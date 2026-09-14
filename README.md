@@ -118,17 +118,99 @@ cat article.md | md2wx -t wechat-green --clip
 
 ## 官方预置视觉主题
 
-MD2WX 官方内置了多套风格截然不同的设计主题（均位于 `md2wx/themes/*.json`）：
+MD2WX 官方内置了 9 套风格截然不同的设计主题（均位于 `md2wx/themes/*.json`）：
 
 | 主题代号 | 视觉风格 | 核心视觉组件组合 (Styles) | 推荐场景 |
 | :--- | :--- | :--- | :--- |
-| `tech-blue` *(默认)* | **现代极客蓝** | 极简容器 + 下划粗线 H1 + 左侧竖条 H2 + Mac 圆点代码框 + 斑马纹表格 | 架构复盘、技术干货、开发者手记 |
+| `tech-blue` *(默认)* | **现代科技蓝** | 极简容器 + 下划粗线 H1 + 左侧竖条 H2 + Mac 圆点代码框 + 斑马纹表格 | 架构复盘、技术干货、开发者手记 |
 | `vintage-news` | **复古报刊** | 米黄纸质底色 + 衬线字体 + 双细线 H1 + 学术三线表 + 典雅大引号名言 | 人文深度长文、书摘精读、文化评论 |
 | `terminal-geek` | **极客终端** | 纯黑底色 + 等宽字 + 命令行 H1 + 终端运行状态条代码框 + 回显引用 | Linux/运维笔记、开源发布、黑客范 |
 | `warm-memo` | **温暖便签** | 暖杏底色 + 胶囊色块 H1/H2 + 日系 NOTE 便签贴纸 + 荧光笔涂鸦 H3 | 生活感悟、治愈随笔、读书手作 |
 | `acid-bold` | **先锋野兽派** | 纯黑粗实线框 + 黑色硬投影 + 粗黑方块列表 + 醒目大色块 | 青年态度、潮流观点、先锋专栏 |
-| `wechat-green` | **微信生态绿** | 经典微信绿 + 官方严谨排版 + 柔和灰底引用 | 官方发布、行业资讯、社群早报 |
 | `elegant-purple` | **先锋优雅紫** | 微阴影悬浮卡片 + 柔和色块 H2 + 气泡卡片引用 + 渐变分割线 | 设计美学、独立思考、产品体验 |
+| `dark-night` | **暗黑极客风** | 沉浸深蓝灰底 + 冷冽荧光蓝 + 网格暗色表 + Mac 圆点深黑代码框 | 深夜阅读、极客笔记、沉浸长文 |
+| `warm-orange` | **温暖活力橙** | 温暖橙色调 + 下划粗线 H1 + 左条 H2 + 斑马纹表格 | 生活感悟、读书故事、个人随笔 |
+| `wechat-green` | **微信生态绿** | 官方微信绿 + 严谨规范排版 + 柔和灰底引用 | 官方发布、行业资讯速递、社群早报 |
+
+---
+
+### 主题预览效果图 (Theme Gallery)
+
+> 点击图片可查看 2x 超清渲染细节，点击链接可直接浏览对应的排版 HTML。
+
+<table>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <h4>✦ 现代科技蓝 (tech-blue · 默认)</h4>
+      <p><i>硅谷现代排版 · 下划粗线 · 左侧竖条 · 斑马纹表格</i></p>
+      <a href="assets/previews/tech-blue.png"><img src="assets/previews/tech-blue.png" alt="tech-blue" width="100%" /></a>
+      <p><a href="previews/tech-blue.html">预览 HTML</a></p>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <h4>✦ 复古报刊 (vintage-news)</h4>
+      <p><i>米黄纸质底色 · 粗衬线体 · 双细线居中 · 学术三线表</i></p>
+      <a href="assets/previews/vintage-news.png"><img src="assets/previews/vintage-news.png" alt="vintage-news" width="100%" /></a>
+      <p><a href="previews/vintage-news.html">预览 HTML</a></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <h4>✦ 极客终端 (terminal-geek)</h4>
+      <p><i>深黑底色 · 等宽字体 · 命令行标题 · 运行状态栏代码框</i></p>
+      <a href="assets/previews/terminal-geek.png"><img src="assets/previews/terminal-geek.png" alt="terminal-geek" width="100%" /></a>
+      <p><a href="previews/terminal-geek.html">预览 HTML</a></p>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <h4>✦ 温暖便签 (warm-memo)</h4>
+      <p><i>日系奶油杏黄 · 胶囊色块 · 便签贴纸 · 治愈手作随笔</i></p>
+      <a href="assets/previews/warm-memo.png"><img src="assets/previews/warm-memo.png" alt="warm-memo" width="100%" /></a>
+      <p><a href="previews/warm-memo.html">预览 HTML</a></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <h4>✦ 先锋野兽派 (acid-bold)</h4>
+      <p><i>高反差黑框硬投影 · 粗线条色块 · 波普视觉冲击</i></p>
+      <a href="assets/previews/acid-bold.png"><img src="assets/previews/acid-bold.png" alt="acid-bold" width="100%" /></a>
+      <p><a href="previews/acid-bold.html">预览 HTML</a></p>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <h4>✦ 先锋优雅紫 (elegant-purple)</h4>
+      <p><i>现代雅致紫调 · 微阴影悬浮卡片 · 气泡卡片引言</i></p>
+      <a href="assets/previews/elegant-purple.png"><img src="assets/previews/elegant-purple.png" alt="elegant-purple" width="100%" /></a>
+      <p><a href="previews/elegant-purple.html">预览 HTML</a></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <h4>✦ 暗黑极客风 (dark-night)</h4>
+      <p><i>沉浸暗黑质感 · 深蓝灰底色 · 冷冽荧光蓝强调色</i></p>
+      <a href="assets/previews/dark-night.png"><img src="assets/previews/dark-night.png" alt="dark-night" width="100%" /></a>
+      <p><a href="previews/dark-night.html">预览 HTML</a></p>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <h4>✦ 温暖活力橙 (warm-orange)</h4>
+      <p><i>温暖活力橙色调 · 清爽阅读骨架 · 随笔与故事首选</i></p>
+      <a href="assets/previews/warm-orange.png"><img src="assets/previews/warm-orange.png" alt="warm-orange" width="100%" /></a>
+      <p><a href="previews/warm-orange.html">预览 HTML</a></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <h4>✦ 微信生态绿 (wechat-green)</h4>
+      <p><i>经典微信绿调 · 官方严谨规范排版 · 行业资讯与早报</i></p>
+      <a href="assets/previews/wechat-green.png"><img src="assets/previews/wechat-green.png" alt="wechat-green" width="100%" /></a>
+      <p><a href="previews/wechat-green.html">预览 HTML</a></p>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <h4>✦ 扩展你的专属主题</h4>
+      <p><i>支持自由扩展任意自定义 JSON 主题文件，轻松定制专属视觉规范</i></p>
+      <br>
+      <pre><code>md2wx article.md -t ./my-theme.json -c</code></pre>
+      <p>所有主题解耦为标准 JSON 文件，开箱即用，深度容错兜底。</p>
+    </td>
+  </tr>
+</table>
 
 ---
 

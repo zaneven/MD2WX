@@ -1,4 +1,25 @@
-<div style="max-width: 677px; margin: 0 auto; box-sizing: border-box; font-family: -apple-system-font, 'Songti SC', 'Noto Serif SC', 'Source Han Serif SC', SimSun, Georgia, serif; background: #fdfbf7; color: #292524;  padding: 24px 16px; border: 1px solid #d6d3d1; border-radius: 4px; box-shadow: 0 2px 12px rgba(0,0,0,0.03);">
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px 16px;
+    background-color: #fdfbf7;
+    display: flex;
+    justify-content: center;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container {
+    width: 100%;
+    max-width: 677px;
+  }
+</style>
+</head>
+<body>
+<div class="container"><div style="max-width: 677px; margin: 0 auto; box-sizing: border-box; font-family: -apple-system-font, 'Songti SC', 'Noto Serif SC', 'Source Han Serif SC', SimSun, Georgia, serif; background: #fdfbf7; color: #292524;  padding: 24px 16px; border: 1px solid #d6d3d1; border-radius: 4px; box-shadow: 0 2px 12px rgba(0,0,0,0.03);">
 <div style="margin: 38px 0 26px 0; text-align: center;"><div style="border-top: 1px solid #d6d3d1; border-bottom: 1px solid #d6d3d1; padding: 12px 14px; display: inline-block; min-width: 60%;"><h1 style="font-size: 22px; font-weight: 700; color: #854d0e; margin: 0; line-height: 1.4; letter-spacing: 1px;">在喧嚣的时代，重塑深度思考的秩序</h1></div></div>
 <blockquote style="margin: 24px 0; padding: 16px 20px; background: #fcfaf2; border-top: 1px solid #d6d3d1; border-bottom: 1px solid #d6d3d1; color: #292524; font-size: 14.5px; position: relative;">
 <div style="font-size: 28px; color: #854d0e; line-height: 1; margin-bottom: 4px; font-family: Georgia, serif;">“</div>
@@ -10,7 +31,7 @@
 <p style="font-size: 15.5px; line-height: 1.9; color: #292524; margin: 18px 0; letter-spacing: 0.6px; text-align: justify;">真正的专注，不是在安静的环境里做简单的事，而是在充满干扰的世界中守住内心的秩序。我们每天接收海量的信息碎片，却越来越少体验到思维深潜的愉悦。阅读长文、推演逻辑、写下真实感悟，是抵抗思维退化的终极武器。</p>
 <h2 style="font-size: 18.5px; font-weight: 700; color: #854d0e; margin: 34px 0 16px 0; padding-bottom: 6px; border-bottom: 1px solid #d6d3d1; line-height: 1.4; letter-spacing: 0.5px;"><span style="color: #854d0e; margin-right: 6px; font-family: Georgia, serif;">§</span>01. 核心架构与设计哲学</h2>
 <p style="font-size: 15.5px; line-height: 1.9; color: #292524; margin: 18px 0; letter-spacing: 0.6px; text-align: justify;">所谓卓越，就是将平凡的事反复雕琢，直到它泛出理性的光芒。</p>
-<h3 style="font-size: 16.5px; font-weight: 600; color: #854d0e; margin: 24px 0 12px 0; line-height: 1.4;"><span style="margin-right: 6px;">✦</span>✦ 核心设计组件对比</h3>
+<h3 style="font-size: 16.5px; font-weight: 600; color: #854d0e; margin: 24px 0 12px 0; line-height: 1.4;"><span style="margin-right: 6px;">✦</span>核心设计组件对比</h3>
 <div style="overflow-x: auto; margin: 24px 0;"><table style="width: 100%; border-collapse: collapse; font-size: 14px; text-align: left; border-top: 2px solid #854d0e; border-bottom: 2px solid #854d0e; background: transparent;"><thead><tr><th style="padding: 10px 14px; font-weight: 700; color: #854d0e; border-bottom: 1px solid #d6d3d1;">模块</th><th style="padding: 10px 14px; font-weight: 700; color: #854d0e; border-bottom: 1px solid #d6d3d1;">职责与定位</th><th style="padding: 10px 14px; font-weight: 700; color: #854d0e; border-bottom: 1px solid #d6d3d1;">实现技术</th></tr></thead><tbody><tr style="border-bottom: 1px dashed #d6d3d1;"><td style="padding: 10px 14px; color: #292524; line-height: 1.5;"><strong>Parser 引擎</strong></td><td style="padding: 10px 14px; color: #292524; line-height: 1.5;">解析 Markdown 并注入内联 CSS</td><td style="padding: 10px 14px; color: #292524; line-height: 1.5;">纯 Python 标准库 (零依赖)</td></tr><tr style="border-bottom: 1px dashed #d6d3d1;"><td style="padding: 10px 14px; color: #292524; line-height: 1.5;"><strong>Theme System</strong></td><td style="padding: 10px 14px; color: #292524; line-height: 1.5;">JSON 文件驱动的视觉风格渲染</td><td style="padding: 10px 14px; color: #292524; line-height: 1.5;">Strategy Pattern + Deep Merge</td></tr><tr style="border-bottom: 1px dashed #d6d3d1;"><td style="padding: 10px 14px; color: #292524; line-height: 1.5;"><strong>Uploader</strong></td><td style="padding: 10px 14px; color: #292524; line-height: 1.5;">微信永久 CDN 换链搬运</td><td style="padding: 10px 14px; color: #292524; line-height: 1.5;">WeChat Media API</td></tr></tbody></table></div>
 <div style="margin: 22px 0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.08);"><div style="display: flex; align-items: center; padding: 8px 12px; background: #27272a; border-top-left-radius: 8px; border-top-right-radius: 8px; border-bottom: 1px solid #3f3f46;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444; display: inline-block; margin-right: 6px;"></span><span style="width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; display: inline-block; margin-right: 6px;"></span><span style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; display: inline-block; margin-right: 10px;"></span><span style="color: #a1a1aa; font-size: 12px; font-family: monospace;">python</span></div><pre style="margin: 0; padding: 14px 16px; background: #292524; color: #f5f5f4; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: Consolas, Monaco, monospace;"><code>def deploy_article(markdown_path: str, theme: str = "vintage-news"):
     # 纯内联样式转换
@@ -21,4 +42,6 @@
 <section style="display: flex; align-items: flex-start; margin-bottom: 8px; line-height: 1.75; font-size: 15.5px; color: #292524;"><span style="color: #854d0e; margin-right: 8px; font-size: 15px; line-height: 1.75;">◆</span><span style="flex: 1;">一键注入剪贴板，支持直接 Cmd+V 粘贴公众号后台。</span></section>
 <div style="text-align: center; color: #854d0e; font-size: 14px; letter-spacing: 8px; margin: 32px 0;">✻  ✻  ✻</div>
 <div style="text-align: center; color: #78716c; font-size: 13px; margin: -16px 0 20px 0; font-style: italic;">▲ 图：全自动极简发布流水线架构全貌</div>
-</div>
+</div></div>
+</body>
+</html>
