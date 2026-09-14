@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "md2wx"
+version = "1.0.0"
+description = "Markdown to WeChat Official Account Formatter: 高质感微信排版转换器与草稿箱自动化发布工具"
+readme = "README.md"
+authors = [{ name = "野生宝藏箱" }]
+license = { text = "MIT" }
+requires-python = ">=3.8"
+dependencies = []
+
+[project.scripts]
+md2wx = "md2wx.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/zaneven/MD2WX"
+
+[tool.setuptools.package-data]
+"md2wx" = ["themes/*.json"]

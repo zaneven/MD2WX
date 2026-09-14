@@ -1,0 +1,34 @@
+{
+  "id": "terminal-geek",
+  "name": "极客终端 (Terminal / Dev Note)",
+  "description": "深黑终端底色、等宽代码字体、终端命令提示符与青绿发光强调色，极客笔记首选",
+  "colors": {
+    "accent": "#10b981",
+    "accent_bg": "#064e3b",
+    "text_color": "#e2e8f0",
+    "sub_color": "#94a3b8",
+    "border_color": "#1e293b",
+    "code_bg": "#020617",
+    "code_text": "#34d399",
+    "quote_bg": "#0f172a",
+    "page_bg": "#0b0f19"
+  },
+  "typography": {
+    "font_family": "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    "font_size_base": "15px",
+    "line_height_base": "1.75",
+    "letter_spacing": "0.3px",
+    "paragraph_indent": false
+  },
+  "styles": {
+    "container": "dark",
+    "h1": "terminal",
+    "h2": "terminal_prompt",
+    "h3": "slash",
+    "quote": "terminal_box",
+    "code": "terminal",
+    "table": "grid",
+    "list": "arrow",
+    "hr": "terminal_dash"
+  }
+}
