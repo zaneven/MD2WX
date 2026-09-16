@@ -1,14 +1,14 @@
 ---
-title: Vibe Coding 记（下篇）：从 CLI 跃迁到 Web 工作台，与 AI 结对打造 MD2WX Studio 与全新品牌
+title: 免费的微信公众号排版工具：从 CLI 跃迁到 Web 工作台，MD2WX Studio 上线
 author: 野生宝藏箱
 digest: 从纯命令行进化到可视化排版工作台！记录如何与 AI 结对打造零服务端依赖的 Web Studio、真机仿真移动端视口、全站纯矢量无 Emoji 规范，以及全新品牌 Logo 与像素级 Favicon 重构的全过程。
 ---
 
-# Vibe Coding 记（下篇）：从 CLI 跃迁到 Web 工作台，与 AI 结对打造 MD2WX Studio 与全新品牌
+# 免费的微信公众号排版工具：从 CLI 跃迁到 Web 工作台，MD2WX Studio 上线
 
 > **作者**：野生宝藏箱  
 > **模式**：纯纯的 Vibe Coding（灵感直觉 -> 与 AI 对话 -> 秒级落地）  
-> **排版主题**：tech-blue 现代科技蓝（硅谷开发者手记 · Mac 圆点代码框）  
+> **排版主题**：acid-bold 先锋野兽派（高反差黑框 · 黑色硬投影 · 波普撞色）  
 > **一句话简介**：从纯命令行到可视化网页工作台，把微信排版体验推向极致。
 
 昨天，我们用纯 Python 标准库徒手搓出了 **MD2WX** 核心引擎，实现了零外部重型依赖、9 大独立视觉骨架主题，以及剪贴板富文本注入与草稿箱直推。

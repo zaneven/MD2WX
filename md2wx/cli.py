@@ -64,9 +64,13 @@ def load_env_credentials() -> Dict[str, str]:
                 for line in f:
                     line = line.strip()
                     if line.startswith("WECHAT_APP_ID=") and not creds["app_id"]:
-                        creds["app_id"] = line.split("=", 1)[1].strip().strip("'\"")
+                        val = line.split("=", 1)[1].strip().strip("'\"")
+                        if val and not val.startswith("your_") and not val.startswith("<"):
+                            creds["app_id"] = val
                     elif line.startswith("WECHAT_APP_SECRET=") and not creds["app_secret"]:
-                        creds["app_secret"] = line.split("=", 1)[1].strip().strip("'\"")
+                        val = line.split("=", 1)[1].strip().strip("'\"")
+                        if val and not val.startswith("your_") and not val.startswith("<"):
+                            creds["app_secret"] = val
     return creds
 
 def copy_html_to_clipboard(html: str) -> bool:
