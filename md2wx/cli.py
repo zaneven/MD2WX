@@ -97,6 +97,7 @@ def main():
     parser.add_argument("-c", "--clip", action="store_true", help="将生成的带样式富文本直接复制到剪贴板（微信后台直接 Cmd+V）")
     parser.add_argument("-t", "--theme", default="tech-blue", help="选择设计主题名称 (如 vintage-news, terminal-geek 等) 或指定外部 JSON 主题文件路径")
     parser.add_argument("--list-themes", action="store_true", help="列出所有可用的内置与用户自定义设计主题")
+    parser.add_argument("--web", action="store_true", help="启动 MD2WX Web Studio 可视化排版工作台并在浏览器中打开")
     parser.add_argument("-p", "--publish", action="store_true", help="一键推送到微信公众号草稿箱")
     parser.add_argument("--cover", help="指定封面图片路径 (发布草稿时必填，或自动提取正文首图)")
     parser.add_argument("--author", help="指定文章作者 (默认读取 Frontmatter 或 '野生宝藏箱')")
@@ -105,6 +106,26 @@ def main():
     parser.add_argument("--app-secret", help="微信 AppSecret (默认从环境变量或 .env 读取)")
 
     args = parser.parse_args()
+
+    # 处理 --web 选项
+    if args.web:
+        import webbrowser
+        web_dir = Path(__file__).resolve().parent.parent / "web"
+        dist_dir = web_dir / "dist"
+        print("================================================================================")
+        print("  MD2WX Web Studio (可视化排版工作台)")
+        print("================================================================================")
+        print(f"前端工作目录: {web_dir}")
+        print("正在启动本地 Web 预览服务 (http://localhost:3000) ...")
+        try:
+            webbrowser.open("http://localhost:3000")
+            cmd = ["npm", "run", "dev"]
+            subprocess.run(cmd, cwd=str(web_dir))
+        except KeyboardInterrupt:
+            print("\n[+] 服务已停止。")
+        except Exception as e:
+            print(f"[-] 启动 Web 服务失败: {e}", file=sys.stderr)
+        sys.exit(0)
 
     # 处理 --list-themes 选项
     if args.list_themes:

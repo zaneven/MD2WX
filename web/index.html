@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MD2WX Studio - 微信公众号高质感 Markdown 排版工作台</title>
+  <meta name="description" content="零沉重依赖的微信公众号 Markdown 排版工具，多视觉骨架风格主题与实时预览，一键复制微信内联富文本">
+  
+  <link rel="stylesheet" href="./src/styles/main.css">
+  <link rel="stylesheet" href="./src/styles/editor.css">
+  <link rel="stylesheet" href="./src/styles/preview.css">
+  <link rel="stylesheet" href="./src/styles/toast.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header Bar -->
+    <header class="header-bar">
+      <div class="brand-section">
+        <div class="brand-logo" id="logo-icon"></div>
+        <div class="brand-title">
+          <h1>MD2WX Studio</h1>
+          <span class="brand-badge">Web 排版工作台</span>
+        </div>
+      </div>
+
+      <!-- Theme Selector Dropdown -->
+      <div class="header-center">
+        <div class="theme-selector-wrapper">
+          <button class="theme-selector-trigger" id="theme-trigger-btn" type="button" aria-haspopup="true" aria-expanded="false">
+            <span class="theme-color-dot" id="current-theme-dot"></span>
+            <span id="current-theme-name">现代科技蓝</span>
+            <span id="theme-chevron-icon"></span>
+          </button>
+          <div class="theme-dropdown" id="theme-dropdown-menu" role="menu">
+            <!-- Dynamic Theme Options Injected Here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Header Actions -->
+      <div class="header-actions">
+        <button class="btn btn-secondary" id="btn-load-sample" type="button" title="载入官方排版示范长文">
+          <span id="icon-sample"></span>
+          <span>载入示例</span>
+        </button>
+
+        <button class="btn btn-secondary" id="btn-export-html" type="button" title="导出自包含的微信排版 HTML 文件">
+          <span id="icon-download"></span>
+          <span>导出 HTML</span>
+        </button>
+
+        <button class="btn btn-primary" id="btn-copy-header" type="button" title="写入系统剪贴板，支持直接在微信后台按 Cmd+V 粘贴">
+          <span id="icon-copy-header"></span>
+          <span>复制到微信</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace Split Pane -->
+    <main class="workspace-container">
+      <!-- Left: Editor Pane -->
+      <section class="pane pane-editor" aria-label="Markdown 编辑区">
+        <!-- Editor Formatting Toolbar -->
+        <div class="editor-toolbar">
+          <div class="toolbar-group">
+            <button class="tool-btn" id="tool-bold" type="button" title="粗体 (**文本**)"><span id="icon-bold"></span></button>
+            <button class="tool-btn" id="tool-italic" type="button" title="斜体 (*文本*)"><span id="icon-italic"></span></button>
+            <div class="toolbar-divider"></div>
+            <button class="tool-btn" id="tool-h1" type="button" title="一级标题 (# 标题)"><span id="icon-h1"></span></button>
+            <button class="tool-btn" id="tool-h2" type="button" title="二级标题 (## 标题)"><span id="icon-h2"></span></button>
+            <div class="toolbar-divider"></div>
+            <button class="tool-btn" id="tool-quote" type="button" title="引用导读块 (> 引言)"><span id="icon-quote"></span></button>
+            <button class="tool-btn" id="tool-code" type="button" title="代码块 (```代码```)"><span id="icon-code"></span></button>
+            <button class="tool-btn" id="tool-table" type="button" title="插入三线/斑马纹表格"><span id="icon-table"></span></button>
+            <button class="tool-btn" id="tool-list" type="button" title="列表项 (- 项目)"><span id="icon-list"></span></button>
+            <button class="tool-btn" id="tool-hr" type="button" title="分割线 (---)"><span id="icon-minus"></span></button>
+            <button class="tool-btn" id="tool-link" type="button" title="超链接 ([文本](链接))"><span id="icon-link"></span></button>
+          </div>
+
+          <div class="toolbar-group">
+            <button class="tool-btn" id="tool-clear" type="button" title="清空编辑器内容"><span id="icon-trash"></span></button>
+          </div>
+        </div>
+
+        <!-- Editor Input Body -->
+        <div class="editor-body">
+          <div class="editor-gutter" id="editor-gutter" aria-hidden="true">1</div>
+          <div class="editor-textarea-wrapper">
+            <textarea
+              class="editor-textarea"
+              id="markdown-input"
+              placeholder="在此输入或粘贴 Markdown 文章内容...&#10;&#10;支持 Frontmatter 元信息、连续引用导读块聚合、ASCII 架构图保护、多视觉风格组件化标题与三线表。"
+              spellcheck="false"
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- Editor Status Bar -->
+        <footer class="editor-statusbar">
+          <div class="statusbar-left">
+            <span class="status-tag">
+              <span class="status-dot"></span>
+              <span>实时秒级解析就绪</span>
+            </span>
+            <span id="status-theme-tag">主题: 现代科技蓝</span>
+          </div>
+          <div class="statusbar-right">
+            <span id="status-word-count">0 字</span>
+            <span id="status-read-time">约 1 分钟阅读</span>
+          </div>
+        </footer>
+      </section>
+
+      <!-- Right: Preview Pane -->
+      <section class="pane pane-preview" aria-label="微信排版实时预览区">
+        <!-- Preview Toolbar -->
+        <div class="preview-toolbar">
+          <div class="view-mode-tabs">
+            <button class="view-tab active" id="tab-mode-mobile" type="button">
+              <span id="icon-phone"></span>
+              <span>iPhone 仿真实机</span>
+            </button>
+            <button class="view-tab" id="tab-mode-desktop" type="button">
+              <span id="icon-desktop"></span>
+              <span>全宽桌面视图</span>
+            </button>
+          </div>
+
+          <div class="preview-meta-info" id="preview-style-info">
+            容器: 极简白 · 标题: 下划粗线 · 表格: 斑马纹
+          </div>
+        </div>
+
+        <!-- Preview Canvas -->
+        <div class="preview-canvas" id="preview-canvas">
+          <!-- Mobile Device Simulation Frame -->
+          <div class="mobile-device-frame" id="device-frame">
+            <!-- Dynamic Island Notch -->
+            <div class="phone-notch-area"></div>
+
+            <!-- iOS Status Bar -->
+            <div class="phone-status-bar" id="phone-status-bar">
+              <span id="phone-clock">09:41</span>
+              <div class="status-bar-icons">
+                <span id="icon-wifi"></span>
+                <span id="icon-battery"></span>
+              </div>
+            </div>
+
+            <!-- WeChat Navigation Bar -->
+            <div class="wechat-nav-bar" id="wechat-nav-bar">
+              <div class="wechat-nav-btn" id="icon-nav-back"></div>
+              <div class="wechat-nav-title" id="wechat-nav-title">文章详情</div>
+              <div class="wechat-nav-btn" id="icon-nav-more"></div>
+            </div>
+
+            <!-- Article Scroll Area -->
+            <div class="phone-content-scroll" id="phone-content-scroll">
+              <div id="preview-render-target">
+                <!-- Converted WeChat Rich HTML Output Injected Here -->
+              </div>
+            </div>
+
+            <!-- Bottom Home Indicator -->
+            <div class="phone-home-indicator"></div>
+          </div>
+
+          <!-- Floating Action Button -->
+          <div class="floating-actions">
+            <button class="floating-btn floating-btn-primary" id="btn-copy-floating" type="button">
+              <span id="icon-copy-floating"></span>
+              <span>复制公众号排版</span>
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Global Toast Feedback -->
+    <div class="toast-container" id="toast-container" aria-live="polite"></div>
+  </div>
+
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>

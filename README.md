@@ -48,7 +48,40 @@ cd MD2WX
 pip install -e .
 ```
 
-安装完成后，即可在任何终端使用 `md2wx` 命令行工具。
+安装完成后，即可在任何终端使用 `md2wx` 命令行工具或启动 Web 工作台。
+
+---
+
+## Web 可视化排版工作台 (MD2WX Studio)
+
+除了命令行外，MD2WX 还提供了**纯前端驱动的可视化排版工作台**。在网页端直接粘贴 Markdown 文本，即可享受即时渲染、主题切换与微信移动端真机仿真。
+
+<div align="center">
+  <img src="assets/web_studio_preview.png" alt="MD2WX Web Studio" width="100%" style="border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.25);" />
+</div>
+
+### 启动工作台
+
+只需一行命令即可在本地启动并自动打开浏览器：
+
+```bash
+md2wx --web
+```
+
+或直接进入 `web/` 目录运行：
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+### Web 端核心亮点
+- **纯前端零延迟响应**：内置纯 JavaScript 解析引擎，本地打字毫秒级无感知实时重绘；
+- **iPhone 仿真实机视窗**：真实还原微信公众号在移动端的行距、边距与排版质感，并支持一键切换「全宽桌面视图」；
+- **9 套独立视觉骨架主题**：报刊、便签、终端、野兽派、优雅紫等主题即点即换；
+- **一键写入微信富文本**：基于原生 Clipboard API 写入 `text/html`，直接在微信公众号后台按 **Cmd + V** 即可保留全部样式；
+- **全站纯矢量设计**：严格遵循专业美学标准，杜绝使用 Emoji，全站统一采用精美 SVG 矢量图标。
 
 ---
 

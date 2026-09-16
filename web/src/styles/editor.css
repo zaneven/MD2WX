@@ -1,0 +1,133 @@
+/* ==============================================================================
+   MD2WX Web Studio - Editor Styles
+   ============================================================================== */
+
+.editor-toolbar {
+  height: var(--toolbar-height);
+  background: var(--bg-surface-elevated);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  user-select: none;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--border-subtle);
+  margin: 0 6px;
+}
+
+.tool-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tool-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.tool-btn:active {
+  transform: scale(0.94);
+}
+
+/* Editor Input Area */
+.editor-body {
+  flex: 1;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+}
+
+.editor-gutter {
+  width: 44px;
+  background: rgba(0, 0, 0, 0.15);
+  border-right: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 22px;
+  padding: 16px 8px 16px 0;
+  text-align: right;
+  user-select: none;
+  overflow: hidden;
+}
+
+.editor-textarea-wrapper {
+  flex: 1;
+  position: relative;
+  height: 100%;
+}
+
+.editor-textarea {
+  width: 100%;
+  height: 100%;
+  padding: 16px 18px;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 22px;
+  border: none;
+  outline: none;
+  resize: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+  tab-size: 2;
+}
+
+.editor-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* Status Bar */
+.editor-statusbar {
+  height: var(--status-height);
+  background: var(--bg-surface-elevated);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.statusbar-left, .statusbar-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.status-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success-color);
+  box-shadow: 0 0 6px var(--success-color);
+}

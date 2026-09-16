@@ -1,0 +1,160 @@
+/**
+ * MD2WX 矢量图标库 (Pure SVG Vector Icons)
+ * 严格遵循规范：全站禁止使用任何 Emoji，全部采用高质量 24x24 矢量 SVG 图标
+ */
+
+export const ICONS = {
+  logo: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+    <path d="m8 10 2 2-2 2"/>
+    <path d="M12 14h4"/>
+  </svg>`,
+
+  copy: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+  </svg>`,
+
+  check: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="20 6 9 17 4 12"/>
+  </svg>`,
+
+  smartphone: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/>
+    <path d="M12 18h.01"/>
+  </svg>`,
+
+  monitor: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect width="20" height="14" x="2" y="3" rx="2"/>
+    <line x1="8" x2="16" y1="21" y2="21"/>
+    <line x1="12" x2="12" y1="17" y2="21"/>
+  </svg>`,
+
+  download: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+    <polyline points="7 10 12 15 17 10"/>
+    <line x1="12" x2="12" y1="15" y2="3"/>
+  </svg>`,
+
+  trash: `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 6h18"/>
+    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+  </svg>`,
+
+  fileText: `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
+    <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+    <path d="M10 9H8"/>
+    <path d="M16 13H8"/>
+    <path d="M16 17H8"/>
+  </svg>`,
+
+  palette: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/>
+    <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/>
+    <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/>
+    <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/>
+    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
+  </svg>`,
+
+  bold: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 12a4 4 0 0 0 0-8H6v8"/>
+    <path d="M15 20a4 4 0 0 0 0-8H6v8Z"/>
+  </svg>`,
+
+  italic: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="19" x2="10" y1="4" y2="4"/>
+    <line x1="14" x2="5" y1="20" y2="20"/>
+    <line x1="15" x2="9" y1="4" y2="20"/>
+  </svg>`,
+
+  heading1: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 12h8"/>
+    <path d="M4 18V6"/>
+    <path d="M12 18V6"/>
+    <path d="m17 12 3-2v8"/>
+  </svg>`,
+
+  heading2: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 12h8"/>
+    <path d="M4 18V6"/>
+    <path d="M12 18V6"/>
+    <path d="M21 18h-4c0-4 4-3 4-6 0-1.5-1-2.5-2.5-2.5-1.3 0-2.3.8-2.5 2"/>
+  </svg>`,
+
+  quote: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/>
+    <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/>
+  </svg>`,
+
+  code: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="16 18 22 12 16 6"/>
+    <polyline points="8 6 2 12 8 18"/>
+  </svg>`,
+
+  table: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3v18"/>
+    <rect width="18" height="18" x="3" y="3" rx="2"/>
+    <path d="M3 9h18"/>
+    <path d="M3 15h18"/>
+  </svg>`,
+
+  list: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="8" x2="21" y1="6" y2="6"/>
+    <line x1="8" x2="21" y1="12" y2="12"/>
+    <line x1="8" x2="21" y1="18" y2="18"/>
+    <line x1="3" x2="3.01" y1="6" y2="6"/>
+    <line x1="3" x2="3.01" y1="12" y2="12"/>
+    <line x1="3" x2="3.01" y1="18" y2="18"/>
+  </svg>`,
+
+  minus: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="5" x2="19" y1="12" y2="12"/>
+  </svg>`,
+
+  link: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+  </svg>`,
+
+  chevronDown: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m6 9 6 6 6-6"/>
+  </svg>`,
+
+  wifi: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 20h.01"/>
+    <path d="M2 8.82a15 15 0 0 1 20 0"/>
+    <path d="M5 12.859a10 10 0 0 1 14 0"/>
+    <path d="M8.5 16.429a5 5 0 0 1 7 0"/>
+  </svg>`,
+
+  battery: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect width="16" height="10" x="2" y="7" rx="2" ry="2"/>
+    <line x1="22" x2="22" y1="11" y2="13"/>
+    <line x1="6" x2="12" y1="11" y2="11"/>
+  </svg>`,
+
+  moreVertical: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="1"/>
+    <circle cx="12" cy="5" r="1"/>
+    <circle cx="12" cy="19" r="1"/>
+  </svg>`,
+
+  arrowLeft: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="19" x2="5" y1="12" y2="12"/>
+    <polyline points="12 19 5 12 12 5"/>
+  </svg>`
+};
+
+/**
+ * 助手函数：将图标注入指定元素
+ */
+export function setIcon(elementOrSelector, iconName) {
+  const el = typeof elementOrSelector === 'string'
+    ? document.querySelector(elementOrSelector)
+    : elementOrSelector;
+  if (el && ICONS[iconName]) {
+    el.innerHTML = ICONS[iconName];
+  }
+}
