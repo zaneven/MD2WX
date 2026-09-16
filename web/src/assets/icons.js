@@ -4,10 +4,28 @@
  */
 
 export const ICONS = {
-  logo: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-    <path d="m8 10 2 2-2 2"/>
-    <path d="M12 14h4"/>
+  logo: `<svg width="30" height="30" viewBox="0 0 128 128" fill="none">
+    <defs>
+      <linearGradient id="nav-logo-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#0b1329"/>
+        <stop offset="60%" stop-color="#090f1d"/>
+        <stop offset="100%" stop-color="#042017"/>
+      </linearGradient>
+      <linearGradient id="nav-logo-border" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.85"/>
+        <stop offset="50%" stop-color="#818cf8" stop-opacity="0.3"/>
+        <stop offset="100%" stop-color="#10b981" stop-opacity="0.95"/>
+      </linearGradient>
+      <linearGradient id="nav-logo-wx" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#10b981"/>
+        <stop offset="100%" stop-color="#047857"/>
+      </linearGradient>
+    </defs>
+    <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#nav-logo-bg)" stroke="url(#nav-logo-border)" stroke-width="3"/>
+    <path d="M22 60C22 37.9 39.9 20 62 20C84.1 20 102 37.9 102 60C102 82.1 84.1 100 62 100C54.8 100 48.1 98.1 42.3 94.8L20 102L26 83.5C23.5 76.5 22 68.6 22 60Z" fill="url(#nav-logo-wx)"/>
+    <path d="M37 73V47L51 61L65 47V73" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M76 52L86 60L76 68" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <line x1="84" y1="60" x2="72" y2="60" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>
   </svg>`,
 
   copy: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

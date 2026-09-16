@@ -1,6 +1,8 @@
-# MD2WX (Markdown to WeChat)
-
 <div align="center">
+
+<img src="assets/logo.svg" alt="MD2WX Logo" width="112" height="112" style="margin-bottom: 8px;" />
+
+# MD2WX (Markdown to WeChat)
 
 **专为微信公众号深度定制的 Markdown 高质感排版转换器与草稿箱发布工具**
 
