@@ -42,6 +42,64 @@
 
       <!-- Header Actions -->
       <div class="header-actions">
+        <!-- Settings Popover -->
+        <div class="settings-wrapper">
+          <button class="btn btn-secondary" id="btn-settings-trigger" type="button" title="排版微调（字号、行距、外链脚注与同步滚动）">
+            <span id="icon-settings"></span>
+            <span>排版微调</span>
+          </button>
+          <div class="settings-dropdown" id="settings-dropdown-menu" role="menu">
+            <div class="settings-header">
+              <span id="icon-sliders-title"></span>
+              <span>排版与联动偏好</span>
+            </div>
+            
+            <div class="settings-item">
+              <div class="settings-label">正文字号</div>
+              <div class="segmented-control" id="control-font-size">
+                <button type="button" class="segment-btn" data-val="14px">14px</button>
+                <button type="button" class="segment-btn active" data-val="15.5px">15.5</button>
+                <button type="button" class="segment-btn" data-val="16.5px">16.5</button>
+                <button type="button" class="segment-btn" data-val="17.5px">17.5</button>
+              </div>
+            </div>
+
+            <div class="settings-item">
+              <div class="settings-label">正文行距</div>
+              <div class="segmented-control" id="control-line-height">
+                <button type="button" class="segment-btn" data-val="1.6">1.6</button>
+                <button type="button" class="segment-btn active" data-val="1.8">1.8</button>
+                <button type="button" class="segment-btn" data-val="1.95">1.95</button>
+                <button type="button" class="segment-btn" data-val="2.1">2.1</button>
+              </div>
+            </div>
+
+            <div class="settings-divider"></div>
+
+            <div class="settings-toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-title">外链转文末脚注</div>
+                <div class="toggle-desc">微信公众号链接自动编号并在文末生成文献引用列表</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="toggle-footnotes" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+
+            <div class="settings-toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-title">双栏同步滚动</div>
+                <div class="toggle-desc">左侧 Markdown 编辑滚动时右侧预览窗按比例联动</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="toggle-sync-scroll" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
         <button class="btn btn-secondary" id="btn-load-sample" type="button" title="载入官方排版示范长文">
           <span id="icon-sample"></span>
           <span>载入示例</span>
@@ -52,7 +110,7 @@
           <span>导出 HTML</span>
         </button>
 
-        <button class="btn btn-primary" id="btn-copy-header" type="button" title="写入系统剪贴板，支持直接在微信后台按 Cmd+V 粘贴">
+        <button class="btn btn-primary" id="btn-copy-header" type="button" title="写入系统剪贴板 (快捷键: Cmd+Enter 或 Ctrl+Enter)">
           <span id="icon-copy-header"></span>
           <span>复制到微信</span>
         </button>
@@ -62,12 +120,12 @@
     <!-- Main Workspace Split Pane -->
     <main class="workspace-container">
       <!-- Left: Editor Pane -->
-      <section class="pane pane-editor" aria-label="Markdown 编辑区">
+      <section class="pane pane-editor" id="editor-pane" aria-label="Markdown 编辑区">
         <!-- Editor Formatting Toolbar -->
         <div class="editor-toolbar">
           <div class="toolbar-group">
-            <button class="tool-btn" id="tool-bold" type="button" title="粗体 (**文本**)"><span id="icon-bold"></span></button>
-            <button class="tool-btn" id="tool-italic" type="button" title="斜体 (*文本*)"><span id="icon-italic"></span></button>
+            <button class="tool-btn" id="tool-bold" type="button" title="粗体 (Cmd+B)"><span id="icon-bold"></span></button>
+            <button class="tool-btn" id="tool-italic" type="button" title="斜体 (Cmd+I)"><span id="icon-italic"></span></button>
             <div class="toolbar-divider"></div>
             <button class="tool-btn" id="tool-h1" type="button" title="一级标题 (# 标题)"><span id="icon-h1"></span></button>
             <button class="tool-btn" id="tool-h2" type="button" title="二级标题 (## 标题)"><span id="icon-h2"></span></button>
@@ -77,7 +135,8 @@
             <button class="tool-btn" id="tool-table" type="button" title="插入三线/斑马纹表格"><span id="icon-table"></span></button>
             <button class="tool-btn" id="tool-list" type="button" title="列表项 (- 项目)"><span id="icon-list"></span></button>
             <button class="tool-btn" id="tool-hr" type="button" title="分割线 (---)"><span id="icon-minus"></span></button>
-            <button class="tool-btn" id="tool-link" type="button" title="超链接 ([文本](链接))"><span id="icon-link"></span></button>
+            <button class="tool-btn" id="tool-link" type="button" title="超链接 (Cmd+K)"><span id="icon-link"></span></button>
+            <button class="tool-btn" id="tool-image" type="button" title="插入图片 (支持拖拽/粘贴截图)"><span id="icon-image"></span></button>
           </div>
 
           <div class="toolbar-group">

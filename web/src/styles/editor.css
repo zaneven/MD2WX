@@ -131,3 +131,9 @@
   background: var(--success-color);
   box-shadow: 0 0 6px var(--success-color);
 }
+
+.editor-textarea-wrapper.drag-over {
+  outline: 2px dashed #2563eb;
+  outline-offset: -4px;
+  background: rgba(37, 99, 235, 0.05);
+}

@@ -53,6 +53,11 @@ def deploy_article(markdown_path: str, theme: str = "vintage-news"):
 // App State
 let currentThemeId = localStorage.getItem('md2wx_theme') || DEFAULT_THEME_ID;
 let currentViewMode = localStorage.getItem('md2wx_view_mode') || 'mobile';
+let currentFontSize = localStorage.getItem('md2wx_font_size') || '15.5px';
+let currentLineHeight = localStorage.getItem('md2wx_line_height') || '1.8';
+let enableFootnotes = localStorage.getItem('md2wx_enable_footnotes') !== 'false';
+let enableSyncScroll = localStorage.getItem('md2wx_sync_scroll') !== 'false';
+let isSyncingScroll = false;
 let debounceTimer = null;
 let currentHtmlOutput = '';
 
@@ -92,7 +97,9 @@ function initIcons() {
   setIcon('#icon-nav-back', 'arrowLeft');
   setIcon('#icon-nav-more', 'moreVertical');
 
-  // Toolbar Formatting Icons
+  // Toolbar & Header Icons
+  setIcon('#icon-settings', 'settings');
+  setIcon('#icon-sliders-title', 'sliders');
   setIcon('#icon-bold', 'bold');
   setIcon('#icon-italic', 'italic');
   setIcon('#icon-h1', 'heading1');
@@ -103,6 +110,7 @@ function initIcons() {
   setIcon('#icon-list', 'list');
   setIcon('#icon-minus', 'minus');
   setIcon('#icon-link', 'link');
+  setIcon('#icon-image', 'imagePlus');
   setIcon('#icon-trash', 'trash');
 }
 
@@ -119,8 +127,28 @@ function updateGutter() {
 }
 
 /**
- * 同步滚动
+ * 双栏联动同步滚动 (带互斥锁防抖)
  */
+function handleSyncScroll() {
+  syncGutterScroll();
+  if (!enableSyncScroll) return;
+  if (isSyncingScroll) return;
+
+  isSyncingScroll = true;
+  const targetScrollEl = currentViewMode === 'desktop' ? previewCanvas : phoneScroll;
+  if (targetScrollEl) {
+    const editorScrollable = textarea.scrollHeight - textarea.clientHeight;
+    if (editorScrollable > 0) {
+      const scrollRatio = textarea.scrollTop / editorScrollable;
+      const targetScrollable = targetScrollEl.scrollHeight - targetScrollEl.clientHeight;
+      targetScrollEl.scrollTop = scrollRatio * targetScrollable;
+    }
+  }
+  requestAnimationFrame(() => {
+    isSyncingScroll = false;
+  });
+}
+
 function syncGutterScroll() {
   gutter.scrollTop = textarea.scrollTop;
 }
@@ -326,8 +354,12 @@ function renderPreview() {
   }
   wechatNavTitle.textContent = articleTitle || '文章详情';
 
-  // 转换为微信专用的纯 Inline CSS HTML
-  currentHtmlOutput = markdownToWechatHtml(body, currentThemeId);
+  // 转换为微信专用的纯 Inline CSS HTML (注入排版微调参数与文末脚注设置)
+  currentHtmlOutput = markdownToWechatHtml(body, currentThemeId, null, {
+    fontSize: currentFontSize,
+    lineHeight: currentLineHeight,
+    linkToFootnote: enableFootnotes,
+  });
   previewTarget.innerHTML = currentHtmlOutput;
 
   // 自动保存本地草稿
@@ -408,14 +440,15 @@ function updateClock() {
  * 绑定所有事件监听
  */
 function bindEvents() {
-  // 编辑器实时输入与滚动同步
+  // 编辑器实时输入与双栏滚动联动
   textarea.addEventListener('input', scheduleRender);
-  textarea.addEventListener('scroll', syncGutterScroll);
+  textarea.addEventListener('scroll', handleSyncScroll);
 
   // 主题下拉菜单触发与外部点击自动关闭
   themeTriggerBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     themeDropdownMenu.classList.toggle('show');
+    document.getElementById('settings-dropdown-menu').classList.remove('show');
   });
 
   document.addEventListener('click', (e) => {
@@ -457,12 +490,48 @@ function bindEvents() {
   document.getElementById('tool-list').addEventListener('click', () => insertFormatting('- ', '\n', '核心列表项'));
   document.getElementById('tool-hr').addEventListener('click', () => insertFormatting('\n---\n', '', ''));
   document.getElementById('tool-link').addEventListener('click', () => insertFormatting('[', '](https://example.com)', '链接说明'));
+  document.getElementById('tool-image').addEventListener('click', () => insertFormatting('![图片说明](', ')', 'https://example.com/image.png'));
 
   document.getElementById('tool-clear').addEventListener('click', () => {
     if (confirm('确定要清空当前的编辑器内容吗？')) {
       textarea.value = '';
       scheduleRender();
       showToast('编辑器已清空');
+    }
+  });
+
+  // 快捷键支持 (Cmd/Ctrl + S, Cmd/Ctrl + Enter, Cmd/Ctrl + B/I/K)
+  document.addEventListener('keydown', (e) => {
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const modifier = isMac ? e.metaKey : e.ctrlKey;
+
+    // Cmd/Ctrl + S: 快速保存草稿
+    if (modifier && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      localStorage.setItem('md2wx_draft', textarea.value);
+      showToast('草稿已成功保存至本地浏览器');
+      return;
+    }
+
+    // Cmd/Ctrl + Enter: 复制排版到微信
+    if (modifier && e.key === 'Enter') {
+      e.preventDefault();
+      handleCopy();
+      return;
+    }
+
+    // 编辑器内部快捷格式化
+    if (document.activeElement === textarea && modifier) {
+      if (e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        insertFormatting('**', '**', '粗体文字');
+      } else if (e.key.toLowerCase() === 'i') {
+        e.preventDefault();
+        insertFormatting('*', '*', '斜体文字');
+      } else if (e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        insertFormatting('[', '](https://example.com)', '链接说明');
+      }
     }
   });
 
@@ -477,6 +546,130 @@ function bindEvents() {
       scheduleRender();
     }
   });
+
+  // 本地图片粘贴支持 (支持剪贴板中的截图直接转 Base64 嵌入)
+  textarea.addEventListener('paste', (e) => {
+    const items = (e.clipboardData || window.clipboardData)?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.indexOf('image') !== -1) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const base64Url = event.target.result;
+            insertFormatting('![粘贴图片](', ')', base64Url);
+            showToast('已将剪贴板图片转换为 Markdown 嵌入');
+          };
+          reader.readAsDataURL(file);
+        }
+        return;
+      }
+    }
+  });
+
+  // 本地图片拖拽上传与防盗链感知
+  const textareaWrapper = document.querySelector('.editor-textarea-wrapper');
+  if (textareaWrapper) {
+    textareaWrapper.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      textareaWrapper.classList.add('drag-over');
+    });
+    textareaWrapper.addEventListener('dragleave', () => {
+      textareaWrapper.classList.remove('drag-over');
+    });
+    textareaWrapper.addEventListener('drop', (e) => {
+      e.preventDefault();
+      textareaWrapper.classList.remove('drag-over');
+      const files = e.dataTransfer?.files;
+      if (files && files.length > 0) {
+        const file = files[0];
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const base64Url = event.target.result;
+            insertFormatting(`![${file.name}](`, ')', base64Url);
+            showToast(`已插入拖拽图片: ${file.name}`);
+          };
+          reader.readAsDataURL(file);
+        }
+      }
+    });
+  }
+}
+
+/**
+ * 初始化排版微调设置面板
+ */
+function initSettings() {
+  const settingsBtn = document.getElementById('btn-settings-trigger');
+  const settingsDropdown = document.getElementById('settings-dropdown-menu');
+  const toggleFootnotes = document.getElementById('toggle-footnotes');
+  const toggleSyncScroll = document.getElementById('toggle-sync-scroll');
+
+  if (!settingsBtn || !settingsDropdown) return;
+
+  // 初始化 UI 勾选状态
+  if (toggleFootnotes) toggleFootnotes.checked = enableFootnotes;
+  if (toggleSyncScroll) toggleSyncScroll.checked = enableSyncScroll;
+
+  // 正文字号切换
+  document.querySelectorAll('#control-font-size .segment-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.val === currentFontSize);
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#control-font-size .segment-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFontSize = btn.dataset.val;
+      localStorage.setItem('md2wx_font_size', currentFontSize);
+      renderPreview();
+    });
+  });
+
+  // 行距切换
+  document.querySelectorAll('#control-line-height .segment-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.val === currentLineHeight);
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#control-line-height .segment-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentLineHeight = btn.dataset.val;
+      localStorage.setItem('md2wx_line_height', currentLineHeight);
+      renderPreview();
+    });
+  });
+
+  // 外链转文末脚注开关
+  if (toggleFootnotes) {
+    toggleFootnotes.addEventListener('change', (e) => {
+      enableFootnotes = e.target.checked;
+      localStorage.setItem('md2wx_enable_footnotes', String(enableFootnotes));
+      renderPreview();
+      showToast(enableFootnotes ? '已开启外链自动转文末脚注' : '已关闭外链转脚注');
+    });
+  }
+
+  // 双栏同步滚动开关
+  if (toggleSyncScroll) {
+    toggleSyncScroll.addEventListener('change', (e) => {
+      enableSyncScroll = e.target.checked;
+      localStorage.setItem('md2wx_sync_scroll', String(enableSyncScroll));
+      showToast(enableSyncScroll ? '已开启双栏联动同步滚动' : '已关闭双栏同步滚动');
+    });
+  }
+
+  // 弹窗切换与点击外部自动收起
+  settingsBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    settingsDropdown.classList.toggle('show');
+    themeDropdownMenu.classList.remove('show');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!settingsBtn.contains(e.target) && !settingsDropdown.contains(e.target)) {
+      settingsDropdown.classList.remove('show');
+    }
+  });
 }
 
 /**
@@ -485,6 +678,7 @@ function bindEvents() {
 function init() {
   initIcons();
   renderThemeDropdown();
+  initSettings();
   updateClock();
   setInterval(updateClock, 30000);
 

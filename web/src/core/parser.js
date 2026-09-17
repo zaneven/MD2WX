@@ -3,6 +3,7 @@
  * 1:1 复刻 Python 端核心排版与组件风格矩阵
  */
 import { getTheme, DEFAULT_THEME_ID } from './themes.js';
+import { highlightCode } from './highlighter.js';
 
 /**
  * 解析并剥离 Markdown 顶部的 YAML Frontmatter
@@ -70,7 +71,7 @@ export function stripMarkdown(mdText, maxLen = 120) {
  * 3. 粗体与斜体
  * 4. 还原 Tokens
  */
-export function formatInline(text, accent, codeFontSize = '13.5px') {
+export function formatInline(text, accent, codeFontSize = '13.5px', footnotes = null) {
   const tokens = {};
   let tokenIdx = 0;
 
@@ -86,14 +87,26 @@ export function formatInline(text, accent, codeFontSize = '13.5px') {
     return k;
   });
 
-  // 2. 保护超链接 [...](...)
+  // 2. 保护超链接 [...](...)，若开启脚注且非锚点链接则生成微信文末参考脚注
   text = text.replace(/\[(.*?)\]\((.*?)\)/g, (_, label, url) => {
     const k = `\x00MDLINK${tokenIdx++}\x00`;
     const escLabel = label
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
-    tokens[k] = `<a href="${url}" style="color: ${accent}; text-decoration: none; border-bottom: 1px dashed ${accent};">${escLabel}</a>`;
+
+    if (footnotes && !url.startsWith('#')) {
+      let fIndex = footnotes.findIndex((f) => f.url === url);
+      if (fIndex === -1) {
+        footnotes.push({ label: escLabel, url });
+        fIndex = footnotes.length;
+      } else {
+        fIndex = fIndex + 1;
+      }
+      tokens[k] = `<span style="color: ${accent}; font-weight: 500;">${escLabel}</span><sup style="font-size: 11px; color: ${accent}; margin-left: 2px; font-weight: bold; vertical-align: super;">[${fIndex}]</sup>`;
+    } else {
+      tokens[k] = `<a href="${url}" style="color: ${accent}; text-decoration: none; border-bottom: 1px dashed ${accent};">${escLabel}</a>`;
+    }
     return k;
   });
 
@@ -295,6 +308,7 @@ export function renderCode(rawCode, codeLang, theme) {
   const accent = theme.accent;
   const borderColor = theme.border_color;
   const subColor = theme.sub_color;
+  const highlighted = highlightCode(rawCode, codeLang);
 
   if (style === 'terminal') {
     const topBar = `
@@ -305,12 +319,12 @@ export function renderCode(rawCode, codeLang, theme) {
     return `
 <div style="margin: 22px 0; border-radius: 6px; overflow: hidden; border: 1px solid ${borderColor}; box-shadow: 0 4px 14px rgba(0,0,0,0.15);">
 ${topBar}
-<pre style="margin: 0; padding: 14px 16px; background: ${codeBg}; color: ${codeText}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: Consolas, Monaco, monospace;"><code>${rawCode}</code></pre>
+<pre style="margin: 0; padding: 14px 16px; background: ${codeBg}; color: ${codeText}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: Consolas, Monaco, monospace;"><code>${highlighted}</code></pre>
 </div>`;
   } else if (style === 'clean_flat') {
     return `
 <div style="margin: 22px 0; border-radius: 8px; overflow: hidden; border: 1px solid ${borderColor};">
-<pre style="margin: 0; padding: 14px 16px; background: ${codeBg}; color: ${codeText}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: Consolas, Monaco, monospace;"><code>${rawCode}</code></pre>
+<pre style="margin: 0; padding: 14px 16px; background: ${codeBg}; color: ${codeText}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: Consolas, Monaco, monospace;"><code>${highlighted}</code></pre>
 </div>`;
   } else {
     // 默认：Mac 三色小圆点
@@ -324,7 +338,7 @@ ${topBar}
     return `
 <div style="margin: 22px 0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.08);">
 ${macDots}
-<pre style="margin: 0; padding: 14px 16px; background: ${codeBg}; color: ${codeText}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: Consolas, Monaco, monospace;"><code>${rawCode}</code></pre>
+<pre style="margin: 0; padding: 14px 16px; background: ${codeBg}; color: ${codeText}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: Consolas, Monaco, monospace;"><code>${highlighted}</code></pre>
 </div>`;
   }
 }
@@ -478,18 +492,23 @@ export function renderContainer(bodyHtml, theme) {
 // Markdown 解析主管道 (Parser Pipeline)
 // ==============================================================================
 
-export function markdownToWechatHtml(mdText, themeName = DEFAULT_THEME_ID, customOverride = null) {
+export function markdownToWechatHtml(mdText, themeName = DEFAULT_THEME_ID, customOverride = null, renderOptions = {}) {
   const theme = getTheme(themeName, customOverride);
   const accent = theme.accent;
   const textColor = theme.text_color;
   const subColor = theme.sub_color;
+  const borderColor = theme.border_color || 'rgba(0, 0, 0, 0.1)';
 
   const typography = theme.typography || {};
-  const fontSizeBase = typography.font_size_base || '15.5px';
-  const lineHeightBase = typography.line_height_base || '1.8';
-  const letterSpacing = typography.letter_spacing || '0.4px';
+  const fontSizeBase = renderOptions.fontSize || typography.font_size_base || '15.5px';
+  const lineHeightBase = renderOptions.lineHeight || typography.line_height_base || '1.8';
+  const letterSpacing = renderOptions.letterSpacing || typography.letter_spacing || '0.4px';
   const paragraphIndent = typography.paragraph_indent || false;
   const indentCss = paragraphIndent ? 'text-indent: 2em; ' : '';
+
+  // 微信公众号超链接自动转文末脚注机制
+  const linkToFootnote = renderOptions.linkToFootnote !== false; // 默认开启
+  const footnotes = linkToFootnote ? [] : null;
 
   const lines = mdText.split('\n');
   const htmlParts = [];
@@ -642,7 +661,7 @@ export function markdownToWechatHtml(mdText, themeName = DEFAULT_THEME_ID, custo
           formattedItems.push('<div style="height: 6px;"></div>');
           continue;
         }
-        const qFmt = formatInline(qLine, accent, '13px');
+        const qFmt = formatInline(qLine, accent, '13px', footnotes);
         formattedItems.push(`<div style="margin: 4px 0; line-height: 1.75;">${qFmt}</div>`);
       }
 
@@ -654,7 +673,7 @@ export function markdownToWechatHtml(mdText, themeName = DEFAULT_THEME_ID, custo
     // 9. 列表项
     if (stripped.startsWith('- ') || stripped.startsWith('* ')) {
       const itemText = stripped.slice(2).trim();
-      const itemFmt = formatInline(itemText, accent, '13.5px');
+      const itemFmt = formatInline(itemText, accent, '13.5px', footnotes);
       htmlParts.push(renderListItem(itemFmt, theme));
       idx++;
       continue;
@@ -690,7 +709,7 @@ ${caption}
     }
 
     // 12. 正文段落
-    const pText = formatInline(stripped, accent, '13.5px');
+    const pText = formatInline(stripped, accent, '13.5px', footnotes);
     htmlParts.push(`
 <p style="font-size: ${fontSizeBase}; line-height: ${lineHeightBase}; color: ${textColor}; margin: 18px 0; letter-spacing: ${letterSpacing}; ${indentCss}text-align: justify;">
 ${pText}
@@ -700,6 +719,23 @@ ${pText}
 
   if (inTable) htmlParts.push(flushTable());
   if (inCodeBlock) htmlParts.push(flushCode());
+
+  // 注入文末参考资料与引用外链
+  if (footnotes && footnotes.length > 0) {
+    const listItems = footnotes.map((fn, fIndex) => {
+      return `<li style="margin: 5px 0; word-break: break-all; list-style-type: none;"><span style="color: ${accent}; font-weight: 700; margin-right: 6px;">[${fIndex + 1}]</span><span style="color: ${textColor}; font-weight: 500;">${fn.label}</span>: <span style="color: ${subColor}; font-family: monospace; font-size: 11.5px;">${fn.url}</span></li>`;
+    }).join('\n');
+
+    htmlParts.push(`
+<section style="margin-top: 36px; padding: 16px 18px; border-radius: 8px; background: rgba(0,0,0,0.02); border-left: 3px solid ${accent}; border-top: 1px solid ${borderColor};">
+<div style="font-size: 13.5px; font-weight: 700; color: ${accent}; margin-bottom: 10px; display: flex; align-items: center;">
+<span>参考链接与资料引用</span>
+</div>
+<ul style="margin: 0; padding-left: 0; font-size: 12px; color: ${subColor}; line-height: 1.8;">
+${listItems}
+</ul>
+</section>`);
+  }
 
   const finalBody = htmlParts.join('\n');
   return renderContainer(finalBody, theme);

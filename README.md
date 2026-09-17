@@ -7,6 +7,7 @@
 **专为微信公众号深度定制的 Markdown 高质感排版转换器与草稿箱发布工具**
 
 [![Python 3.8+](https://img.shields.io/badge/Python-3.8+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![Online Studio](https://img.shields.io/badge/Online_Studio-md2wx.zaneven.com-0284c7?style=flat-square&logo=googlechrome&logoColor=white)](https://md2wx.zaneven.com/)
 [![License MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 [![Tests Passing](https://img.shields.io/badge/Tests-Passing-brightgreen?style=flat-square)](tests/)
 
@@ -56,7 +57,9 @@ pip install -e .
 
 ## Web 可视化排版工作台 (MD2WX Studio)
 
-除了命令行外，MD2WX 还提供了**纯前端驱动的可视化排版工作台**。在网页端直接粘贴 Markdown 文本，即可享受即时渲染、主题切换与微信移动端真机仿真。
+除了命令行外，MD2WX 还提供了**纯前端驱动的可视化排版工作台**。在网页端直接粘贴 Markdown 文本，即可享受即时渲染、主题切换、微信外链自动转文末脚注、内联代码彩色语法高亮、双栏联动同步滚动与移动端真机仿真。
+
+🌐 **在线免安装体验**：**[https://md2wx.zaneven.com](https://md2wx.zaneven.com)**
 
 <div align="center">
   <img src="assets/web_studio_preview.png" alt="MD2WX Web Studio" width="100%" style="border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.25);" />
