@@ -11,6 +11,8 @@
   justify-content: space-between;
   padding: 0 16px;
   user-select: none;
+  position: relative;
+  z-index: 50;
 }
 
 .view-mode-tabs {

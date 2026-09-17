@@ -274,7 +274,9 @@ function selectTheme(themeId) {
     grid: '全网格卡片',
   };
 
-  previewStyleInfo.textContent = `容器: ${containerMap[styles.container] || styles.container} · 标题: ${h1Map[styles.h1] || styles.h1} · 表格: ${tableMap[styles.table] || styles.table}`;
+  if (previewStyleInfo) {
+    previewStyleInfo.textContent = `容器: ${containerMap[styles.container] || styles.container} · 标题: ${h1Map[styles.h1] || styles.h1} · 表格: ${tableMap[styles.table] || styles.table}`;
+  }
 
   // 适配移动端外壳配色
   adaptPhoneTheme(theme);
