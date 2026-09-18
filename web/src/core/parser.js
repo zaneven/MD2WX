@@ -77,7 +77,7 @@ export function formatInline(text, accent, codeFontSize = '13.5px', footnotes = 
 
   // 1. 保护并转义行内代码 `...`
   text = text.replace(/`([^`]+?)`/g, (_, raw) => {
-    const k = `\x00MDCODE${tokenIdx++}\x00`;
+    const k = `@@MDCODE_${tokenIdx++}@@`;
     const esc = raw
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -89,11 +89,28 @@ export function formatInline(text, accent, codeFontSize = '13.5px', footnotes = 
 
   // 2. 保护超链接 [...](...)，若开启脚注且非锚点链接则生成微信文末参考脚注
   text = text.replace(/\[(.*?)\]\((.*?)\)/g, (_, label, url) => {
-    const k = `\x00MDLINK${tokenIdx++}\x00`;
-    const escLabel = label
+    const k = `@@MDLINK_${tokenIdx++}@@`;
+    let escLabel = label
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
+
+    // 展开嵌套的 code token
+    for (const [tk, tv] of Object.entries(tokens)) {
+      if (escLabel.includes(tk)) {
+        escLabel = escLabel.split(tk).join(tv);
+      }
+    }
+
+    // 本地 file 协议转换为安全链接
+    if (url.startsWith('file:///')) {
+      if (url.includes('MD2WX')) {
+        const sub = url.split('MD2WX/')[1];
+        url = `https://github.com/zaneven/MD2WX/blob/main/${sub}`;
+      } else {
+        url = 'https://github.com/zaneven/MD2WX';
+      }
+    }
 
     if (footnotes && !url.startsWith('#')) {
       let fIndex = footnotes.findIndex((f) => f.url === url);
@@ -114,10 +131,18 @@ export function formatInline(text, accent, codeFontSize = '13.5px', footnotes = 
   text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   text = text.replace(/(^|[^*])\*([^*]+?)\*(?!\*)/g, '$1<em>$2</em>');
 
-  // 4. 还原保护的 tokens
-  for (const [k, v] of Object.entries(tokens)) {
-    text = text.replace(k, v);
+  // 4. 彻底还原保护的 tokens (支持嵌套多轮展开)
+  let loops = 5;
+  while (Object.keys(tokens).some((k) => text.includes(k)) && loops-- > 0) {
+    for (const [k, v] of Object.entries(tokens)) {
+      if (text.includes(k)) {
+        text = text.split(k).join(v);
+      }
+    }
   }
+
+  // 5. 防御性清除任何控制字符
+  text = text.replace(/\x00/g, '');
 
   return text;
 }

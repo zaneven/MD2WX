@@ -5,6 +5,7 @@ MD2WX Markdown -> 微信公众号专用内联 HTML 转换引擎
 import re
 from typing import Dict, Tuple, Optional, List, Any
 from .themes import get_theme
+from .highlighter import highlight_code
 
 def parse_frontmatter(text: str) -> Tuple[Dict[str, Any], str]:
     """解析并剥离 Markdown 顶部的 YAML Frontmatter"""
@@ -37,13 +38,13 @@ def strip_markdown(md_text: str, max_len: int = 120) -> str:
     plain = " ".join(lines)
     return plain[:max_len].strip()
 
-def format_inline(text: str, accent: str, code_font_size: str = "13.5px") -> str:
+def format_inline(text: str, accent: str, code_font_size: str = "13.5px", footnotes: Optional[List[Dict[str, str]]] = None) -> str:
     """
     统一解析行内 Markdown 语法：
-    1. 保护并严格对行内代码进行 HTML 实体转义 (& -> &amp;, < -> &lt;, > -> &gt;)，彻底杜绝 <style> 等标签被微信拦截截断；
-    2. 保护超链接；
+    1. 保护并严格对行内代码进行 HTML 实体转义 (& -> &amp;, < -> &lt;, > -> &gt;)；
+    2. 保护超链接并支持安全协议处理与文末学术文献脚注；
     3. 解析加粗 **...** 和斜体 *...*；
-    4. 还原保护的 tokens。
+    4. 彻底递归还原所有 Tokens，杜绝控制字符 \\x00 导致的截断。
     """
     tokens: Dict[str, str] = {}
     token_idx = 0
@@ -51,7 +52,7 @@ def format_inline(text: str, accent: str, code_font_size: str = "13.5px") -> str
     # 1. 保护并转义行内代码 `...`
     def save_code(m: re.Match) -> str:
         nonlocal token_idx
-        k = f"\x00MDCODE{token_idx}\x00"
+        k = f"@@MDCODE_{token_idx}@@"
         token_idx += 1
         raw = m.group(1)
         esc = (
@@ -71,11 +72,40 @@ def format_inline(text: str, accent: str, code_font_size: str = "13.5px") -> str
     # 2. 保护超链接 [...](...)
     def save_link(m: re.Match) -> str:
         nonlocal token_idx
-        k = f"\x00MDLINK{token_idx}\x00"
+        k = f"@@MDLINK_{token_idx}@@"
         token_idx += 1
-        label = m.group(1).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        raw_label = m.group(1)
+        esc_label = raw_label.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+        # 立即展开 label 中嵌套的已有 code token
+        for tk, tv in tokens.items():
+            if tk in esc_label:
+                esc_label = esc_label.replace(tk, tv)
+
         url = m.group(2)
-        tokens[k] = f'<a href="{url}" style="color: {accent}; text-decoration: none; border-bottom: 1px dashed {accent};">{label}</a>'
+
+        # 处理本地 file:/// 协议，重定向至 GitHub 仓库对应源码或安全 URL，防止微信安全拦截
+        if url.startswith("file:///"):
+            if "MD2WX" in url:
+                sub_path = url.split("MD2WX/")[-1]
+                url = f"https://github.com/zaneven/MD2WX/blob/main/{sub_path}"
+            else:
+                url = "https://github.com/zaneven/MD2WX"
+
+        if footnotes is not None and not url.startswith("#"):
+            match_idx = -1
+            for idx, item in enumerate(footnotes):
+                if item["url"] == url:
+                    match_idx = idx
+                    break
+            if match_idx == -1:
+                footnotes.append({"label": esc_label, "url": url})
+                f_num = len(footnotes)
+            else:
+                f_num = match_idx + 1
+            tokens[k] = f'<span style="color: {accent}; font-weight: 500;">{esc_label}</span><sup style="font-size: 11px; color: {accent}; margin-left: 2px; font-weight: bold; vertical-align: super;">[{f_num}]</sup>'
+        else:
+            tokens[k] = f'<a href="{url}" style="color: {accent}; text-decoration: none; border-bottom: 1px dashed {accent};">{esc_label}</a>'
         return k
 
     text = re.sub(r"\[(.*?)\]\((.*?)\)", save_link, text)
@@ -84,9 +114,16 @@ def format_inline(text: str, accent: str, code_font_size: str = "13.5px") -> str
     text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
     text = re.sub(r"(?<!\*)\*([^*]+?)\*(?!\*)", r"<em>\1</em>", text)
 
-    # 4. 还原保护的 tokens
-    for k, v in tokens.items():
-        text = text.replace(k, v)
+    # 4. 彻底还原保护的 tokens (支持多层嵌套展开)
+    max_loops = 5
+    while any(k in text for k in tokens) and max_loops > 0:
+        for k, v in list(tokens.items()):
+            if k in text:
+                text = text.replace(k, v)
+        max_loops -= 1
+
+    # 5. 防御性消除任何残留的控制字符
+    text = text.replace("\x00", "")
 
     return text
 
@@ -307,13 +344,16 @@ def render_quote(inner_content: str, theme: dict) -> str:
         )
 
 def render_code(raw_code: str, code_lang: str, theme: dict) -> str:
-    """渲染多行代码块"""
+    """渲染多行代码块并应用纯内联语法着色"""
     style = theme.get("code_style", theme.get("styles", {}).get("code", "mac_dark"))
     code_bg = theme["code_bg"]
     code_text = theme.get("code_text", "#e4e4e7")
     accent = theme["accent"]
     border_color = theme["border_color"]
     sub_color = theme["sub_color"]
+
+    # 纯内联语法着色（微信后台不褪色）
+    highlighted = highlight_code(raw_code, code_lang)
 
     if style == "terminal":
         # 纯黑终端状态栏风格
@@ -326,14 +366,14 @@ def render_code(raw_code: str, code_lang: str, theme: dict) -> str:
         return (
             f'<div style="margin: 22px 0; border-radius: 6px; overflow: hidden; border: 1px solid {border_color}; box-shadow: 0 4px 14px rgba(0,0,0,0.15);">'
             f'{top_bar}'
-            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: Consolas, Monaco, monospace;"><code>{raw_code}</code></pre>'
+            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: Consolas, Monaco, monospace;"><code>{highlighted}</code></pre>'
             f'</div>'
         )
     elif style == "clean_flat":
         # 极简扁平圆角无指示灯
         return (
             f'<div style="margin: 22px 0; border-radius: 8px; overflow: hidden; border: 1px solid {border_color};">'
-            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: Consolas, Monaco, monospace;"><code>{raw_code}</code></pre>'
+            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: Consolas, Monaco, monospace;"><code>{highlighted}</code></pre>'
             f'</div>'
         )
     else:
@@ -349,7 +389,7 @@ def render_code(raw_code: str, code_lang: str, theme: dict) -> str:
         return (
             f'<div style="margin: 22px 0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.08);">'
             f'{mac_dots}'
-            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: Consolas, Monaco, monospace;"><code>{raw_code}</code></pre>'
+            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: Consolas, Monaco, monospace;"><code>{highlighted}</code></pre>'
             f'</div>'
         )
 
@@ -531,7 +571,8 @@ def render_container(body_html: str, theme: dict) -> str:
 def markdown_to_wechat_html(
     md_text: str,
     theme_name: str = "tech-blue",
-    image_map: Optional[Dict[str, str]] = None
+    image_map: Optional[Dict[str, str]] = None,
+    link_to_footnote: bool = True
 ) -> str:
     """
     将 Markdown 文本转换为微信公众号完美适配的纯 Inline CSS HTML
@@ -541,6 +582,7 @@ def markdown_to_wechat_html(
     accent = theme["accent"]
     text_color = theme["text_color"]
     sub_color = theme["sub_color"]
+    border_color = theme.get("border_color", "rgba(0,0,0,0.08)")
 
     typography = theme.get("typography", {})
     font_size_base = typography.get("font_size_base", "15.5px")
@@ -548,6 +590,9 @@ def markdown_to_wechat_html(
     letter_spacing = typography.get("letter_spacing", "0.4px")
     paragraph_indent = typography.get("paragraph_indent", False)
     indent_css = "text-indent: 2em; " if paragraph_indent else ""
+
+    # 外部链接学术脚注收集器
+    footnotes: Optional[List[Dict[str, str]]] = [] if link_to_footnote else None
 
     # 1. 替换已上传到微信 CDN 的图片链接
     if image_map:
@@ -587,7 +632,6 @@ def markdown_to_wechat_html(
     def flush_code() -> str:
         nonlocal in_code_block, code_lang, code_lines
         raw_code = "\n".join(code_lines)
-        raw_code = raw_code.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
         rendered = render_code(raw_code, code_lang, theme)
         code_lines = []
         in_code_block = False
@@ -674,7 +718,7 @@ def markdown_to_wechat_html(
                 if not q_line:
                     formatted_items.append('<div style="height: 6px;"></div>')
                     continue
-                q_fmt = format_inline(q_line, accent, "13px")
+                q_fmt = format_inline(q_line, accent, "13px", footnotes=footnotes)
                 formatted_items.append(f'<div style="margin: 4px 0; line-height: 1.75;">{q_fmt}</div>')
 
             inner_content = "\n".join(formatted_items)
@@ -684,7 +728,7 @@ def markdown_to_wechat_html(
         # 9. 列表项
         if stripped.startswith("- ") or stripped.startswith("* "):
             item_text = stripped[2:].strip()
-            item_fmt = format_inline(item_text, accent, "13.5px")
+            item_fmt = format_inline(item_text, accent, "13.5px", footnotes=footnotes)
             html_parts.append(render_list_item(item_fmt, theme))
             idx += 1
             continue
@@ -716,7 +760,7 @@ def markdown_to_wechat_html(
             continue
 
         # 12. 正文段落
-        p_text = format_inline(stripped, accent, "13.5px")
+        p_text = format_inline(stripped, accent, "13.5px", footnotes=footnotes)
 
         html_parts.append(
             f'<p style="font-size: {font_size_base}; line-height: {line_height_base}; color: {text_color}; '
@@ -730,6 +774,30 @@ def markdown_to_wechat_html(
         html_parts.append(flush_table())
     if in_code_block:
         html_parts.append(flush_code())
+
+    # 13. 注入文末参考链接与学术资料引用卡片
+    if footnotes:
+        list_items = []
+        for f_idx, fn in enumerate(footnotes):
+            clean_label = fn["label"]
+            list_items.append(
+                f'<li style="margin: 5px 0; word-break: break-all; list-style-type: none;">'
+                f'<span style="color: {accent}; font-weight: 700; margin-right: 6px;">[{f_idx + 1}]</span>'
+                f'<span style="color: {text_color}; font-weight: 500;">{clean_label}</span>: '
+                f'<span style="color: {sub_color}; font-family: monospace; font-size: 11.5px;">{fn["url"]}</span>'
+                f'</li>'
+            )
+        items_html = "\n".join(list_items)
+        html_parts.append(
+            f'<section style="margin-top: 36px; padding: 16px 18px; border-radius: 8px; background: rgba(0,0,0,0.02); border-left: 3px solid {accent}; border-top: 1px solid {border_color};">\n'
+            f'<div style="font-size: 13.5px; font-weight: 700; color: {accent}; margin-bottom: 10px; display: flex; align-items: center;">\n'
+            f'<span>参考链接与资料引用</span>\n'
+            f'</div>\n'
+            f'<ul style="margin: 0; padding-left: 0; font-size: 12px; color: {sub_color}; line-height: 1.8;">\n'
+            f'{items_html}\n'
+            f'</ul>\n'
+            f'</section>'
+        )
 
     final_body = "\n".join(html_parts)
     return render_container(final_body, theme)
