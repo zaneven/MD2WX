@@ -261,13 +261,15 @@ def main():
 
         print(f"    使用封面图片: {cover_path}")
         try:
+            source_url = meta.get("content_source_url") or meta.get("source_url") or "https://md2wx.zaneven.com"
             res = publish_draft_to_wechat(
                 token=token,
                 title=title,
                 content_html=html_output,
                 author=author,
                 digest=digest,
-                cover_image_path=cover_path
+                cover_image_path=cover_path,
+                content_source_url=source_url
             )
             print("[+] 恭喜！文章已成功推送到微信公众号草稿箱！")
             print(f"    草稿标题: {res['title']}")

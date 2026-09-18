@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 2350px;
+    height: 1000px;
+    background: #FEE500;
+    color: #000000;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  .frame {
+    width: 100%;
+    height: 100%;
+    border: 14px solid #000000;
+    padding: 48px 64px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    background: #FEE500;
+  }
+  
+  /* Top Bar */
+  .top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .top-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .badge-black {
+    background: #000000;
+    color: #FEE500;
+    padding: 8px 22px;
+    font-size: 26px;
+    font-weight: 900;
+    border-radius: 6px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .top-title {
+    font-size: 32px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    font-family: "SF Pro Display", -apple-system, sans-serif;
+  }
+  .top-right {
+    font-family: "SF Mono", "Menlo", monospace;
+    font-size: 34px;
+    font-weight: 900;
+    letter-spacing: 3px;
+  }
+
+  /* Main Body */
+  .main-body {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 60px;
+    margin-top: -10px;
+  }
+
+  .left-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+  }
+
+  .rect-bar {
+    width: 150px;
+    height: 18px;
+    background: #000000;
+  }
+
+  .main-headline {
+    font-size: 110px;
+    font-weight: 900;
+    line-height: 1.16;
+    letter-spacing: -2px;
+    color: #000000;
+  }
+
+  .sub-headline {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-top: 6px;
+  }
+
+  .sub-pill {
+    background: #000000;
+    color: #FFFFFF;
+    padding: 8px 20px;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    font-family: "SF Mono", monospace;
+    border-radius: 4px;
+  }
+
+  .sub-text {
+    font-size: 30px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    color: #000000;
+  }
+
+  /* Right Card */
+  .right-card {
+    width: 840px;
+    background: #FFFFFF;
+    border: 10px solid #000000;
+    box-shadow: 18px 18px 0px #000000;
+    border-radius: 12px;
+    padding: 42px 46px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+  }
+
+  .card-logo {
+    width: 80px;
+    height: 80px;
+    background: #090d16;
+    border: 4px solid #000000;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 4px 4px 0px #000000;
+  }
+
+  .card-titles {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .card-main-title {
+    font-size: 42px;
+    font-weight: 900;
+    color: #000000;
+    letter-spacing: 1px;
+    font-family: "SF Pro Display", -apple-system, sans-serif;
+  }
+
+  .card-sub-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #4b5563;
+    letter-spacing: 1.5px;
+  }
+
+  /* Grid Features */
+  .features-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+
+  .feature-item {
+    background: #FEE500;
+    border: 5px solid #000000;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 22px;
+    font-weight: 900;
+    color: #000000;
+    border-radius: 6px;
+    box-shadow: 4px 4px 0px #000000;
+  }
+
+  .feature-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+  }
+
+  /* Bottom Bar */
+  .bottom-bar {
+    border-top: 6px solid #000000;
+    padding-top: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .bottom-left {
+    font-size: 26px;
+    font-weight: 800;
+    color: #000000;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    letter-spacing: 1px;
+  }
+  .brand-name {
+    font-weight: 900;
+  }
+
+  .bottom-right {
+    font-family: "SF Mono", monospace;
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    color: #000000;
+  }
+</style>
+</head>
+<body>
+<div class="frame">
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <div class="top-left">
+      <div class="badge-black">在线即用</div>
+      <div class="top-title">MD2WX STUDIO // FREE ONLINE</div>
+    </div>
+    <div class="top-right">2026 · VOL.11</div>
+  </div>
+
+  <!-- Main Body -->
+  <div class="main-body">
+    <div class="left-content">
+      <div class="rect-bar"></div>
+      <div class="main-headline">
+        随开随用，<br>
+        排版秒级搞定！
+      </div>
+      <div class="sub-headline">
+        <div class="sub-pill">MD2WX.ZANEVEN.COM</div>
+        <div class="sub-text">独立域名 · 微信排版黑科技</div>
+      </div>
+    </div>
+
+    <!-- Right Card -->
+    <div class="right-card">
+      <div class="card-header">
+        <div class="card-logo">
+          <!-- SVG Logo without Emoji -->
+          <svg width="48" height="48" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="32" height="32" rx="8" fill="#0f172a"/>
+            <path d="M7 23V9L12 16L17 9V23" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M21 16L25 20L21 24" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="card-titles">
+          <div class="card-main-title">MD2WX Studio</div>
+          <div class="card-sub-title">免安装 · 零依赖 · 纯前端排版神器</div>
+        </div>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-item">
+          <div class="feature-icon">
+            <!-- Globe / Online SVG -->
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+          </div>
+          <span>免安装 在线即用</span>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon">
+            <!-- Link / Footnotes SVG -->
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+            </svg>
+          </div>
+          <span>外链自动转脚注</span>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon">
+            <!-- Code Bracket SVG -->
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
+            </svg>
+          </div>
+          <span>纯内联代码高亮</span>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon">
+            <!-- Sync Scroll SVG -->
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="18" rx="1"></rect>
+              <rect x="14" y="3" width="7" height="18" rx="1"></rect>
+              <line x1="7" y1="9" x2="7" y2="15"></line>
+              <line x1="18" y1="9" x2="18" y2="15"></line>
+            </svg>
+          </div>
+          <span>双栏联动同步滚动</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Bar -->
+  <div class="bottom-bar">
+    <div class="bottom-left">
+      <span class="brand-name">野生宝藏箱</span>
+      <span>// 告别排版精神内耗 · 把时间还给创造</span>
+    </div>
+    <div class="bottom-right">MD2WX.ZANEVEN.COM · WECHAT</div>
+  </div>
+</div>
+</body>
+</html>
