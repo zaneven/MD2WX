@@ -4,6 +4,7 @@
  */
 import { getTheme, DEFAULT_THEME_ID } from './themes.js';
 import { highlightCode } from './highlighter.js';
+import { renderWechatArticleHeaderCover, extractCoverMeta } from './cover.js';
 
 /**
  * 解析并剥离 Markdown 顶部的 YAML Frontmatter
@@ -272,10 +273,10 @@ export function renderH3(h3Text, theme) {
 <span style="color: ${subColor}; margin-right: 6px;">##</span>${h3Text}
 </h3>`;
   } else {
-    // 默认：菱形星号 ✦
+    // 默认：纯 SVG 矢量菱形图标
     return `
-<h3 style="font-size: 16.5px; font-weight: 600; color: ${accent}; margin: 24px 0 12px 0; line-height: 1.4;">
-<span style="margin-right: 6px;">✦</span>${h3Text}
+<h3 style="font-size: 16.5px; font-weight: 600; color: ${accent}; margin: 24px 0 12px 0; line-height: 1.4; display: flex; align-items: center;">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="${accent}" style="margin-right: 6px; flex-shrink: 0;"><polygon points="12 2 15 9 22 12 15 15 12 22 9 15 2 12 9 9"/></svg><span>${h3Text}</span>
 </h3>`;
   }
 }
@@ -477,7 +478,14 @@ export function renderHr(theme) {
   if (style === 'gradient') {
     return `<div style="height: 1px; background: linear-gradient(to right, transparent, ${accent}, transparent); margin: 34px auto; width: 85%;"></div>`;
   } else if (style === 'asterisk') {
-    return `<div style="text-align: center; color: ${accent}; font-size: 14px; letter-spacing: 8px; margin: 32px 0;">✻  ✻  ✻</div>`;
+    return `
+<div style="text-align: center; margin: 32px 0; line-height: 1;">
+  <svg width="60" height="12" viewBox="0 0 60 12" fill="${accent}" style="display: inline-block;">
+    <circle cx="10" cy="6" r="3"/>
+    <circle cx="30" cy="6" r="3"/>
+    <circle cx="50" cy="6" r="3"/>
+  </svg>
+</div>`;
   } else if (style === 'terminal_dash') {
     return `<div style="text-align: center; color: ${subColor}; font-family: monospace; font-size: 12px; letter-spacing: 2px; margin: 32px 0;">----------------------------------------</div>`;
   } else {
@@ -537,6 +545,16 @@ export function markdownToWechatHtml(mdText, themeName = DEFAULT_THEME_ID, custo
 
   const lines = mdText.split('\n');
   const htmlParts = [];
+
+  // 微信公众号文章顶部自动嵌入当前主题封面卡片 (默认开启)
+  const insertCover = renderOptions.insertCover !== false;
+  if (insertCover) {
+    const coverMeta = renderOptions.coverMeta || extractCoverMeta(mdText, themeName);
+    const headerCoverHtml = renderWechatArticleHeaderCover(themeName, coverMeta);
+    if (headerCoverHtml) {
+      htmlParts.push(headerCoverHtml);
+    }
+  }
 
   let inCodeBlock = false;
   let codeLang = '';

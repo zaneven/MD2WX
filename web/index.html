@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="./src/styles/editor.css">
   <link rel="stylesheet" href="./src/styles/preview.css">
   <link rel="stylesheet" href="./src/styles/toast.css">
+  <link rel="stylesheet" href="./src/styles/cover.css">
 </head>
 <body>
   <div id="app">
@@ -23,11 +24,16 @@
         <div class="brand-title">
           <h1>MD2WX Studio</h1>
           <span class="brand-badge">Web 排版工作台</span>
+          <button class="brand-version-badge" id="btn-version-badge" type="button" title="点击查看 MD2WX v1.0.2 版本亮点与更新日志">v1.0.2</button>
         </div>
       </div>
 
       <!-- Header Actions -->
       <div class="header-actions">
+        <button class="btn btn-secondary" id="btn-open-cover" type="button" title="封面生成器 (生成适配当前主题风格的公众号大图与方图)">
+          <span id="icon-cover-trigger"></span>
+          <span>生成封面</span>
+        </button>
         <!-- Settings Popover -->
         <div class="settings-wrapper">
           <button class="btn btn-secondary" id="btn-settings-trigger" type="button" title="排版微调（字号、行距、外链脚注与同步滚动）">
@@ -61,6 +67,17 @@
             </div>
 
             <div class="settings-divider"></div>
+
+            <div class="settings-toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-title">在正文顶部插入封面图</div>
+                <div class="toggle-desc">微信排版预览与复制时，自动在文章开头嵌入当前主题封面</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="toggle-insert-cover" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
 
             <div class="settings-toggle-row">
               <div class="toggle-info">
@@ -234,6 +251,216 @@
 
     <!-- Global Toast Feedback -->
     <div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+    <!-- Cover Studio Modal -->
+    <div class="cover-modal-overlay" id="cover-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="cover-modal-title">
+      <div class="cover-modal-window">
+        <!-- Modal Header -->
+        <div class="cover-modal-header">
+          <div class="cover-header-title-group">
+            <div class="cover-header-icon" id="icon-cover-window-logo"></div>
+            <div>
+              <div class="cover-header-title" id="cover-modal-title">
+                <span>公众号封面生成工作台</span>
+                <span class="cover-header-badge">主题视觉同源</span>
+              </div>
+            </div>
+          </div>
+          <button class="cover-modal-close-btn" id="btn-close-cover-modal" type="button" title="关闭 (Esc)">
+            <span id="icon-cover-close"></span>
+          </button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="cover-modal-body">
+          <!-- Left: Preview Viewport -->
+          <div class="cover-preview-stage">
+            <div class="cover-preview-toolbar">
+              <div class="cover-ratio-tabs">
+                <button type="button" class="ratio-tab-btn active" id="tab-ratio-banner" data-ratio="banner">
+                  <span id="icon-ratio-banner"></span>
+                  <span>2.35:1 头条大图</span>
+                </button>
+                <button type="button" class="ratio-tab-btn" id="tab-ratio-square" data-ratio="square">
+                  <span id="icon-ratio-square"></span>
+                  <span>1:1 次条/方图</span>
+                </button>
+              </div>
+
+              <label class="cover-safe-toggle" title="在画布上叠加微信聊天转发默认 1:1 截取线与订阅号列表安全范围">
+                <input type="checkbox" id="toggle-safe-area">
+                <span>微信 1:1 裁切与安全线</span>
+              </label>
+            </div>
+
+            <!-- Canvas Viewport -->
+            <div class="cover-canvas-viewport" id="cover-canvas-viewport">
+              <div class="cover-scaler-container" id="cover-scaler-container">
+                <div id="cover-render-target">
+                  <!-- Cover Canvas Injected Here -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Preview Actions Bar -->
+            <div class="cover-preview-bottom-actions">
+              <div class="bottom-action-hint">
+                <span id="icon-action-hint"></span>
+                <span id="cover-dimensions-hint">导出分辨率: 2350 × 1000 像素 (Retina 2x 高清)</span>
+              </div>
+              <div class="bottom-action-buttons">
+                <button class="btn btn-secondary" id="btn-copy-cover-image" type="button" title="直接复制 PNG 图像到系统剪贴板，微信公众号后台可直接粘贴">
+                  <span id="icon-copy-cover"></span>
+                  <span>复制封面图片</span>
+                </button>
+                <button class="btn btn-primary" id="btn-download-cover-image" type="button" title="下载 2x Retina 高清 PNG 文件">
+                  <span id="icon-download-cover"></span>
+                  <span>下载高清 PNG</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Controls Sidebar -->
+          <div class="cover-sidebar">
+            <div class="sidebar-section-title">
+              <span>视觉主题风格</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="select-cover-theme">匹配排版主题</label>
+              <select class="form-select" id="select-cover-theme">
+                <option value="tech-blue">现代科技蓝 (tech-blue)</option>
+                <option value="acid-bold">先锋野兽派 (acid-bold)</option>
+                <option value="dark-night">暗黑极客风 (dark-night)</option>
+                <option value="elegant-purple">先锋优雅紫 (elegant-purple)</option>
+                <option value="terminal-geek">极客终端 (terminal-geek)</option>
+                <option value="vintage-news">复古报刊 (vintage-news)</option>
+                <option value="warm-memo">温暖便签 (warm-memo)</option>
+                <option value="warm-orange">温暖活力橙 (warm-orange)</option>
+                <option value="wechat-green">微信生态绿 (wechat-green)</option>
+              </select>
+            </div>
+
+            <div class="sidebar-section-title" style="margin-top: 6px;">
+              <span>文案元素自定义</span>
+              <button type="button" class="sync-article-btn" id="btn-sync-from-article" title="重新从当前 Markdown 正文提取最新标题与摘要">
+                <span id="icon-sync-article"></span>
+                <span>同步正文</span>
+              </button>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="input-cover-title">封面主标题</label>
+              <input type="text" class="form-input" id="input-cover-title" placeholder="输入核心主标题...">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="input-cover-digest">封面副标题 / 摘要</label>
+              <textarea class="form-textarea" id="input-cover-digest" placeholder="输入副标题或精练导读..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="input-cover-tag">分类标签 / 亮点</label>
+              <input type="text" class="form-input" id="input-cover-tag" placeholder="如：深度架构 · 极客手记">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="input-cover-badge">顶部徽章 / 栏目</label>
+              <input type="text" class="form-input" id="input-cover-badge" placeholder="如：TECH BLOG">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="input-cover-vol">期号 / 年份</label>
+              <input type="text" class="form-input" id="input-cover-vol" placeholder="如：2026 · VOL.02">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="input-cover-author">作者 / 品牌落款</label>
+              <input type="text" class="form-input" id="input-cover-author" placeholder="输入作者或公众号名称...">
+            </div>
+
+            <!-- WeChat Share Card Live Preview -->
+            <div class="wechat-share-card-container">
+              <div class="wechat-share-card-title-row">
+                <span>微信转发好友卡片实时模拟</span>
+                <span style="color:#10b981;">1:1 截取对齐</span>
+              </div>
+              <div class="wechat-share-bubble">
+                <div class="wechat-share-text">
+                  <div class="wechat-share-main-title" id="preview-share-title">在喧嚣时代重塑深度思考</div>
+                  <div class="wechat-share-sub-desc" id="preview-share-digest">真正的专注，是在充满干扰的世界中守住内心的秩序</div>
+                </div>
+                <div class="wechat-share-thumb" id="preview-share-thumb">
+                  <div id="preview-share-thumb-box" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#38bdf8;">1:1</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Changelog Modal -->
+    <div class="cover-modal-overlay" id="changelog-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="changelog-modal-title">
+      <div class="changelog-modal-window">
+        <div class="cover-modal-header">
+          <div class="cover-header-title-group">
+            <div class="cover-header-icon" id="icon-changelog-header"></div>
+            <div>
+              <div class="cover-header-title" id="changelog-modal-title">
+                <span>MD2WX Studio 版本速递</span>
+                <span class="cover-header-badge">v1.0.2</span>
+              </div>
+            </div>
+          </div>
+          <button class="cover-modal-close-btn" id="btn-close-changelog-modal" type="button" title="关闭 (Esc)">
+            <span id="icon-changelog-close"></span>
+          </button>
+        </div>
+
+        <div class="changelog-content">
+          <div>
+            <div class="changelog-ver-tag">
+              <span class="cover-badge" style="background:#2563eb;color:#fff;font-size:12px;padding:3px 10px;">RELEASE 1.0.2</span>
+              <span style="font-size:13px;color:#94a3b8;">2026 年 9 月</span>
+            </div>
+            <h3 class="changelog-title">全主题自适应默认封面生成器重磅上线</h3>
+          </div>
+
+          <div class="changelog-features-list">
+            <div class="changelog-feature-item">
+              <div class="changelog-feature-icon" id="icon-feat-theme"></div>
+              <div class="changelog-feature-text">
+                <h4>8 套主题视觉同源封面</h4>
+                <p>每套排版主题均配套量身定制的封面设计美学（科技蓝、先锋野兽派、极客终端、复古报刊、温暖便签等），排版与封面风格再无割裂感。</p>
+              </div>
+            </div>
+
+            <div class="changelog-feature-item">
+              <div class="changelog-feature-icon" id="icon-feat-ratio"></div>
+              <div class="changelog-feature-text">
+                <h4>微信官方双比例无缝自适应</h4>
+                <p>原生支持 2.35:1 微信头条大图（2350×1000 高清）与 1:1 次条/分享方图（1200×1200），专属自适应版式拒绝机械拉伸。</p>
+              </div>
+            </div>
+
+            <div class="changelog-feature-item">
+              <div class="changelog-feature-icon" id="icon-feat-copy"></div>
+              <div class="changelog-feature-text">
+                <h4>一键写入剪贴板与 2x 高清导出</h4>
+                <p>支持一键将高清图片写入系统剪贴板，微信公众号后台直接 Cmd+V 粘贴封面，无需下载上传中转；亦可一键保存高清 PNG 文件。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="changelog-rules-card">
+            <strong>版本更新机制规则说明</strong>：<br>
+            MD2WX 当前基准版本起步为 <strong>1.0.2</strong>。后续演进遵循语义化规范：日常体验优化与小功能更新只变动最后一位（Patch: 1.0.x），大版本与重要模块升级更新第二位（Minor: 1.x.0）。
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="./src/app.js"></script>
