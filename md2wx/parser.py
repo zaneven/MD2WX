@@ -10,12 +10,15 @@ from .highlighter import highlight_code
 def parse_frontmatter(text: str) -> Tuple[Dict[str, Any], str]:
     """解析并剥离 Markdown 顶部的 YAML Frontmatter"""
     meta: Dict[str, Any] = {}
-    body = text
-    if text.startswith("---"):
-        parts = text.split("---", 2)
-        if len(parts) >= 3:
-            fm_text = parts[1].strip()
-            body = parts[2].strip()
+    # 统一换行符，避免 CRLF 编辑的文档解析异常
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    body = normalized
+    # 仅当首行严格为 '---' 时才视为 Frontmatter，避免正文以 --- 分隔线开头被误判
+    if normalized.startswith("---\n") or normalized == "---":
+        closing = re.search(r"^---\s*$", normalized[4:], re.MULTILINE)
+        if closing:
+            fm_text = normalized[4:4 + closing.start()].strip()
+            candidate_meta: Dict[str, Any] = {}
             for line in fm_text.split("\n"):
                 if ":" in line:
                     k, v = line.split(":", 1)
@@ -23,9 +26,13 @@ def parse_frontmatter(text: str) -> Tuple[Dict[str, Any], str]:
                     v = v.strip().strip("'\"")
                     if v.startswith("[") and v.endswith("]"):
                         tags = [t.strip().strip("'\"") for t in v[1:-1].split(",") if t.strip()]
-                        meta[k] = tags
+                        candidate_meta[k] = tags
                     else:
-                        meta[k] = v
+                        candidate_meta[k] = v
+            # 只有解析出至少一条元数据才认定为 Frontmatter，否则按普通正文处理
+            if candidate_meta:
+                meta = candidate_meta
+                body = normalized[4 + closing.end():].lstrip("\n")
     return meta, body
 
 def strip_markdown(md_text: str, max_len: int = 120) -> str:
@@ -664,10 +671,24 @@ def markdown_to_wechat_html(
     # 外部链接学术脚注收集器
     footnotes: Optional[List[Dict[str, str]]] = [] if link_to_footnote else None
 
-    # 1. 替换已上传到微信 CDN 的图片链接
+    # 1. 替换已上传到微信 CDN 的图片链接：
+    #    仅精确替换 Markdown 图片语法中的 src，且跳过代码围栏段，
+    #    避免裸 str.replace 污染代码块或误伤路径相似的普通文本。
     if image_map:
-        for local_ref, cdn_url in image_map.items():
-            md_text = md_text.replace(local_ref, cdn_url)
+        from urllib.parse import unquote
+
+        def _swap_image_token(m: "re.Match") -> str:
+            raw_src = m.group(2)
+            cdn_url = image_map.get(raw_src) or image_map.get(unquote(raw_src))
+            return f'{m.group(1)}({cdn_url})' if cdn_url else m.group(0)
+
+        img_token_re = re.compile(r'(!\[[^\]]*\])\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)')
+        segments = re.split(r'(```.*?```|~~~.*?~~~)', md_text, flags=re.DOTALL)
+        md_text = ''.join(
+            seg if seg.startswith('```') or seg.startswith('~~~')
+            else img_token_re.sub(_swap_image_token, seg)
+            for seg in segments
+        )
 
     lines = md_text.split("\n")
     html_parts = []
@@ -809,8 +830,8 @@ def markdown_to_wechat_html(
             idx += 1
             continue
 
-        # 10. 图片格式 ![alt](url)
-        img_match = re.match(r'^!\[(.*?)\]\((.*?)\)$', stripped)
+        # 10. 图片格式 ![alt](url) / ![alt](url "title")
+        img_match = re.match(r'^!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)$', stripped)
         if img_match:
             alt, src = img_match.group(1), img_match.group(2)
             caption = f'<div style="text-align: center; color: {sub_color}; font-size: 13px; margin-top: 6px; font-style: italic;">{alt}</div>' if alt else ""

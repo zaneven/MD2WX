@@ -3,17 +3,37 @@ MD2WX 命令行工具 (CLI Entrypoint)
 支持多主题风格化渲染、自定义主题文件加载与一键发布
 """
 import os
+import re
 import sys
 import argparse
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Dict
+from urllib.parse import unquote
 
+from . import __version__
 from .parser import markdown_to_wechat_html, parse_frontmatter, strip_markdown
-from .themes import list_themes, get_theme, load_theme_file, get_builtin_themes_dir, get_user_themes_dir
+from .themes import list_themes, get_theme, get_builtin_themes_dir, get_user_themes_dir
 from .uploader import get_access_token, upload_image_to_wechat_cdn
 from .publisher import publish_draft_to_wechat
+
+# 各主题封面徽标预设 (与 Web Studio THEME_COVER_PRESETS 保持一致)
+COVER_BADGE_PRESETS = {
+    "tech-blue": "TECH BLOG",
+    "acid-bold": "ACID BOLD",
+    "dark-night": "NIGHT RUN",
+    "elegant-purple": "AESTHETIC",
+    "terminal-geek": "BASH / DEV",
+    "vintage-news": "WEEKLY PRESS",
+    "warm-memo": "HEALING NOTE",
+    "warm-orange": "SUNSHINE",
+    "wechat-green": "WECHAT OFFICIAL",
+}
+
+# 微信公众平台字段长度上限
+WECHAT_TITLE_MAX_LEN = 64
+WECHAT_DIGEST_MAX_LEN = 120
 
 def print_themes_list():
     """以精美清晰的终端格式打印所有已安装主题清单（遵循规范，不使用 Emoji）"""
@@ -45,51 +65,68 @@ def print_themes_list():
     print("================================================================================")
 
 def load_env_credentials() -> Dict[str, str]:
-    """从环境变量或已知路径加载微信凭证"""
+    """从环境变量或常见 .env 路径加载微信凭证"""
     creds = {
         "app_id": os.environ.get("WECHAT_APP_ID", ""),
         "app_secret": os.environ.get("WECHAT_APP_SECRET", "")
     }
-    # 尝试读取常见 .env 路径
+    if creds["app_id"] and creds["app_secret"]:
+        return creds
+
+    # 按优先级尝试读取 .env（utf-8-sig 兼容 BOM，支持 export 前缀与注释行）
     candidate_envs = [
         Path.cwd() / ".env",
-        Path.home() / "Develop" / "wx-serv" / ".env",
-        Path.home() / "Develop" / "MD2WX" / ".env",
+        Path.home() / ".config" / "md2wx" / ".env",
+        Path(__file__).resolve().parent.parent / ".env",
     ]
     for env_file in candidate_envs:
         if creds["app_id"] and creds["app_secret"]:
             break
-        if env_file.exists():
-            with open(env_file, "r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if line.startswith("WECHAT_APP_ID=") and not creds["app_id"]:
-                        val = line.split("=", 1)[1].strip().strip("'\"")
-                        if val and not val.startswith("your_") and not val.startswith("<"):
-                            creds["app_id"] = val
-                    elif line.startswith("WECHAT_APP_SECRET=") and not creds["app_secret"]:
-                        val = line.split("=", 1)[1].strip().strip("'\"")
-                        if val and not val.startswith("your_") and not val.startswith("<"):
-                            creds["app_secret"] = val
+        if not env_file.exists():
+            continue
+        try:
+            with open(env_file, "r", encoding="utf-8-sig") as f:
+                lines = f.readlines()
+        except OSError:
+            continue
+        for line in lines:
+            line = line.strip()
+            if line.startswith("export "):
+                line = line[len("export "):].strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, val = line.split("=", 1)
+            val = val.strip().strip("'\"")
+            if not val or val.startswith("your_") or val.startswith("<"):
+                continue
+            key = key.strip()
+            if key == "WECHAT_APP_ID" and not creds["app_id"]:
+                creds["app_id"] = val
+            elif key == "WECHAT_APP_SECRET" and not creds["app_secret"]:
+                creds["app_secret"] = val
     return creds
 
 def copy_html_to_clipboard(html: str) -> bool:
     """在 macOS 环境下将 HTML 作为富文本写入剪贴板 (可以直接 Cmd+V 粘贴到微信后台)"""
     if sys.platform != "darwin":
         return False
+    tmp_path = None
     try:
         with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False, encoding="utf-8") as f:
             f.write(html)
             tmp_path = f.name
-        cmd = f'osascript -e \'set the clipboard to (read (POSIX file "{tmp_path}") as «class HTML»)\''
-        res = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-        try:
-            os.remove(tmp_path)
-        except OSError:
-            pass
+        script = f'set the clipboard to (read (POSIX file "{tmp_path}") as «class HTML»)'
+        # 使用 argv 形式调用，避免 shell 拼接与注入风险
+        res = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
         return res.returncode == 0
     except Exception:
         return False
+    finally:
+        if tmp_path:
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
 
 def main():
     parser = argparse.ArgumentParser(
@@ -107,26 +144,47 @@ def main():
     parser.add_argument("--author", help="指定文章作者 (默认读取 Frontmatter 或 '野生宝藏箱')")
     parser.add_argument("--title", help="指定文章标题 (默认读取 Frontmatter 或首个 H1)")
     parser.add_argument("--app-id", help="微信 AppID (默认从环境变量或 .env 读取)")
-    parser.add_argument("--app-secret", help="微信 AppSecret (默认从环境变量或 .env 读取)")
+    parser.add_argument("--no-cover", action="store_true", help="不在正文顶部注入封面卡片")
 
     args = parser.parse_args()
 
     # 处理 --web 选项
     if args.web:
+        import socket
+        import time
         import webbrowser
         web_dir = Path(__file__).resolve().parent.parent / "web"
-        dist_dir = web_dir / "dist"
+        port = 3000
         print("================================================================================")
         print("  MD2WX Web Studio (可视化排版工作台)")
         print("================================================================================")
         print(f"前端工作目录: {web_dir}")
-        print("正在启动本地 Web 预览服务 (http://localhost:3000) ...")
+        print(f"正在启动本地 Web 预览服务 (http://localhost:{port}) ...")
         try:
-            webbrowser.open("http://localhost:3000")
-            cmd = ["npm", "run", "dev"]
-            subprocess.run(cmd, cwd=str(web_dir))
+            proc = subprocess.Popen(["npm", "run", "dev"], cwd=str(web_dir))
+            # 轮询端口就绪后再打开浏览器，避免浏览器先于服务启动而加载失败
+            deadline = time.time() + 20
+            ready = False
+            while time.time() < deadline:
+                if proc.poll() is not None:
+                    break
+                try:
+                    with socket.create_connection(("127.0.0.1", port), timeout=0.5):
+                        ready = True
+                        break
+                except OSError:
+                    time.sleep(0.3)
+            if ready:
+                webbrowser.open(f"http://localhost:{port}")
+            else:
+                print("[-] 服务启动超时或已退出，请检查 npm 环境与端口占用。", file=sys.stderr)
+            proc.wait()
         except KeyboardInterrupt:
             print("\n[+] 服务已停止。")
+            proc.terminate()
+        except FileNotFoundError:
+            print("[-] 未找到 npm 命令，请先安装 Node.js。", file=sys.stderr)
+            sys.exit(1)
         except Exception as e:
             print(f"[-] 启动 Web 服务失败: {e}", file=sys.stderr)
         sys.exit(0)
@@ -136,12 +194,17 @@ def main():
         print_themes_list()
         sys.exit(0)
 
-    # 1. 校验并获取主题配置
+    # 1. 校验主题配置：交给 get_theme 统一解析（含文件路径加载与回退），
+    #    并在确实发生回退时给出明确警告，避免预检逻辑与解析逻辑漂移
     theme_input = args.theme
+    theme_cfg = get_theme(theme_input)
     candidate_json = Path(theme_input).expanduser()
-    registered_themes = list_themes()
-    if not candidate_json.is_file() and theme_input not in registered_themes:
-        print(f"[-] 警告: 未找到指定主题 '{theme_input}'，回退使用默认 'tech-blue' 主题。", file=sys.stderr)
+    loaded_from_file = (
+        candidate_json.is_file()
+        and theme_cfg.get("_source_path") == str(candidate_json.resolve())
+    )
+    if theme_input != theme_cfg.get("id") and not loaded_from_file:
+        print(f"[-] 警告: 未找到指定主题 '{theme_input}'，回退使用默认 '{theme_cfg.get('id')}' 主题。", file=sys.stderr)
         print(f"    提示: 使用 'md2wx --list-themes' 可查看所有已安装主题。\n", file=sys.stderr)
 
     # 2. 获取输入内容
@@ -176,14 +239,26 @@ def main():
     author = args.author or meta.get("author") or "野生宝藏箱"
     digest = meta.get("digest") or strip_markdown(body_md, 120)
 
+    # 微信公众平台字段长度校验 (标题 64 字、摘要 120 字)，超长提前截断并警告
+    if len(title) > WECHAT_TITLE_MAX_LEN:
+        print(f"[-] 警告: 标题超过微信 {WECHAT_TITLE_MAX_LEN} 字上限，已自动截断。", file=sys.stderr)
+        title = title[:WECHAT_TITLE_MAX_LEN]
+    if digest and len(digest) > WECHAT_DIGEST_MAX_LEN:
+        print(f"[-] 警告: 摘要超过微信 {WECHAT_DIGEST_MAX_LEN} 字上限，已自动截断。", file=sys.stderr)
+        digest = digest[:WECHAT_DIGEST_MAX_LEN]
+
     # 4. 如果需要发布到公众号草稿箱，需要前置上传正文图片
     image_map = {}
     creds = load_env_credentials()
     app_id = args.app_id or creds["app_id"]
-    app_secret = args.app_secret or creds["app_secret"]
+    app_secret = creds["app_secret"]
 
     token = None
     if args.publish:
+        # AppSecret 属敏感信息，仅从环境变量/.env 读取；缺失时交互式输入，避免进入 shell history
+        if not app_secret and sys.stdin.isatty():
+            import getpass
+            app_secret = getpass.getpass("请输入 WECHAT_APP_SECRET (输入不回显): ")
         if not app_id or not app_secret:
             print("[-] 错误: 推送草稿箱需要配置 WECHAT_APP_ID 和 WECHAT_APP_SECRET！", file=sys.stderr)
             sys.exit(1)
@@ -195,43 +270,48 @@ def main():
             print(f"[-] 获取 Token 失败: {e}", file=sys.stderr)
             sys.exit(1)
 
-        # 扫描本地图片并上传
-        import re
-        img_matches = list(re.finditer(r'!\[(.*?)\]\((.*?)\)', body_md))
+        # 扫描本地图片并上传 (支持 title 语法与 URL 编码路径，精确捕获 src)
+        img_matches = list(re.finditer(r'!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)', body_md))
         if img_matches:
             print(f">>> 2. 检测到 {len(img_matches)} 处图片引用，正在上传至微信官方 CDN...")
+            upload_failed = []
             for m in img_matches:
-                alt = m.group(1)
-                img_src = m.group(2)
-                if img_src.startswith("http://") or img_src.startswith("https://"):
-                    # 外部网络图如果包含微信 CDN 则跳过
-                    if "mmbiz.qpic.cn" in img_src:
-                        continue
+                img_src = unquote(m.group(2))
+                if img_src.startswith(("http://", "https://")):
+                    # 外部网络图直接透传；仅微信 CDN 图无需处理
+                    continue
                 # 本地相对路径查找
                 local_img_path = (base_dir / img_src).resolve()
-                if local_img_path.exists() and img_src not in image_map:
-                    try:
-                        print(f"    正在上传图片: {img_src} ...")
-                        cdn_url = upload_image_to_wechat_cdn(token, str(local_img_path))
-                        image_map[img_src] = cdn_url
-                        print(f"    -> 成功换链: {cdn_url[:60]}...")
-                    except Exception as e:
-                        print(f"    [-] 图片上传失败 ({img_src}): {e}", file=sys.stderr)
+                if not local_img_path.exists():
+                    upload_failed.append(img_src)
+                    print(f"    [-] 本地图片不存在，发布后将保持原样: {img_src}", file=sys.stderr)
+                    continue
+                if img_src in image_map:
+                    continue
+                try:
+                    print(f"    正在上传图片: {img_src} ...")
+                    cdn_url = upload_image_to_wechat_cdn(token, str(local_img_path))
+                    image_map[img_src] = cdn_url
+                    print(f"    -> 成功换链: {cdn_url[:60]}...")
+                except Exception as e:
+                    upload_failed.append(img_src)
+                    print(f"    [-] 图片上传失败 ({img_src}): {e}", file=sys.stderr)
+            if upload_failed:
+                print(f"    [!] 共 {len(upload_failed)} 处图片未能换链，对应位置在草稿中将无法显示。", file=sys.stderr)
 
-    # 5. 执行 Markdown -> 微信专用 HTML 转换 (自动提取封面元数据并在正文顶部注入专属封面卡片)
-    cover_title = "告别封面荒！\nMD2WX v1.0.2" if "告别封面荒" in title else title
+    # 5. 执行 Markdown -> 微信专用 HTML 转换 (提取封面元数据并按需在正文顶部注入封面卡片)
     cover_meta = {
-        "title": cover_title,
+        "title": title,
         "digest": digest,
         "author": author,
-        "badge": "ACID BOLD" if theme_input == "acid-bold" else "TECH BLOG",
-        "vol": "2026 · V1.0.2 RELEASE"
+        "badge": COVER_BADGE_PRESETS.get(theme_input, "TECH BLOG"),
+        "vol": f"2026 · V{__version__}"
     }
     html_output = markdown_to_wechat_html(
         body_md,
         theme_name=theme_input,
         image_map=image_map,
-        insert_cover=True,
+        insert_cover=not args.no_cover,
         cover_meta=cover_meta
     )
 

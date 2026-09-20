@@ -49,10 +49,9 @@ def publish_draft_to_wechat(
 
     res_raw = urllib.request.urlopen(req, timeout=30).read().decode("utf-8")
     res = json.loads(res_raw)
-    if res.get("errcode") and res.get("errcode") != 0:
-        raise RuntimeError(f"微信草稿提交失败: {res.get('errmsg', res)}")
-
     draft_media_id = res.get("media_id")
+    if res.get("errcode") or not draft_media_id:
+        raise RuntimeError(f"微信草稿提交失败: {res.get('errmsg', res)}")
 
     # 2. 尝试读取草稿详情获取微信官方临时预览 URL
     preview_url = ""
