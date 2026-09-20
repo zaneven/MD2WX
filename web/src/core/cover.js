@@ -6,7 +6,7 @@
  * 严格遵循规范：全站无 Emoji，全部采用高质量矢量排版
  */
 
-import { parseFrontmatter, stripMarkdown } from './parser.js';
+import { parseFrontmatter, stripMarkdown, escapeHtml } from './parser.js';
 
 // 封面推荐逻辑尺寸配置
 export const COVER_DIMENSIONS = {
@@ -121,15 +121,11 @@ export function extractCoverMeta(markdownText, themeId = 'tech-blue') {
 }
 
 /**
- * HTML 转义
+ * HTML 转义并保留多行（\r\n / \n / \r 统一转 <br>，兼容 Windows 编辑的文案）
  */
-function escapeHtml(str) {
+function escapeMultiline(str) {
   if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return escapeHtml(str).replace(/\r\n|\n|\r/g, '<br>');
 }
 
 /**
@@ -140,13 +136,12 @@ function escapeHtml(str) {
  * @param {boolean} showSafeGuide - 是否叠加安全参考线
  */
 export function renderCoverHtml(themeId = 'tech-blue', ratio = 'banner', meta = {}, showSafeGuide = false) {
-  const safeTitle = escapeHtml(meta.title || '在喧嚣时代重塑深度思考').replace(/\n/g, '<br>');
-  const safeDigest = escapeHtml(meta.digest || '真正的专注，是充满干扰的世界中守住内心的秩序').replace(/\n/g, '<br>');
+  const safeTitle = escapeMultiline(meta.title || '在喧嚣时代重塑深度思考');
+  const safeDigest = escapeMultiline(meta.digest || '真正的专注，是充满干扰的世界中守住内心的秩序');
   const safeAuthor = escapeHtml(meta.author || '野生宝藏箱');
   const safeTag = escapeHtml(meta.tag || '深度架构 · 极客手记');
   const safeBadge = escapeHtml(meta.badge || 'TECH BLOG');
   const safeVol = escapeHtml(meta.vol || '2026 · VOL.02');
-  const safeSite = escapeHtml(meta.website || 'MD2WX.ZANEVEN.COM');
 
   const isSquare = ratio === 'square';
   const themeClass = `cover-theme-${themeId}`;
@@ -275,13 +270,11 @@ export function renderCoverHtml(themeId = 'tech-blue', ratio = 'banner', meta = 
  * @returns {string}
  */
 export function renderWechatArticleHeaderCover(themeId = 'tech-blue', meta = {}) {
-  const safeTitle = escapeHtml(meta.title || '在喧嚣时代重塑深度思考').replace(/\n/g, '<br>');
-  const safeDigest = escapeHtml(meta.digest || '真正的专注，是在充满干扰的世界中守住内心的秩序').replace(/\n/g, '<br>');
+  const safeTitle = escapeMultiline(meta.title || '在喧嚣时代重塑深度思考');
+  const safeDigest = escapeMultiline(meta.digest || '真正的专注，是在充满干扰的世界中守住内心的秩序');
   const safeAuthor = escapeHtml(meta.author || '野生宝藏箱');
-  const safeTag = escapeHtml(meta.tag || '深度架构 · 极客手记');
   const safeBadge = escapeHtml(meta.badge || 'TECH BLOG');
   const safeVol = escapeHtml(meta.vol || '2026 · VOL.02');
-  const safeSite = escapeHtml(meta.website || 'MD2WX.ZANEVEN.COM');
 
   if (themeId === 'acid-bold') {
     return `

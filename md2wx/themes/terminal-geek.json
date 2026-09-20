@@ -30,5 +30,6 @@
     "table": "grid",
     "list": "arrow",
     "hr": "terminal_dash"
-  }
+  },
+  "dark": true
 }

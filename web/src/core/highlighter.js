@@ -45,8 +45,8 @@ export function highlightCode(code, lang = '') {
   } else if (['html', 'xml'].includes(cleanLang)) {
     tokenRules.push({ type: 'comment', regex: /<!--[\s\S]*?-->/ });
   } else {
-    // JS, CSS, SQL, 其它 C-style 注释
-    tokenRules.push({ type: 'comment', regex: /\/\/.*|\/\*[\s\S]*?\*\// });
+    // JS, CSS, SQL, 其它 C-style 注释 (排除字符串中的 https:// 等协议双斜杠)
+    tokenRules.push({ type: 'comment', regex: /(?<!:)\/\/.*|\/\*[\s\S]*?\*\// });
   }
 
   // 字符串规则 (支持单双引号与反引号)

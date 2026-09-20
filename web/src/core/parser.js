@@ -2,22 +2,37 @@
  * MD2WX 前端纯 JavaScript Markdown -> 微信内联 HTML 解析与渲染引擎
  * 1:1 复刻 Python 端核心排版与组件风格矩阵
  */
-import { getTheme, DEFAULT_THEME_ID } from './themes.js';
+import { getTheme, DEFAULT_THEME_ID, isDarkTheme } from './themes.js';
 import { highlightCode } from './highlighter.js';
 import { renderWechatArticleHeaderCover, extractCoverMeta } from './cover.js';
 
 /**
+ * HTML 转义（普通文本通道统一使用，防止标签注入与微信粘贴丢字）
+ */
+export function escapeHtml(str) {
+  if (str === undefined || str === null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
  * 解析并剥离 Markdown 顶部的 YAML Frontmatter
+ * 仅当首行严格为 '---' 且解析出至少一条元数据时才认定为 Frontmatter，
+ * 避免正文以 --- 分隔线开头被误判；统一换行符避免 CRLF 文档解析异常
  */
 export function parseFrontmatter(text) {
   const meta = {};
-  let body = text;
+  const normalized = String(text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  let body = normalized;
 
-  if (text.startsWith('---')) {
-    const parts = text.split('---');
-    if (parts.length >= 3) {
-      const fmText = parts[1].trim();
-      body = parts.slice(2).join('---').trim();
+  if (normalized.startsWith('---\n') || normalized === '---') {
+    const closing = normalized.slice(4).match(/^---\s*$/m);
+    if (closing) {
+      const fmText = normalized.slice(4, 4 + closing.index).trim();
+      const candidateMeta = {};
 
       const lines = fmText.split('\n');
       for (const line of lines) {
@@ -37,11 +52,17 @@ export function parseFrontmatter(text) {
               .split(',')
               .map((t) => t.trim().replace(/^['"]|['"]$/g, ''))
               .filter(Boolean);
-            meta[k] = tags;
+            candidateMeta[k] = tags;
           } else {
-            meta[k] = v;
+            candidateMeta[k] = v;
           }
         }
+      }
+
+      // 只有解析出至少一条元数据才认定为 Frontmatter，否则按普通正文处理
+      if (Object.keys(candidateMeta).length > 0) {
+        Object.assign(meta, candidateMeta);
+        body = normalized.slice(4 + closing.index + closing[0].length).replace(/^\n+/, '');
       }
     }
   }
@@ -91,10 +112,7 @@ export function formatInline(text, accent, codeFontSize = '13.5px', footnotes = 
   // 2. 保护超链接 [...](...)，若开启脚注且非锚点链接则生成微信文末参考脚注
   text = text.replace(/\[(.*?)\]\((.*?)\)/g, (_, label, url) => {
     const k = `@@MDLINK_${tokenIdx++}@@`;
-    let escLabel = label
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+    let escLabel = escapeHtml(label);
 
     // 展开嵌套的 code token
     for (const [tk, tv] of Object.entries(tokens)) {
@@ -103,30 +121,39 @@ export function formatInline(text, accent, codeFontSize = '13.5px', footnotes = 
       }
     }
 
+    // URL 转义后输出，防止属性破坏
+    let escUrl = url.replace(/"/g, '&quot;');
+
     // 本地 file 协议转换为安全链接
-    if (url.startsWith('file:///')) {
-      if (url.includes('MD2WX')) {
-        const sub = url.split('MD2WX/')[1];
-        url = `https://github.com/zaneven/MD2WX/blob/main/${sub}`;
+    if (escUrl.startsWith('file:///')) {
+      if (escUrl.includes('MD2WX')) {
+        escUrl = `https://github.com/zaneven/MD2WX/blob/main/${escUrl.split('MD2WX/')[1]}`;
       } else {
-        url = 'https://github.com/zaneven/MD2WX';
+        escUrl = 'https://github.com/zaneven/MD2WX';
       }
     }
 
-    if (footnotes && !url.startsWith('#')) {
-      let fIndex = footnotes.findIndex((f) => f.url === url);
+    if (footnotes && !escUrl.startsWith('#')) {
+      let fIndex = footnotes.findIndex((f) => f.url === escUrl);
       if (fIndex === -1) {
-        footnotes.push({ label: escLabel, url });
+        footnotes.push({ label: escLabel, url: escUrl });
         fIndex = footnotes.length;
       } else {
         fIndex = fIndex + 1;
       }
       tokens[k] = `<span style="color: ${accent}; font-weight: 500;">${escLabel}</span><sup style="font-size: 11px; color: ${accent}; margin-left: 2px; font-weight: bold; vertical-align: super;">[${fIndex}]</sup>`;
     } else {
-      tokens[k] = `<a href="${url}" style="color: ${accent}; text-decoration: none; border-bottom: 1px dashed ${accent};">${escLabel}</a>`;
+      tokens[k] = `<a href="${escUrl}" style="color: ${accent}; text-decoration: none; border-bottom: 1px dashed ${accent};">${escLabel}</a>`;
     }
     return k;
   });
+
+  // 2.5 对未受 token 保护的普通文本统一转义 HTML，
+  //     防止正文中的 <tag> 破坏预览与微信粘贴输出
+  text = text
+    .split(/(@@MD(?:CODE|LINK)_\d+@@)/)
+    .map((seg) => (seg.startsWith('@@MD') ? seg : escapeHtml(seg)))
+    .join('');
 
   // 3. 粗体与斜体 (严格界定符，避免内部跨越 ** 或穿透普通文本导致反转误加粗)
   text = text.replace(/\*\*(?![\*\s])((?:[^*]|\*(?!\*))+?)(?<![\*\s])\*\*/g, '<strong>$1</strong>');
@@ -160,7 +187,7 @@ export function renderH1(titleText, theme) {
   const codeBg = theme.code_bg;
   const subColor = theme.sub_color;
   const pageBg = theme.page_bg || '#ffffff';
-  const isDark = ['#0b0f19', '#0f172a', '#18181b', '#09090b'].includes(pageBg);
+  const isDark = isDarkTheme(theme);
   const titleColor = isDark ? '#f8fafc' : '#18181b';
 
   if (style === 'double_line') {
@@ -204,7 +231,7 @@ export function renderH2(h2Text, theme) {
   const borderColor = theme.border_color;
   const textColor = theme.text_color;
   const pageBg = theme.page_bg || '#ffffff';
-  const isDark = ['#0b0f19', '#0f172a', '#18181b', '#09090b'].includes(pageBg);
+  const isDark = isDarkTheme(theme);
   const headingColor = isDark ? '#f8fafc' : '#18181b';
 
   if (style === 'pill_badge') {
@@ -257,7 +284,7 @@ export function renderH3(h3Text, theme) {
   const accentBg = theme.accent_bg;
   const subColor = theme.sub_color;
   const pageBg = theme.page_bg || '#ffffff';
-  const isDark = ['#0b0f19', '#0f172a', '#18181b', '#09090b'].includes(pageBg);
+  const isDark = isDarkTheme(theme);
   const headingColor = isDark ? '#f8fafc' : '#18181b';
 
   if (style === 'circle_badge') {
@@ -382,7 +409,7 @@ export function renderTable(header, rows, theme) {
   const borderColor = theme.border_color;
   const textColor = theme.text_color;
   const pageBg = theme.page_bg || '#ffffff';
-  const isDark = ['#0b0f19', '#0f172a', '#18181b', '#09090b'].includes(pageBg);
+  const isDark = isDarkTheme(theme);
   const tdBgAlt = isDark ? '#1e293b' : '#fafafa';
   const tdBg = isDark ? '#0f172a' : '#ffffff';
 
@@ -677,14 +704,9 @@ export function markdownToWechatHtml(mdText, themeName = DEFAULT_THEME_ID, custo
       continue;
     }
 
-    // 7. 三级标题
-    if (stripped.startsWith('### ')) {
-      const h3Text = stripped
-        .slice(4)
-        .trim()
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+    // 7. 三级标题（含 #### 及更深级别，按三级样式渲染，避免字面输出 # 号）
+    if (/^#{3,} /.test(stripped)) {
+      const h3Text = escapeHtml(stripped.replace(/^#+ +/, '').trim());
       htmlParts.push(renderH3(h3Text, theme));
       idx++;
       continue;
@@ -728,11 +750,11 @@ export function markdownToWechatHtml(mdText, themeName = DEFAULT_THEME_ID, custo
       continue;
     }
 
-    // 10. 图片格式 ![alt](url)
-    const imgMatch = stripped.match(/^!\[(.*?)\]\((.*?)\)$/);
+    // 10. 图片格式 ![alt](url) / ![alt](url "title")，alt 与 src 转义防止属性破坏
+    const imgMatch = stripped.match(/^!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)$/);
     if (imgMatch) {
-      const alt = imgMatch[1];
-      const src = imgMatch[2];
+      const alt = escapeHtml(imgMatch[1]);
+      const src = imgMatch[2].replace(/"/g, '&quot;');
       const caption = alt
         ? `<div style="text-align: center; color: ${subColor}; font-size: 13px; margin-top: 6px; font-style: italic;">${alt}</div>`
         : '';

@@ -84,5 +84,6 @@ ${html}
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // 延迟回收：Safari 下立即 revoke 可能导致下载失败 (与 downloadImageBlob 保持一致)
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

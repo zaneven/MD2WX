@@ -359,7 +359,7 @@ export async function domToPngBlob(element, options = {}) {
     let timeoutId = setTimeout(() => {
       console.warn('SVG 光栅化超时，切换为原生 Canvas 2D 备用引擎');
       resolve(renderCoverDirectCanvas(themeId, ratio, meta, scale));
-    }, 1800);
+    }, 4500);
 
     img.onload = () => {
       clearTimeout(timeoutId);

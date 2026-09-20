@@ -30,5 +30,6 @@
     "table": "grid",
     "list": "bullet",
     "hr": "line"
-  }
+  },
+  "dark": true
 }

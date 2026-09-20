@@ -4,7 +4,7 @@
  */
 
 import { ICONS, setIcon } from './assets/icons.js';
-import { BUILTIN_THEMES, DEFAULT_THEME_ID, getTheme } from './core/themes.js';
+import { BUILTIN_THEMES, DEFAULT_THEME_ID, getTheme, isDarkTheme } from './core/themes.js';
 import { markdownToWechatHtml, parseFrontmatter } from './core/parser.js';
 import { copyWechatHtml, downloadHtmlFile } from './core/clipboard.js';
 import { COVER_DIMENSIONS, extractCoverMeta, renderCoverHtml, THEME_COVER_PRESETS } from './core/cover.js';
@@ -315,7 +315,7 @@ function selectTheme(themeId) {
  */
 function adaptPhoneTheme(theme) {
   const pageBg = theme.page_bg || '#ffffff';
-  const isDark = ['#0b0f19', '#0f172a', '#18181b', '#09090b'].includes(pageBg);
+  const isDark = isDarkTheme(theme);
   const wechatNavBar = document.getElementById('wechat-nav-bar');
   const phoneStatusBar = document.getElementById('phone-status-bar');
 
@@ -386,8 +386,33 @@ function renderPreview() {
   });
   previewTarget.innerHTML = currentHtmlOutput;
 
-  // 自动保存本地草稿
-  localStorage.setItem('md2wx_draft', rawText);
+  saveDraft(rawText);
+}
+
+/**
+ * 自动保存本地草稿。
+ * 粘贴的 base64 图片体积巨大，直接写入会超出 localStorage 5MB 配额并抛
+ * QuotaExceededError 中断渲染：超限时降级为剔除图片数据后保存，并提示一次。
+ */
+let draftQuotaWarned = false;
+function saveDraft(rawText) {
+  try {
+    localStorage.setItem('md2wx_draft', rawText);
+    draftQuotaWarned = false;
+  } catch (e) {
+    try {
+      localStorage.setItem(
+        'md2wx_draft',
+        rawText.replace(/!\[[^\]]*\]\(data:image\/[^)]+\)/g, '![粘贴图片]()')
+      );
+      if (!draftQuotaWarned) {
+        draftQuotaWarned = true;
+        showToast('草稿超过本地存储上限，已省略内嵌图片数据 (编辑器内容不受影响)', 'error');
+      }
+    } catch (e2) {
+      // 存储完全不可用时静默跳过，不阻断渲染
+    }
+  }
 }
 
 /**
@@ -532,7 +557,7 @@ function bindEvents() {
     // Cmd/Ctrl + S: 快速保存草稿
     if (modifier && e.key.toLowerCase() === 's') {
       e.preventDefault();
-      localStorage.setItem('md2wx_draft', textarea.value);
+      saveDraft(textarea.value);
       showToast('草稿已成功保存至本地浏览器');
       return;
     }
@@ -889,32 +914,32 @@ function initCoverStudio() {
   inputTitle.addEventListener('input', (e) => {
     coverMeta.title = e.target.value;
     renderCover();
-    renderPreview();
+    scheduleRender();
   });
   inputDigest.addEventListener('input', (e) => {
     coverMeta.digest = e.target.value;
     renderCover();
-    renderPreview();
+    scheduleRender();
   });
   inputTag.addEventListener('input', (e) => {
     coverMeta.tag = e.target.value;
     renderCover();
-    renderPreview();
+    scheduleRender();
   });
   inputBadge.addEventListener('input', (e) => {
     coverMeta.badge = e.target.value;
     renderCover();
-    renderPreview();
+    scheduleRender();
   });
   inputVol.addEventListener('input', (e) => {
     coverMeta.vol = e.target.value;
     renderCover();
-    renderPreview();
+    scheduleRender();
   });
   inputAuthor.addEventListener('input', (e) => {
     coverMeta.author = e.target.value;
     renderCover();
-    renderPreview();
+    scheduleRender();
   });
 
   // 复制封面图片到剪贴板 (基于 Promise 瞬时手势保持与双引擎渲染)
@@ -1090,7 +1115,8 @@ function init() {
   bindEvents();
   renderPreview();
 
-  // 自动化视图与截图辅助钩子 (URL View Hook)
+  // 自动化视图与截图辅助钩子 (URL View Hook，仅开发构建可用)
+  if (!import.meta.env.DEV) return;
   const urlParams = new URLSearchParams(window.location.search);
   const autoView = urlParams.get('view');
   if (autoView === 'cover_studio') {
