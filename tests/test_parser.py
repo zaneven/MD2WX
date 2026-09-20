@@ -50,7 +50,8 @@ def hello():
         self.assertIn("#ef4444", html)
         self.assertIn("#f59e0b", html)
         self.assertIn("#10b981", html)
-        self.assertIn("hello()", html)
+        self.assertIn("hello", html)
+        self.assertIn("wechat", html)
 
     def test_table_rendering(self):
         """测试 Markdown 表格解析与斑马纹样式"""
