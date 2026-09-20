@@ -147,45 +147,46 @@ def render_h1(title_text: str, theme: dict) -> str:
     if style == "double_line":
         # 复古报刊风格：上下双细线居中
         return (
-            f'<div style="margin: 38px 0 26px 0; text-align: center;">'
-            f'<div style="border-top: 1px solid {border_color}; border-bottom: 1px solid {border_color}; padding: 12px 14px; display: inline-block; min-width: 60%;">'
-            f'<h1 style="font-size: 22px; font-weight: 700; color: {accent}; margin: 0; line-height: 1.4; letter-spacing: 1px;">{title_text}</h1>'
-            f'</div></div>'
+            f'<section style="margin: 38px 0 26px 0; text-align: center;">'
+            f'<section style="border-top: 1px solid {border_color}; border-bottom: 1px solid {border_color}; padding: 12px 14px; display: inline-block; min-width: 60%;">'
+            f'<span style="font-size: 22px; font-weight: 700; color: {accent}; margin: 0; line-height: 1.4; letter-spacing: 1px; display: block;">{title_text}</span>'
+            f'</section></section>'
         )
     elif style == "capsule":
         # 温暖便签/胶囊徽章风格
         return (
-            f'<div style="margin: 36px 0 24px 0; text-align: center;">'
+            f'<section style="margin: 36px 0 24px 0; text-align: center;">'
             f'<span style="display: inline-block; background: {accent}; color: #ffffff; padding: 9px 26px; border-radius: 30px; font-size: 20px; font-weight: 700; letter-spacing: 0.8px; box-shadow: 0 4px 14px rgba(0,0,0,0.12);">'
             f'{title_text}'
-            f'</span></div>'
+            f'</span></section>'
         )
     elif style == "terminal":
         # 极客终端命令行风格
         return (
-            f'<div style="margin: 36px 0 24px 0; padding: 14px 18px; background: {code_bg}; border: 1px solid {border_color}; border-radius: 6px;">'
+            f'<section style="margin: 36px 0 24px 0; padding: 14px 18px; background: {code_bg}; border: 1px solid {border_color}; border-radius: 6px;">'
             f'<div style="color: {sub_color}; font-size: 12px; margin-bottom: 6px; font-family: monospace;">$ cat article.md</div>'
-            f'<h1 style="font-size: 20px; font-weight: 700; color: {accent}; margin: 0; line-height: 1.4; font-family: monospace;">&gt; {title_text}</h1>'
-            f'</div>'
+            f'<span style="font-size: 20px; font-weight: 700; color: {accent}; margin: 0; line-height: 1.4; font-family: monospace; display: block;">&gt; {title_text}</span>'
+            f'</section>'
         )
     elif style == "brutalist":
         # 先锋野兽派硬框与硬阴影
         return (
-            f'<div style="margin: 36px 0 24px 0; text-align: center;">'
-            f'<div style="display: inline-block; background: {accent_bg}; border: 2.5px solid #000000; box-shadow: 4px 4px 0 #000000; padding: 10px 22px;">'
-            f'<h1 style="font-size: 21px; font-weight: 800; color: #000000; margin: 0; letter-spacing: 1px;">{title_text}</h1>'
-            f'</div></div>'
+            f'<section style="margin: 36px 0 24px 0; text-align: center;">'
+            f'<section style="display: inline-block; background: {accent_bg}; border: 2.5px solid #000000; box-shadow: 4px 4px 0 #000000; padding: 10px 22px;">'
+            f'<span style="font-size: 21px; font-weight: 800; color: #000000; margin: 0; letter-spacing: 1px; display: block;">{title_text}</span>'
+            f'</section></section>'
         )
     else:
         # 默认：现代居中下划粗线 (underline)
         return (
-            f'<h1 style="font-size: 23px; font-weight: 800; color: {title_color}; line-height: 1.4; margin: 36px 0 22px 0; text-align: center; letter-spacing: 0.5px;">'
-            f'<span style="border-bottom: 3px solid {accent}; padding-bottom: 6px;">{title_text}</span>'
-            f'</h1>'
+            f'<section style="text-align: center; margin: 36px 0 22px 0;">'
+            f'<span style="font-size: 23px; font-weight: 800; color: {title_color}; line-height: 1.4; letter-spacing: 0.5px; border-bottom: 3px solid {accent}; padding-bottom: 6px; display: inline-block;">'
+            f'{title_text}'
+            f'</span></section>'
         )
 
 def render_h2(h2_text: str, theme: dict) -> str:
-    """渲染二级分区标题"""
+    """渲染二级分区标题 (使用微信免疫剥离的 section 容器)"""
     style = theme.get("h2_style", theme.get("styles", {}).get("h2", "left_bar"))
     accent = theme["accent"]
     accent_bg = theme["accent_bg"]
@@ -198,54 +199,56 @@ def render_h2(h2_text: str, theme: dict) -> str:
     if style == "pill_badge":
         # 胶囊药丸徽章
         return (
-            f'<div style="margin: 34px 0 16px 0;">'
+            f'<section style="margin: 34px 0 16px 0;">'
             f'<span style="display: inline-block; background: {accent}; color: #ffffff; font-size: 16px; font-weight: 700; padding: 5px 15px; border-radius: 20px; letter-spacing: 0.5px;">'
             f'{h2_text}'
-            f'</span></div>'
+            f'</span></section>'
         )
     elif style == "bubble_bg":
         # 柔和底色块
         return (
-            f'<div style="margin: 34px 0 16px 0;">'
+            f'<section style="margin: 34px 0 16px 0;">'
             f'<span style="display: inline-block; background: {accent_bg}; color: {accent}; font-size: 17px; font-weight: 700; padding: 6px 14px; border-radius: 6px; border-left: 3px solid {accent};">'
             f'{h2_text}'
-            f'</span></div>'
+            f'</span></section>'
         )
     elif style == "serif_badge":
         # 古典报刊章节符号
         return (
-            f'<h2 style="font-size: 18.5px; font-weight: 700; color: {accent}; margin: 34px 0 16px 0; padding-bottom: 6px; border-bottom: 1px solid {border_color}; line-height: 1.4; letter-spacing: 0.5px;">'
-            f'<span style="color: {accent}; margin-right: 6px; font-family: Georgia, serif;">§</span>{h2_text}'
-            f'</h2>'
+            f'<section style="margin: 34px 0 16px 0; padding-bottom: 6px; border-bottom: 1px solid {border_color};">'
+            f'<span style="color: {accent}; margin-right: 6px; font-family: Georgia, serif; font-size: 18.5px; font-weight: 700;">§</span>'
+            f'<span style="font-size: 18.5px; font-weight: 700; color: {accent}; line-height: 1.4; letter-spacing: 0.5px;">{h2_text}</span>'
+            f'</section>'
         )
     elif style == "terminal_prompt":
         # 极客终端命令风格
         return (
-            f'<div style="margin: 32px 0 16px 0; font-family: monospace;">'
+            f'<section style="margin: 32px 0 16px 0; font-family: monospace;">'
             f'<span style="color: {accent}; font-weight: 700; font-size: 18px; margin-right: 8px;">//</span>'
-            f'<h2 style="display: inline; font-size: 17.5px; font-weight: 700; color: {text_color}; margin: 0; font-family: monospace;">{h2_text}</h2>'
-            f'</div>'
+            f'<span style="display: inline; font-size: 17.5px; font-weight: 700; color: {text_color}; margin: 0; font-family: monospace;">{h2_text}</span>'
+            f'</section>'
         )
     elif style == "brutalist_box":
         # 新野兽粗黑边框与硬投影
         return (
-            f'<div style="margin: 34px 0 16px 0; display: inline-block; background: {accent_bg}; border: 2px solid #000000; box-shadow: 3px 3px 0 #000000; padding: 5px 14px;">'
-            f'<h2 style="font-size: 17px; font-weight: 800; color: #000000; margin: 0;">{h2_text}</h2>'
-            f'</div>'
+            f'<section style="margin: 34px 0 16px 0; text-align: left;">'
+            f'<section style="display: inline-block; background: {accent_bg}; border: 2px solid #000000; box-shadow: 3px 3px 0 #000000; padding: 5px 14px;">'
+            f'<span style="font-size: 17px; font-weight: 800; color: #000000; margin: 0; line-height: 1.4; display: block;">{h2_text}</span>'
+            f'</section></section>'
         )
     elif style == "bottom_line":
         # 全宽底线
         return (
-            f'<h2 style="font-size: 18.5px; font-weight: 700; color: {heading_color}; margin: 34px 0 16px 0; padding-bottom: 8px; border-bottom: 2px solid {accent}; line-height: 1.4;">'
-            f'{h2_text}'
-            f'</h2>'
+            f'<section style="margin: 34px 0 16px 0; padding-bottom: 8px; border-bottom: 2px solid {accent};">'
+            f'<span style="font-size: 18.5px; font-weight: 700; color: {heading_color}; line-height: 1.4; display: block;">{h2_text}</span>'
+            f'</section>'
         )
     else:
         # 默认：左侧 4px 竖线条
         return (
-            f'<h2 style="font-size: 19px; font-weight: 700; color: {heading_color}; margin: 34px 0 16px 0; padding-left: 12px; border-left: 4px solid {accent}; line-height: 1.4;">'
-            f'{h2_text}'
-            f'</h2>'
+            f'<section style="margin: 34px 0 16px 0; padding-left: 12px; border-left: 4px solid {accent};">'
+            f'<span style="font-size: 19px; font-weight: 700; color: {heading_color}; line-height: 1.4; display: block;">{h2_text}</span>'
+            f'</section>'
         )
 
 def render_h3(h3_text: str, theme: dict) -> str:
@@ -261,30 +264,33 @@ def render_h3(h3_text: str, theme: dict) -> str:
     if style == "circle_badge":
         # 实心小圆角方块
         return (
-            f'<h3 style="font-size: 16.5px; font-weight: 600; color: {accent}; margin: 24px 0 12px 0; line-height: 1.4;">'
-            f'<span style="display: inline-block; width: 8px; height: 8px; background: {accent}; border-radius: 2px; margin-right: 8px; vertical-align: middle;"></span>{h3_text}'
-            f'</h3>'
+            f'<section style="margin: 24px 0 12px 0;">'
+            f'<span style="display: inline-block; width: 8px; height: 8px; background: {accent}; border-radius: 2px; margin-right: 8px; vertical-align: middle;"></span>'
+            f'<span style="font-size: 16.5px; font-weight: 600; color: {accent}; line-height: 1.4;">{h3_text}</span>'
+            f'</section>'
         )
     elif style == "highlight_bg":
         # 荧光笔底纹
         return (
-            f'<h3 style="font-size: 16.5px; font-weight: 600; color: {heading_color}; margin: 24px 0 12px 0; line-height: 1.4;">'
-            f'<span style="background: linear-gradient(to top, {accent_bg} 45%, transparent 45%); padding: 1px 4px;">{h3_text}</span>'
-            f'</h3>'
+            f'<section style="margin: 24px 0 12px 0;">'
+            f'<span style="background: linear-gradient(to top, {accent_bg} 45%, transparent 45%); padding: 1px 4px; font-size: 16.5px; font-weight: 600; color: {heading_color}; line-height: 1.4;">{h3_text}</span>'
+            f'</section>'
         )
     elif style == "slash":
         # 极客双斜线
         return (
-            f'<h3 style="font-size: 16px; font-weight: 600; color: {accent}; margin: 24px 0 12px 0; line-height: 1.4; font-family: monospace;">'
-            f'<span style="color: {sub_color}; margin-right: 6px;">##</span>{h3_text}'
-            f'</h3>'
+            f'<section style="margin: 24px 0 12px 0; font-family: monospace;">'
+            f'<span style="color: {sub_color}; margin-right: 6px;">##</span>'
+            f'<span style="font-size: 16px; font-weight: 600; color: {accent}; line-height: 1.4;">{h3_text}</span>'
+            f'</section>'
         )
     else:
-        # 默认：菱形星号 ✦
+        # 默认：矢量四角星形（纯 SVG，无 Emoji）
         return (
-            f'<h3 style="font-size: 16.5px; font-weight: 600; color: {accent}; margin: 24px 0 12px 0; line-height: 1.4;">'
-            f'<span style="margin-right: 6px;">✦</span>{h3_text}'
-            f'</h3>'
+            f'<section style="margin: 24px 0 12px 0; line-height: 1.4; display: flex; align-items: center;">'
+            f'<svg width="14" height="14" viewBox="0 0 24 24" fill="{accent}" style="margin-right: 6px; flex-shrink: 0;"><polygon points="12 2 15 9 22 12 15 15 12 22 9 15 2 12 9 9"/></svg>'
+            f'<span style="font-size: 16.5px; font-weight: 600; color: {accent};">{h3_text}</span>'
+            f'</section>'
         )
 
 def render_quote(inner_content: str, theme: dict) -> str:
@@ -562,7 +568,69 @@ def render_container(body_html: str, theme: dict) -> str:
         # 默认：极简无框
         container_style = f"{base_style} padding: 14px 8px;"
 
-    return f'<div style="{container_style}">\n{body_html}\n</div>'
+    return f'<section style="{container_style}">\n{body_html}\n</section>'
+
+def render_wechat_article_header_cover(theme_id: str = "tech-blue", meta: dict = None) -> str:
+    """生成可直接内嵌在微信公众号可复制正文顶部的富文本封面 HTML (自包含纯内联样式)"""
+    if not meta:
+        meta = {}
+    safe_title = (meta.get("title") or "在喧嚣时代重塑深度思考").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
+    safe_digest = (meta.get("digest") or "真正的专注，是在充满干扰的世界中守住内心的秩序").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
+    safe_author = (meta.get("author") or "野生宝藏箱").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    safe_tag = (meta.get("tag") or "深度架构 · 极客手记").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    safe_badge = (meta.get("badge") or ("ACID BOLD" if theme_id == "acid-bold" else "TECH BLOG")).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    safe_vol = (meta.get("vol") or "2026 · V1.0.2 RELEASE").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    if theme_id == "acid-bold":
+        return (
+            f'<section style="margin: 0 0 28px 0; background: #fee500; border: 3.5px solid #000000; box-shadow: 6px 6px 0 #000000; padding: 26px 20px; box-sizing: border-box; text-align: left;">\n'
+            f'  <section style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">\n'
+            f'    <span style="background: #000000; color: #fee500; font-size: 13px; font-weight: 900; padding: 4px 12px; border-radius: 3px; letter-spacing: 1px;">{safe_badge}</span>\n'
+            f'    <span style="font-size: 14px; font-weight: 900; color: #000000; font-family: monospace;">{safe_vol}</span>\n'
+            f'  </section>\n'
+            f'  <section style="width: 50px; height: 7px; background: #000000; margin-bottom: 14px;"></section>\n'
+            f'  <section style="margin: 0 0 12px 0;"><span style="font-size: 25px; font-weight: 900; line-height: 1.28; color: #000000; letter-spacing: -0.3px; display: block;">{safe_title}</span></section>\n'
+            f'  <p style="font-size: 16px; line-height: 1.6; color: #171717; margin: 0 0 18px 0; font-weight: 600;">{safe_digest}</p>\n'
+            f'  <section style="border-top: 2.5px solid #000000; padding-top: 12px; display: flex; align-items: center; justify-content: space-between;">\n'
+            f'    <span style="font-size: 14px; font-weight: 900; color: #000000;">{safe_author} // 先锋态度</span>\n'
+            f'  </section>\n'
+            f'</section>'
+        )
+    elif theme_id == "terminal-geek":
+        return (
+            f'<section style="margin: 0 0 28px 0; background: #020617; border: 1.5px solid #065f46; border-radius: 10px; overflow: hidden; box-sizing: border-box; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; text-align: left;">\n'
+            f'  <section style="background: #090e1a; padding: 10px 14px; border-bottom: 1px solid #1e293b; display: flex; align-items: center;">\n'
+            f'    <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #ef4444; margin-right: 6px;"></span>\n'
+            f'    <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; margin-right: 6px;"></span>\n'
+            f'    <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #10b981; margin-right: 12px;"></span>\n'
+            f'    <span style="font-size: 12px; color: #64748b;">bash - post.sh ({safe_vol})</span>\n'
+            f'  </section>\n'
+            f'  <section style="padding: 24px 20px;">\n'
+            f'    <div style="font-size: 13px; color: #10b981; font-weight: 800; margin-bottom: 10px;">&gt; ./render --theme=terminal</div>\n'
+            f'    <section style="margin: 0 0 12px 0;"><span style="font-size: 24px; font-weight: 900; line-height: 1.32; color: #34d399; letter-spacing: 0.3px; display: block;">{safe_title}</span></section>\n'
+            f'    <p style="font-size: 15.5px; line-height: 1.6; color: #a7f3d0; margin: 0 0 16px 0;">{safe_digest}</p>\n'
+            f'    <section style="border-top: 1px solid #1e293b; padding-top: 12px; display: flex; align-items: center; justify-content: space-between;">\n'
+            f'      <span style="font-size: 13px; color: #10b981; font-weight: 700;">// {safe_author}</span>\n'
+            f'    </section>\n'
+            f'  </section>\n'
+            f'</section>'
+        )
+    else:
+        # 默认科技蓝大卡片
+        return (
+            f'<section style="margin: 0 0 28px 0; border-radius: 12px; padding: 26px 20px; background: linear-gradient(135deg, #090d16 0%, #0f172a 50%, #1e293b 100%); border: 1px solid rgba(56, 189, 248, 0.2); box-shadow: 0 8px 24px rgba(0,0,0,0.15); box-sizing: border-box; text-align: left;">\n'
+            f'  <section style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">\n'
+            f'    <span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 13px; font-weight: 800; padding: 4px 12px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.3);">{safe_badge}</span>\n'
+            f'    <span style="font-size: 13px; color: #94a3b8; font-family: monospace;">{safe_vol}</span>\n'
+            f'  </section>\n'
+            f'  <section style="width: 44px; height: 5px; background: #38bdf8; border-radius: 2px; margin-bottom: 14px;"></section>\n'
+            f'  <section style="margin: 0 0 12px 0;"><span style="font-size: 25px; font-weight: 900; line-height: 1.3; color: #ffffff; display: block;">{safe_title}</span></section>\n'
+            f'  <p style="font-size: 16px; line-height: 1.6; color: #cbd5e1; margin: 0 0 18px 0; font-weight: 500;">{safe_digest}</p>\n'
+            f'  <section style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px; display: flex; align-items: center; justify-content: space-between;">\n'
+            f'    <span style="font-size: 14px; font-weight: 800; color: #38bdf8;">{safe_author}</span>\n'
+            f'  </section>\n'
+            f'</section>'
+        )
 
 # ==============================================================================
 # Markdown 解析主循环 (Parser Pipeline)
@@ -572,7 +640,9 @@ def markdown_to_wechat_html(
     md_text: str,
     theme_name: str = "tech-blue",
     image_map: Optional[Dict[str, str]] = None,
-    link_to_footnote: bool = True
+    link_to_footnote: bool = True,
+    insert_cover: bool = True,
+    cover_meta: Optional[dict] = None
 ) -> str:
     """
     将 Markdown 文本转换为微信公众号完美适配的纯 Inline CSS HTML
@@ -601,6 +671,12 @@ def markdown_to_wechat_html(
 
     lines = md_text.split("\n")
     html_parts = []
+
+    # 微信公众号文章顶部自动嵌入当前主题专属封面卡片 (默认开启)
+    if insert_cover and cover_meta:
+        header_cover = render_wechat_article_header_cover(theme_name, cover_meta)
+        if header_cover:
+            html_parts.append(header_cover)
 
     in_code_block = False
     code_lang = ""

@@ -165,34 +165,35 @@ export function renderH1(titleText, theme) {
 
   if (style === 'double_line') {
     return `
-<div style="margin: 38px 0 26px 0; text-align: center;">
-<div style="border-top: 1px solid ${borderColor}; border-bottom: 1px solid ${borderColor}; padding: 12px 14px; display: inline-block; min-width: 60%;">
-<h1 style="font-size: 22px; font-weight: 700; color: ${accent}; margin: 0; line-height: 1.4; letter-spacing: 1px;">${titleText}</h1>
-</div></div>`;
+<section style="margin: 38px 0 26px 0; text-align: center;">
+<section style="border-top: 1px solid ${borderColor}; border-bottom: 1px solid ${borderColor}; padding: 12px 14px; display: inline-block; min-width: 60%;">
+<span style="font-size: 22px; font-weight: 700; color: ${accent}; margin: 0; line-height: 1.4; letter-spacing: 1px; display: block;">${titleText}</span>
+</section></section>`;
   } else if (style === 'capsule') {
     return `
-<div style="margin: 36px 0 24px 0; text-align: center;">
+<section style="margin: 36px 0 24px 0; text-align: center;">
 <span style="display: inline-block; background: ${accent}; color: #ffffff; padding: 9px 26px; border-radius: 30px; font-size: 20px; font-weight: 700; letter-spacing: 0.8px; box-shadow: 0 4px 14px rgba(0,0,0,0.12);">
 ${titleText}
-</span></div>`;
+</span></section>`;
   } else if (style === 'terminal') {
     return `
-<div style="margin: 36px 0 24px 0; padding: 14px 18px; background: ${codeBg}; border: 1px solid ${borderColor}; border-radius: 6px;">
+<section style="margin: 36px 0 24px 0; padding: 14px 18px; background: ${codeBg}; border: 1px solid ${borderColor}; border-radius: 6px;">
 <div style="color: ${subColor}; font-size: 12px; margin-bottom: 6px; font-family: monospace;">$ cat article.md</div>
-<h1 style="font-size: 20px; font-weight: 700; color: ${accent}; margin: 0; line-height: 1.4; font-family: monospace;">&gt; ${titleText}</h1>
-</div>`;
+<span style="font-size: 20px; font-weight: 700; color: ${accent}; margin: 0; line-height: 1.4; font-family: monospace; display: block;">&gt; ${titleText}</span>
+</section>`;
   } else if (style === 'brutalist') {
     return `
-<div style="margin: 36px 0 24px 0; text-align: center;">
-<div style="display: inline-block; background: ${accentBg}; border: 2.5px solid #000000; box-shadow: 4px 4px 0 #000000; padding: 10px 22px;">
-<h1 style="font-size: 21px; font-weight: 800; color: #000000; margin: 0; letter-spacing: 1px;">${titleText}</h1>
-</div></div>`;
+<section style="margin: 36px 0 24px 0; text-align: center;">
+<section style="display: inline-block; background: ${accentBg}; border: 2.5px solid #000000; box-shadow: 4px 4px 0 #000000; padding: 10px 22px;">
+<span style="font-size: 21px; font-weight: 800; color: #000000; margin: 0; letter-spacing: 1px; display: block;">${titleText}</span>
+</section></section>`;
   } else {
     // 默认：下划粗线 (underline)
     return `
-<h1 style="font-size: 23px; font-weight: 800; color: ${titleColor}; line-height: 1.4; margin: 36px 0 22px 0; text-align: center; letter-spacing: 0.5px;">
-<span style="border-bottom: 3px solid ${accent}; padding-bottom: 6px;">${titleText}</span>
-</h1>`;
+<section style="text-align: center; margin: 36px 0 22px 0;">
+<span style="font-size: 23px; font-weight: 800; color: ${titleColor}; line-height: 1.4; letter-spacing: 0.5px; border-bottom: 3px solid ${accent}; padding-bottom: 6px; display: inline-block;">
+${titleText}
+</span></section>`;
   }
 }
 
@@ -208,43 +209,45 @@ export function renderH2(h2Text, theme) {
 
   if (style === 'pill_badge') {
     return `
-<div style="margin: 34px 0 16px 0;">
+<section style="margin: 34px 0 16px 0;">
 <span style="display: inline-block; background: ${accent}; color: #ffffff; font-size: 16px; font-weight: 700; padding: 5px 15px; border-radius: 20px; letter-spacing: 0.5px;">
 ${h2Text}
-</span></div>`;
+</span></section>`;
   } else if (style === 'bubble_bg') {
     return `
-<div style="margin: 34px 0 16px 0;">
+<section style="margin: 34px 0 16px 0;">
 <span style="display: inline-block; background: ${accentBg}; color: ${accent}; font-size: 17px; font-weight: 700; padding: 6px 14px; border-radius: 6px; border-left: 3px solid ${accent};">
 ${h2Text}
-</span></div>`;
+</span></section>`;
   } else if (style === 'serif_badge') {
     return `
-<h2 style="font-size: 18.5px; font-weight: 700; color: ${accent}; margin: 34px 0 16px 0; padding-bottom: 6px; border-bottom: 1px solid ${borderColor}; line-height: 1.4; letter-spacing: 0.5px;">
-<span style="color: ${accent}; margin-right: 6px; font-family: Georgia, serif;">§</span>${h2Text}
-</h2>`;
+<section style="margin: 34px 0 16px 0; padding-bottom: 6px; border-bottom: 1px solid ${borderColor};">
+<span style="color: ${accent}; margin-right: 6px; font-family: Georgia, serif; font-size: 18.5px; font-weight: 700;">§</span>
+<span style="font-size: 18.5px; font-weight: 700; color: ${accent}; line-height: 1.4; letter-spacing: 0.5px;">${h2Text}</span>
+</section>`;
   } else if (style === 'terminal_prompt') {
     return `
-<div style="margin: 32px 0 16px 0; font-family: monospace;">
+<section style="margin: 32px 0 16px 0; font-family: monospace;">
 <span style="color: ${accent}; font-weight: 700; font-size: 18px; margin-right: 8px;">//</span>
-<h2 style="display: inline; font-size: 17.5px; font-weight: 700; color: ${textColor}; margin: 0; font-family: monospace;">${h2Text}</h2>
-</div>`;
+<span style="display: inline; font-size: 17.5px; font-weight: 700; color: ${textColor}; margin: 0; font-family: monospace;">${h2Text}</span>
+</section>`;
   } else if (style === 'brutalist_box') {
     return `
-<div style="margin: 34px 0 16px 0; display: inline-block; background: ${accentBg}; border: 2px solid #000000; box-shadow: 3px 3px 0 #000000; padding: 5px 14px;">
-<h2 style="font-size: 17px; font-weight: 800; color: #000000; margin: 0;">${h2Text}</h2>
-</div>`;
+<section style="margin: 34px 0 16px 0; text-align: left;">
+<section style="display: inline-block; background: ${accentBg}; border: 2px solid #000000; box-shadow: 3px 3px 0 #000000; padding: 5px 14px;">
+<span style="font-size: 17px; font-weight: 800; color: #000000; margin: 0; line-height: 1.4; display: block;">${h2Text}</span>
+</section></section>`;
   } else if (style === 'bottom_line') {
     return `
-<h2 style="font-size: 18.5px; font-weight: 700; color: ${headingColor}; margin: 34px 0 16px 0; padding-bottom: 8px; border-bottom: 2px solid ${accent}; line-height: 1.4;">
-${h2Text}
-</h2>`;
+<section style="margin: 34px 0 16px 0; padding-bottom: 8px; border-bottom: 2px solid ${accent};">
+<span style="font-size: 18.5px; font-weight: 700; color: ${headingColor}; line-height: 1.4; display: block;">${h2Text}</span>
+</section>`;
   } else {
     // 默认：左侧 4px 竖条
     return `
-<h2 style="font-size: 19px; font-weight: 700; color: ${headingColor}; margin: 34px 0 16px 0; padding-left: 12px; border-left: 4px solid ${accent}; line-height: 1.4;">
-${h2Text}
-</h2>`;
+<section style="margin: 34px 0 16px 0; padding-left: 12px; border-left: 4px solid ${accent};">
+<span style="font-size: 19px; font-weight: 700; color: ${headingColor}; line-height: 1.4; display: block;">${h2Text}</span>
+</section>`;
   }
 }
 
@@ -259,25 +262,28 @@ export function renderH3(h3Text, theme) {
 
   if (style === 'circle_badge') {
     return `
-<h3 style="font-size: 16.5px; font-weight: 600; color: ${accent}; margin: 24px 0 12px 0; line-height: 1.4;">
-<span style="display: inline-block; width: 8px; height: 8px; background: ${accent}; border-radius: 2px; margin-right: 8px; vertical-align: middle;"></span>${h3Text}
-</h3>`;
+<section style="margin: 24px 0 12px 0;">
+<span style="display: inline-block; width: 8px; height: 8px; background: ${accent}; border-radius: 2px; margin-right: 8px; vertical-align: middle;"></span>
+<span style="font-size: 16.5px; font-weight: 600; color: ${accent}; line-height: 1.4;">${h3Text}</span>
+</section>`;
   } else if (style === 'highlight_bg') {
     return `
-<h3 style="font-size: 16.5px; font-weight: 600; color: ${headingColor}; margin: 24px 0 12px 0; line-height: 1.4;">
-<span style="background: linear-gradient(to top, ${accentBg} 45%, transparent 45%); padding: 1px 4px;">${h3Text}</span>
-</h3>`;
+<section style="margin: 24px 0 12px 0;">
+<span style="background: linear-gradient(to top, ${accentBg} 45%, transparent 45%); padding: 1px 4px; font-size: 16.5px; font-weight: 600; color: ${headingColor}; line-height: 1.4;">${h3Text}</span>
+</section>`;
   } else if (style === 'slash') {
     return `
-<h3 style="font-size: 16px; font-weight: 600; color: ${accent}; margin: 24px 0 12px 0; line-height: 1.4; font-family: monospace;">
-<span style="color: ${subColor}; margin-right: 6px;">##</span>${h3Text}
-</h3>`;
+<section style="margin: 24px 0 12px 0; font-family: monospace;">
+<span style="color: ${subColor}; margin-right: 6px;">##</span>
+<span style="font-size: 16px; font-weight: 600; color: ${accent}; line-height: 1.4;">${h3Text}</span>
+</section>`;
   } else {
     // 默认：纯 SVG 矢量菱形图标
     return `
-<h3 style="font-size: 16.5px; font-weight: 600; color: ${accent}; margin: 24px 0 12px 0; line-height: 1.4; display: flex; align-items: center;">
-<svg width="14" height="14" viewBox="0 0 24 24" fill="${accent}" style="margin-right: 6px; flex-shrink: 0;"><polygon points="12 2 15 9 22 12 15 15 12 22 9 15 2 12 9 9"/></svg><span>${h3Text}</span>
-</h3>`;
+<section style="margin: 24px 0 12px 0; line-height: 1.4; display: flex; align-items: center;">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="${accent}" style="margin-right: 6px; flex-shrink: 0;"><polygon points="12 2 15 9 22 12 15 15 12 22 9 15 2 12 9 9"/></svg>
+<span style="font-size: 16.5px; font-weight: 600; color: ${accent};">${h3Text}</span>
+</section>`;
   }
 }
 
@@ -518,7 +524,7 @@ export function renderContainer(bodyHtml, theme) {
     containerStyle = `${baseStyle} padding: 20px 14px; border: 2.5px solid #000000; box-shadow: 5px 5px 0 #000000;`;
   }
 
-  return `<div style="${containerStyle}">\n${bodyHtml}\n</div>`;
+  return `<section style="${containerStyle}">\n${bodyHtml}\n</section>`;
 }
 
 // ==============================================================================

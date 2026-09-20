@@ -218,8 +218,22 @@ def main():
                     except Exception as e:
                         print(f"    [-] 图片上传失败 ({img_src}): {e}", file=sys.stderr)
 
-    # 5. 执行 Markdown -> 微信专用 HTML 转换
-    html_output = markdown_to_wechat_html(body_md, theme_name=theme_input, image_map=image_map)
+    # 5. 执行 Markdown -> 微信专用 HTML 转换 (自动提取封面元数据并在正文顶部注入专属封面卡片)
+    cover_title = "告别封面荒！\nMD2WX v1.0.2" if "告别封面荒" in title else title
+    cover_meta = {
+        "title": cover_title,
+        "digest": digest,
+        "author": author,
+        "badge": "ACID BOLD" if theme_input == "acid-bold" else "TECH BLOG",
+        "vol": "2026 · V1.0.2 RELEASE"
+    }
+    html_output = markdown_to_wechat_html(
+        body_md,
+        theme_name=theme_input,
+        image_map=image_map,
+        insert_cover=True,
+        cover_meta=cover_meta
+    )
 
     # 6. 输出处理
     # 选项 A: 写入输出文件
