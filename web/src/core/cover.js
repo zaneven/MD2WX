@@ -140,8 +140,8 @@ function escapeHtml(str) {
  * @param {boolean} showSafeGuide - 是否叠加安全参考线
  */
 export function renderCoverHtml(themeId = 'tech-blue', ratio = 'banner', meta = {}, showSafeGuide = false) {
-  const safeTitle = escapeHtml(meta.title || '在喧嚣时代重塑深度思考');
-  const safeDigest = escapeHtml(meta.digest || '真正的专注，是充满干扰的世界中守住内心的秩序');
+  const safeTitle = escapeHtml(meta.title || '在喧嚣时代重塑深度思考').replace(/\n/g, '<br>');
+  const safeDigest = escapeHtml(meta.digest || '真正的专注，是充满干扰的世界中守住内心的秩序').replace(/\n/g, '<br>');
   const safeAuthor = escapeHtml(meta.author || '野生宝藏箱');
   const safeTag = escapeHtml(meta.tag || '深度架构 · 极客手记');
   const safeBadge = escapeHtml(meta.badge || 'TECH BLOG');
@@ -275,8 +275,8 @@ export function renderCoverHtml(themeId = 'tech-blue', ratio = 'banner', meta = 
  * @returns {string}
  */
 export function renderWechatArticleHeaderCover(themeId = 'tech-blue', meta = {}) {
-  const safeTitle = escapeHtml(meta.title || '在喧嚣时代重塑深度思考');
-  const safeDigest = escapeHtml(meta.digest || '真正的专注，是在充满干扰的世界中守住内心的秩序');
+  const safeTitle = escapeHtml(meta.title || '在喧嚣时代重塑深度思考').replace(/\n/g, '<br>');
+  const safeDigest = escapeHtml(meta.digest || '真正的专注，是在充满干扰的世界中守住内心的秩序').replace(/\n/g, '<br>');
   const safeAuthor = escapeHtml(meta.author || '野生宝藏箱');
   const safeTag = escapeHtml(meta.tag || '深度架构 · 极客手记');
   const safeBadge = escapeHtml(meta.badge || 'TECH BLOG');
