@@ -110,9 +110,9 @@ def format_inline(text: str, accent: str, code_font_size: str = "13.5px", footno
 
     text = re.sub(r"\[(.*?)\]\((.*?)\)", save_link, text)
 
-    # 3. 粗体与斜体
-    text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
-    text = re.sub(r"(?<!\*)\*([^*]+?)\*(?!\*)", r"<em>\1</em>", text)
+    # 3. 粗体与斜体 (严格界定符，避免内部跨越 ** 或穿透普通文本导致反转误加粗)
+    text = re.sub(r"\*\*(?![\*\s])((?:[^*]|\*(?!\*))+?)(?<![\*\s])\*\*", r"<strong>\1</strong>", text)
+    text = re.sub(r"(?<!\*)\*(?![\*\s])([^*\n]+?)(?<![\*\s])\*(?!\*)", r"<em>\1</em>", text)
 
     # 4. 彻底还原保护的 tokens (支持多层嵌套展开)
     max_loops = 5

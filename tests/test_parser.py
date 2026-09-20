@@ -237,6 +237,16 @@ kind: Pod
         self.assertNotIn("<style>", html)
         self.assertNotIn("<script>", html)
 
+    def test_bold_inline_with_quotes_and_asterisks(self):
+        """测试加粗遇到单引号、双引号以及容错避免跨段误吞"""
+        md = "测试 **'单引号'** 与 **“中文双引号”**，还有多余星号容错：**加粗1**。**** 中间普通文本 **加粗2**"
+        html = markdown_to_wechat_html(md)
+        self.assertIn("<strong>'单引号'</strong>", html)
+        self.assertIn("<strong>“中文双引号”</strong>", html)
+        self.assertIn("<strong>加粗1</strong>", html)
+        self.assertIn("<strong>加粗2</strong>", html)
+        self.assertNotIn("<strong> 中间普通文本", html)
+
 if __name__ == "__main__":
     unittest.main()
 

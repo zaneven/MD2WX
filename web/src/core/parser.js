@@ -128,9 +128,9 @@ export function formatInline(text, accent, codeFontSize = '13.5px', footnotes = 
     return k;
   });
 
-  // 3. 粗体与斜体
-  text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  text = text.replace(/(^|[^*])\*([^*]+?)\*(?!\*)/g, '$1<em>$2</em>');
+  // 3. 粗体与斜体 (严格界定符，避免内部跨越 ** 或穿透普通文本导致反转误加粗)
+  text = text.replace(/\*\*(?![\*\s])((?:[^*]|\*(?!\*))+?)(?<![\*\s])\*\*/g, '<strong>$1</strong>');
+  text = text.replace(/(^|[^*])\*(?![\*\s])([^*\n]+?)(?<![\*\s])\*(?!\*)/g, '$1<em>$2</em>');
 
   // 4. 彻底还原保护的 tokens (支持嵌套多轮展开)
   let loops = 5;

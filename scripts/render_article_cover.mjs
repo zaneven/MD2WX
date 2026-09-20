@@ -15,7 +15,7 @@ const cssContent = fs.readFileSync(coverCssPath, 'utf8');
 // 本文专属封面元数据
 const meta = {
   title: '告别封面荒！\nMD2WX v1.0.2',
-  digest: '彻底终结“文章排版两分钟，找封面两小时”的创作者内耗！9 大主题专属封面、微信 1:1 裁切安全区与真机大字排版实战。',
+  digest: '彻底终结“排版两秒钟，找封面半小时”的创作者内耗！9 大主题专属封面、微信 1:1 裁切安全区与真机大字排版实战。',
   author: '野生宝藏箱',
   tag: '先锋态度 · 封面工坊',
   badge: 'ACID BOLD',
