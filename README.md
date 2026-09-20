@@ -377,6 +377,11 @@ print(wechat_html)
 python3 -m unittest discover -s tests -v
 ```
 
+## 📖 开发日志与版本发布
+
+- **版本发布与更新要点**：详见 [GitHub Releases](https://github.com/zaneven/MD2WX/releases)。
+- **深度研发手记 (DevLogs)**：记录项目从纯 CLI 到全功能 Studio 演进脉络的系列长文，详见 [开发日志索引 (devlogs/)](devlogs/README.md)。
+
 ---
 
 ## 许可证
