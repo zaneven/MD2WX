@@ -1089,6 +1089,35 @@ function init() {
   setViewMode(currentViewMode);
   bindEvents();
   renderPreview();
+
+  // 自动化视图与截图辅助钩子 (URL View Hook)
+  const urlParams = new URLSearchParams(window.location.search);
+  const autoView = urlParams.get('view');
+  if (autoView === 'cover_studio') {
+    setTimeout(() => {
+      const btn = document.getElementById('btn-open-cover');
+      if (btn) btn.click();
+    }, 100);
+  } else if (autoView === 'crop_guide') {
+    setTimeout(() => {
+      const btn = document.getElementById('btn-open-cover');
+      if (btn) btn.click();
+      setTimeout(() => {
+        const safeCheck = document.getElementById('toggle-safe-area');
+        if (safeCheck && !safeCheck.checked) safeCheck.click();
+      }, 80);
+    }, 100);
+  } else if (autoView === 'changelog') {
+    setTimeout(() => {
+      const btn = document.getElementById('btn-version-badge');
+      if (btn) btn.click();
+    }, 100);
+  } else if (autoView === 'settings_inline') {
+    setTimeout(() => {
+      const btn = document.getElementById('btn-settings-trigger');
+      if (btn) btn.click();
+    }, 100);
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);
