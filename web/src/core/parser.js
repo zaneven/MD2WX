@@ -389,12 +389,12 @@ export function renderCode(rawCode, codeLang, theme) {
     return `
 <div style="margin: 22px 0; border-radius: 6px; overflow: hidden; border: 1px solid ${borderColor}; box-shadow: 0 4px 14px rgba(0,0,0,0.15);">
 ${topBar}
-<div style="overflow-x: auto; -webkit-overflow-scrolling: touch;"><pre style="margin: 0; padding: 14px 16px; background: ${codeBg}; color: ${codeText}; font-size: 13.5px; line-height: 1.6; font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'Courier New', monospace;"><code>${highlighted}</code></pre></div>
+<div style="overflow-x: auto; -webkit-overflow-scrolling: touch;"><pre style="margin: 0; display: inline-block; min-width: 100%; box-sizing: border-box; padding: 14px 16px; background: ${codeBg}; color: ${codeText}; font-size: 13.5px; line-height: 1.6; font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'Courier New', monospace;"><code>${highlighted}</code></pre></div>
 </div>`;
   } else if (style === 'clean_flat') {
     return `
 <div style="margin: 22px 0; border-radius: 8px; overflow: hidden; border: 1px solid ${borderColor};">
-<div style="overflow-x: auto; -webkit-overflow-scrolling: touch;"><pre style="margin: 0; padding: 14px 16px; background: ${codeBg}; color: ${codeText}; font-size: 13.5px; line-height: 1.6; font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'Courier New', monospace;"><code>${highlighted}</code></pre></div>
+<div style="overflow-x: auto; -webkit-overflow-scrolling: touch;"><pre style="margin: 0; display: inline-block; min-width: 100%; box-sizing: border-box; padding: 14px 16px; background: ${codeBg}; color: ${codeText}; font-size: 13.5px; line-height: 1.6; font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'Courier New', monospace;"><code>${highlighted}</code></pre></div>
 </div>`;
   } else {
     // 默认：Mac 三色小圆点
@@ -408,7 +408,7 @@ ${topBar}
     return `
 <div style="margin: 22px 0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.08);">
 ${macDots}
-<div style="overflow-x: auto; -webkit-overflow-scrolling: touch;"><pre style="margin: 0; padding: 14px 16px; background: ${codeBg}; color: ${codeText}; font-size: 13.5px; line-height: 1.6; font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'Courier New', monospace;"><code>${highlighted}</code></pre></div>
+<div style="overflow-x: auto; -webkit-overflow-scrolling: touch;"><pre style="margin: 0; display: inline-block; min-width: 100%; box-sizing: border-box; padding: 14px 16px; background: ${codeBg}; color: ${codeText}; font-size: 13.5px; line-height: 1.6; font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'Courier New', monospace;"><code>${highlighted}</code></pre></div>
 </div>`;
   }
 }

@@ -408,7 +408,7 @@ def render_code(raw_code: str, code_lang: str, theme: dict) -> str:
             f'<div style="margin: 22px 0; border-radius: 6px; overflow: hidden; border: 1px solid {border_color}; box-shadow: 0 4px 14px rgba(0,0,0,0.15);">'
             f'{top_bar}'
             f'{code_scroll_open}'
-            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; font-family: \'SF Mono\', SFMono-Regular, Menlo, Consolas, \'Liberation Mono\', \'Courier New\', monospace;"><code>{highlighted}</code></pre>'
+            f'<pre style="margin: 0; display: inline-block; min-width: 100%; box-sizing: border-box; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; font-family: \'SF Mono\', SFMono-Regular, Menlo, Consolas, \'Liberation Mono\', \'Courier New\', monospace;"><code>{highlighted}</code></pre>'
             f'{code_scroll_close}'
             f'</div>'
         )
@@ -417,7 +417,7 @@ def render_code(raw_code: str, code_lang: str, theme: dict) -> str:
         return (
             f'<div style="margin: 22px 0; border-radius: 8px; overflow: hidden; border: 1px solid {border_color};">'
             f'{code_scroll_open}'
-            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; font-family: \'SF Mono\', SFMono-Regular, Menlo, Consolas, \'Liberation Mono\', \'Courier New\', monospace;"><code>{highlighted}</code></pre>'
+            f'<pre style="margin: 0; display: inline-block; min-width: 100%; box-sizing: border-box; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; font-family: \'SF Mono\', SFMono-Regular, Menlo, Consolas, \'Liberation Mono\', \'Courier New\', monospace;"><code>{highlighted}</code></pre>'
             f'{code_scroll_close}'
             f'</div>'
         )
@@ -435,7 +435,7 @@ def render_code(raw_code: str, code_lang: str, theme: dict) -> str:
             f'<div style="margin: 22px 0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.08);">'
             f'{mac_dots}'
             f'{code_scroll_open}'
-            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; font-family: \'SF Mono\', SFMono-Regular, Menlo, Consolas, \'Liberation Mono\', \'Courier New\', monospace;"><code>{highlighted}</code></pre>'
+            f'<pre style="margin: 0; display: inline-block; min-width: 100%; box-sizing: border-box; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; font-family: \'SF Mono\', SFMono-Regular, Menlo, Consolas, \'Liberation Mono\', \'Courier New\', monospace;"><code>{highlighted}</code></pre>'
             f'{code_scroll_close}'
             f'</div>'
         )
