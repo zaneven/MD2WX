@@ -363,6 +363,22 @@ def render_quote(inner_content: str, theme: dict) -> str:
             f'</blockquote>'
         )
 
+def _wechat_safe_line_structure(html_str: str) -> str:
+    """
+    将代码块 HTML 的换行结构改为微信自包含式：
+    - 换行符 -> <br> (br 在微信标签白名单中永远保留，不依赖 pre 语义与 white-space CSS)
+    - 空格   -> &nbsp; (缩进与 ASCII 树形对齐在任意净化策略下都不丢失)
+    仅处理文本节点，标签与内联样式属性原样保留
+    """
+    parts = re.split(r"(<[^>]+>)", html_str)
+    out = []
+    for part in parts:
+        if part.startswith("<"):
+            out.append(part)
+        else:
+            out.append(part.replace("\n", "<br>").replace(" ", "&nbsp;"))
+    return "".join(out)
+
 def render_code(raw_code: str, code_lang: str, theme: dict) -> str:
     """渲染多行代码块并应用纯内联语法着色"""
     style = theme.get("code_style", theme.get("styles", {}).get("code", "mac_dark"))
@@ -372,8 +388,8 @@ def render_code(raw_code: str, code_lang: str, theme: dict) -> str:
     border_color = theme["border_color"]
     sub_color = theme["sub_color"]
 
-    # 纯内联语法着色（微信后台不褪色）
-    highlighted = highlight_code(raw_code, code_lang)
+    # 纯内联语法着色（微信后台不褪色），并把换行/空格转为微信白名单安全的自包含结构
+    highlighted = _wechat_safe_line_structure(highlight_code(raw_code, code_lang))
 
     if style == "terminal":
         # 纯黑终端状态栏风格
@@ -386,14 +402,14 @@ def render_code(raw_code: str, code_lang: str, theme: dict) -> str:
         return (
             f'<div style="margin: 22px 0; border-radius: 6px; overflow: hidden; border: 1px solid {border_color}; box-shadow: 0 4px 14px rgba(0,0,0,0.15);">'
             f'{top_bar}'
-            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; letter-spacing: 0; white-space: pre; overflow-x: auto; font-family: \'SF Mono\', SFMono-Regular, Menlo, Consolas, \'Liberation Mono\', \'Courier New\', monospace;"><code>{highlighted}</code></pre>'
+            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: \'SF Mono\', SFMono-Regular, Menlo, Consolas, \'Liberation Mono\', \'Courier New\', monospace;"><code>{highlighted}</code></pre>'
             f'</div>'
         )
     elif style == "clean_flat":
         # 极简扁平圆角无指示灯
         return (
             f'<div style="margin: 22px 0; border-radius: 8px; overflow: hidden; border: 1px solid {border_color};">'
-            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; letter-spacing: 0; white-space: pre; overflow-x: auto; font-family: \'SF Mono\', SFMono-Regular, Menlo, Consolas, \'Liberation Mono\', \'Courier New\', monospace;"><code>{highlighted}</code></pre>'
+            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: \'SF Mono\', SFMono-Regular, Menlo, Consolas, \'Liberation Mono\', \'Courier New\', monospace;"><code>{highlighted}</code></pre>'
             f'</div>'
         )
     else:
@@ -409,7 +425,7 @@ def render_code(raw_code: str, code_lang: str, theme: dict) -> str:
         return (
             f'<div style="margin: 22px 0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.08);">'
             f'{mac_dots}'
-            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; letter-spacing: 0; white-space: pre; overflow-x: auto; font-family: \'SF Mono\', SFMono-Regular, Menlo, Consolas, \'Liberation Mono\', \'Courier New\', monospace;"><code>{highlighted}</code></pre>'
+            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: \'SF Mono\', SFMono-Regular, Menlo, Consolas, \'Liberation Mono\', \'Courier New\', monospace;"><code>{highlighted}</code></pre>'
             f'</div>'
         )
 

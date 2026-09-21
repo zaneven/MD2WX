@@ -41,7 +41,7 @@ tags: [python, wechat]
         self.assertIn("<strong>核心标签</strong>", html)
 
     def test_mac_code_block_rendering(self):
-        """测试默认科技主题下代码块是否生成 Mac 红黄绿圆点指示灯"""
+        """测试默认科技主题下代码块是否生成 Mac 红黄绿圆点指示灯，以及换行/缩进的自包含结构"""
         md = """```python
 def hello():
     return "wechat"
@@ -52,6 +52,9 @@ def hello():
         self.assertIn("#10b981", html)
         self.assertIn("hello", html)
         self.assertIn("wechat", html)
+        # 微信白名单安全换行结构: 换行 -> <br>，缩进空格 -> &nbsp;，pre 内不再依赖裸换行
+        self.assertIn("<br>", html)
+        self.assertNotIn("\n", html.split("<code>")[1].split("</code>")[0])
 
     def test_table_rendering(self):
         """测试 Markdown 表格解析与斑马纹样式"""
@@ -230,9 +233,10 @@ public/
 └── 报告/
 ```"""
         html = markdown_to_wechat_html(tree_md, theme_name="acid-bold")
-        # 目录树字符完整保留，未被包裹彩色 span
-        self.assertIn("├── 数据大屏/", html)
-        self.assertIn("└── 报告/", html)
+        # 目录树字符完整保留，缩进空格转为 &nbsp;，未被包裹彩色 span
+        self.assertIn("├──&nbsp;数据大屏/", html)
+        self.assertIn("└──&nbsp;报告/", html)
+        self.assertIn("<br>", html)
         self.assertNotIn('<span style="color: #94a3b8;">/</span>', html)
         # 编程语言仍正常高亮
         code_html = markdown_to_wechat_html("```python\ndef hi(): pass\n```", theme_name="acid-bold")

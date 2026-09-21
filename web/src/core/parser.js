@@ -360,6 +360,17 @@ ${innerContent}
   }
 }
 
+/**
+ * 将代码块 HTML 的换行结构改为微信自包含式：
+ * 换行符 -> <br>，空格 -> &nbsp;，仅处理文本节点，标签与内联样式属性原样保留
+ */
+function wechatSafeLineStructure(htmlStr) {
+  return htmlStr
+    .split(/(<[^>]+>)/)
+    .map((part) => (part.startsWith('<') ? part : part.replace(/\n/g, '<br>').replace(/ /g, '&nbsp;')))
+    .join('');
+}
+
 export function renderCode(rawCode, codeLang, theme) {
   const style = theme.code_style || theme.styles?.code || 'mac_dark';
   const codeBg = theme.code_bg;
@@ -367,7 +378,7 @@ export function renderCode(rawCode, codeLang, theme) {
   const accent = theme.accent;
   const borderColor = theme.border_color;
   const subColor = theme.sub_color;
-  const highlighted = highlightCode(rawCode, codeLang);
+  const highlighted = wechatSafeLineStructure(highlightCode(rawCode, codeLang));
 
   if (style === 'terminal') {
     const topBar = `
@@ -378,12 +389,12 @@ export function renderCode(rawCode, codeLang, theme) {
     return `
 <div style="margin: 22px 0; border-radius: 6px; overflow: hidden; border: 1px solid ${borderColor}; box-shadow: 0 4px 14px rgba(0,0,0,0.15);">
 ${topBar}
-<pre style="margin: 0; padding: 14px 16px; background: ${codeBg}; color: ${codeText}; font-size: 13.5px; line-height: 1.6; letter-spacing: 0; white-space: pre; overflow-x: auto; font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'Courier New', monospace;"><code>${highlighted}</code></pre>
+<pre style="margin: 0; padding: 14px 16px; background: ${codeBg}; color: ${codeText}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'Courier New', monospace;"><code>${highlighted}</code></pre>
 </div>`;
   } else if (style === 'clean_flat') {
     return `
 <div style="margin: 22px 0; border-radius: 8px; overflow: hidden; border: 1px solid ${borderColor};">
-<pre style="margin: 0; padding: 14px 16px; background: ${codeBg}; color: ${codeText}; font-size: 13.5px; line-height: 1.6; letter-spacing: 0; white-space: pre; overflow-x: auto; font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'Courier New', monospace;"><code>${highlighted}</code></pre>
+<pre style="margin: 0; padding: 14px 16px; background: ${codeBg}; color: ${codeText}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'Courier New', monospace;"><code>${highlighted}</code></pre>
 </div>`;
   } else {
     // 默认：Mac 三色小圆点
@@ -397,7 +408,7 @@ ${topBar}
     return `
 <div style="margin: 22px 0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.08);">
 ${macDots}
-<pre style="margin: 0; padding: 14px 16px; background: ${codeBg}; color: ${codeText}; font-size: 13.5px; line-height: 1.6; letter-spacing: 0; white-space: pre; overflow-x: auto; font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'Courier New', monospace;"><code>${highlighted}</code></pre>
+<pre style="margin: 0; padding: 14px 16px; background: ${codeBg}; color: ${codeText}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'Courier New', monospace;"><code>${highlighted}</code></pre>
 </div>`;
   }
 }

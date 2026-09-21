@@ -16,7 +16,7 @@ from .themes import (
 from .uploader import get_access_token, upload_image_to_wechat_cdn, upload_cover_material
 from .publisher import publish_draft_to_wechat
 
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 
 __all__ = [
     "markdown_to_wechat_html",
