@@ -35,6 +35,13 @@ def parse_frontmatter(text: str) -> Tuple[Dict[str, Any], str]:
                 body = normalized[4 + closing.end():].lstrip("\n")
     return meta, body
 
+def extract_quote_text(md_text: str, max_len: int = 120) -> str:
+    """提取正文第一个引言块 (>) 内容作为摘要候选，剥离行内 Markdown 修饰符，无引言时返回空串"""
+    m = re.search(r"^>\s*(.+)$", md_text, re.MULTILINE)
+    if not m:
+        return ""
+    return re.sub(r"[`*_]", "", m.group(1)).strip()[:max_len]
+
 def strip_markdown(md_text: str, max_len: int = 120) -> str:
     """剥离 Markdown 符号生成纯文本摘要 (Digest)"""
     text = re.sub(r'!\[.*?\]\(.*?\)', '', md_text)
@@ -379,14 +386,14 @@ def render_code(raw_code: str, code_lang: str, theme: dict) -> str:
         return (
             f'<div style="margin: 22px 0; border-radius: 6px; overflow: hidden; border: 1px solid {border_color}; box-shadow: 0 4px 14px rgba(0,0,0,0.15);">'
             f'{top_bar}'
-            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: Consolas, Monaco, monospace;"><code>{highlighted}</code></pre>'
+            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; letter-spacing: 0; white-space: pre; overflow-x: auto; font-family: \'SF Mono\', SFMono-Regular, Menlo, Consolas, \'Liberation Mono\', \'Courier New\', monospace;"><code>{highlighted}</code></pre>'
             f'</div>'
         )
     elif style == "clean_flat":
         # 极简扁平圆角无指示灯
         return (
             f'<div style="margin: 22px 0; border-radius: 8px; overflow: hidden; border: 1px solid {border_color};">'
-            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: Consolas, Monaco, monospace;"><code>{highlighted}</code></pre>'
+            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; letter-spacing: 0; white-space: pre; overflow-x: auto; font-family: \'SF Mono\', SFMono-Regular, Menlo, Consolas, \'Liberation Mono\', \'Courier New\', monospace;"><code>{highlighted}</code></pre>'
             f'</div>'
         )
     else:
@@ -402,7 +409,7 @@ def render_code(raw_code: str, code_lang: str, theme: dict) -> str:
         return (
             f'<div style="margin: 22px 0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.08);">'
             f'{mac_dots}'
-            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: Consolas, Monaco, monospace;"><code>{highlighted}</code></pre>'
+            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; letter-spacing: 0; white-space: pre; overflow-x: auto; font-family: \'SF Mono\', SFMono-Regular, Menlo, Consolas, \'Liberation Mono\', \'Courier New\', monospace;"><code>{highlighted}</code></pre>'
             f'</div>'
         )
 

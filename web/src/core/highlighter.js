@@ -35,7 +35,13 @@ function escapeHtml(text) {
  */
 export function highlightCode(code, lang = '') {
   const cleanLang = (lang || '').trim().toLowerCase();
-  
+
+  // 纯文本/目录树等非编程语言不做任何 Token 拆分：
+  // 避免把 / - . 等标点染成彩色碎片，破坏 ASCII 树结构与移动端阅读体验
+  if (['', 'text', 'txt', 'plain'].includes(cleanLang)) {
+    return escapeHtml(code);
+  }
+
   // 简易 Tokenizer 规则表
   const tokenRules = [];
 

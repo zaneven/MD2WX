@@ -28,6 +28,11 @@ def highlight_code(code: str, lang: str = "") -> str:
     """
     clean_lang = (lang or "").strip().lower()
 
+    # 纯文本/目录树等非编程语言不做任何 Token 拆分：
+    # 避免把 / - . 等标点染成彩色碎片，破坏 ASCII 树结构与移动端阅读体验
+    if clean_lang in ("", "text", "txt", "plain"):
+        return escape_html(code)
+
     token_rules = []
 
     # 1. 注释规则

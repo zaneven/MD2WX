@@ -378,12 +378,12 @@ export function renderCode(rawCode, codeLang, theme) {
     return `
 <div style="margin: 22px 0; border-radius: 6px; overflow: hidden; border: 1px solid ${borderColor}; box-shadow: 0 4px 14px rgba(0,0,0,0.15);">
 ${topBar}
-<pre style="margin: 0; padding: 14px 16px; background: ${codeBg}; color: ${codeText}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: Consolas, Monaco, monospace;"><code>${highlighted}</code></pre>
+<pre style="margin: 0; padding: 14px 16px; background: ${codeBg}; color: ${codeText}; font-size: 13.5px; line-height: 1.6; letter-spacing: 0; white-space: pre; overflow-x: auto; font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'Courier New', monospace;"><code>${highlighted}</code></pre>
 </div>`;
   } else if (style === 'clean_flat') {
     return `
 <div style="margin: 22px 0; border-radius: 8px; overflow: hidden; border: 1px solid ${borderColor};">
-<pre style="margin: 0; padding: 14px 16px; background: ${codeBg}; color: ${codeText}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: Consolas, Monaco, monospace;"><code>${highlighted}</code></pre>
+<pre style="margin: 0; padding: 14px 16px; background: ${codeBg}; color: ${codeText}; font-size: 13.5px; line-height: 1.6; letter-spacing: 0; white-space: pre; overflow-x: auto; font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'Courier New', monospace;"><code>${highlighted}</code></pre>
 </div>`;
   } else {
     // 默认：Mac 三色小圆点
@@ -397,7 +397,7 @@ ${topBar}
     return `
 <div style="margin: 22px 0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.08);">
 ${macDots}
-<pre style="margin: 0; padding: 14px 16px; background: ${codeBg}; color: ${codeText}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: Consolas, Monaco, monospace;"><code>${highlighted}</code></pre>
+<pre style="margin: 0; padding: 14px 16px; background: ${codeBg}; color: ${codeText}; font-size: 13.5px; line-height: 1.6; letter-spacing: 0; white-space: pre; overflow-x: auto; font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'Courier New', monospace;"><code>${highlighted}</code></pre>
 </div>`;
   }
 }
