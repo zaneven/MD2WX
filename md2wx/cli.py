@@ -13,8 +13,9 @@ from typing import Dict
 from urllib.parse import unquote
 
 from . import __version__
-from .parser import markdown_to_wechat_html, parse_frontmatter, strip_markdown
-from .themes import list_themes, get_theme, get_builtin_themes_dir, get_user_themes_dir
+from .parser import markdown_to_wechat_html, parse_frontmatter, strip_markdown, extract_quote_text
+from .themes import list_themes, get_theme, get_builtin_themes_dir, get_user_themes_dir, get_builtin_theme_cover
+from .cover import render_article_cover_png
 from .uploader import get_access_token, upload_image_to_wechat_cdn
 from .publisher import publish_draft_to_wechat
 
@@ -140,7 +141,7 @@ def main():
     parser.add_argument("--list-themes", action="store_true", help="列出所有可用的内置与用户自定义设计主题")
     parser.add_argument("--web", action="store_true", help="启动 MD2WX Web Studio 可视化排版工作台并在浏览器中打开")
     parser.add_argument("-p", "--publish", action="store_true", help="一键推送到微信公众号草稿箱")
-    parser.add_argument("--cover", help="指定封面图片路径 (发布草稿时必填，或自动提取正文首图)")
+    parser.add_argument("--cover", help="指定封面图片路径 (默认优先级: 此参数 > frontmatter cover: > 动态渲染主题封面 > 正文首图)")
     parser.add_argument("--author", help="指定文章作者 (默认读取 Frontmatter 或 '野生宝藏箱')")
     parser.add_argument("--title", help="指定文章标题 (默认读取 Frontmatter 或首个 H1)")
     parser.add_argument("--app-id", help="微信 AppID (默认从环境变量或 .env 读取)")
@@ -237,7 +238,8 @@ def main():
     title = title or "未命名文章"
 
     author = args.author or meta.get("author") or "野生宝藏箱"
-    digest = meta.get("digest") or strip_markdown(body_md, 120)
+    # 摘要优先级与 Web Studio extractCoverMeta 对齐: frontmatter digest > 正文首个引言块 > 正文纯文本摘要
+    digest = meta.get("digest") or extract_quote_text(body_md, 120) or strip_markdown(body_md, 120)
 
     # 微信公众平台字段长度校验 (标题 64 字、摘要 120 字)，超长提前截断并警告
     if len(title) > WECHAT_TITLE_MAX_LEN:
@@ -338,16 +340,31 @@ def main():
     # 选项 D: 一键发布到微信公众号草稿箱
     if args.publish:
         print(">>> 3. 准备提交草稿至微信公众号...")
-        # 确定封面图
+        # 确定封面图，优先级: --cover 参数 > frontmatter cover: > 主题默认封面 > 正文首图
         cover_path = None
         if args.cover:
             cover_path = str(Path(args.cover).resolve())
         elif meta.get("cover"):
             cover_path = str((base_dir / meta["cover"]).resolve())
-        elif image_map:
-            # 取第一张本地图片作为默认封面候选
-            first_local = list(image_map.keys())[0]
-            cover_path = str((base_dir / first_local).resolve())
+        else:
+            theme_id = theme_cfg.get("id")
+            # 优先动态渲染文章专属主题封面 (与 Web Studio Cover Studio 同款视觉，
+            # 标题/摘要/作者/标签自动排版进主题设计稿，输出 2350x1000 头条尺寸)
+            cover_path = render_article_cover_png(
+                theme_id, title=title, digest=digest, author=author, tags=meta.get("tags")
+            )
+            if cover_path:
+                print(f"    已动态生成 '{theme_cfg.get('name')}' 主题专属封面 (文章标题/摘要自动渲染)。")
+            else:
+                # 无头浏览器不可用时降级为内置静态主题封面
+                theme_cover = get_builtin_theme_cover(theme_id)
+                if theme_cover:
+                    cover_path = str(theme_cover)
+                    print(f"    未检测到无头浏览器，使用 '{theme_cfg.get('name')}' 主题静态默认封面。")
+            if not cover_path and image_map:
+                # 取第一张本地图片作为默认封面候选
+                first_local = list(image_map.keys())[0]
+                cover_path = str((base_dir / first_local).resolve())
 
         if not cover_path or not Path(cover_path).exists():
             print("[-] 错误: 微信图文消息必须设置封面图！请使用 --cover 参数指定封面图片路径。", file=sys.stderr)

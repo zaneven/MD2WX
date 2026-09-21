@@ -193,6 +193,51 @@ kind: Pod
         self.assertIn("2.5px solid #000000", html)
         self.assertIn("4px 4px 0 #000000", html)
 
+    def test_extract_quote_text_digest(self):
+        """测试正文首个引言块提取摘要：剥离修饰符、超长截断、无引言返回空串"""
+        from md2wx.parser import extract_quote_text
+        md = """# 标题
+
+正文段落。
+
+> **真正的专注**，是在充满干扰的世界中守住内心的秩序。
+
+后续正文。
+"""
+        self.assertEqual(extract_quote_text(md), "真正的专注，是在充满干扰的世界中守住内心的秩序。")
+        self.assertEqual(extract_quote_text("没有引言的内容"), "")
+        self.assertEqual(extract_quote_text("> " + "长" * 200, max_len=10), "长" * 10)
+
+    def test_builtin_theme_covers_packaged(self):
+        """测试所有内置主题均有随包分发的默认封面图，自定义主题则安全返回 None"""
+        from md2wx.themes import get_builtin_theme_cover
+        for theme_id in ["tech-blue", "terminal-geek", "acid-bold", "vintage-news",
+                         "warm-memo", "warm-orange", "dark-night", "elegant-purple", "wechat-green"]:
+            cover = get_builtin_theme_cover(theme_id)
+            self.assertIsNotNone(cover, f"主题 {theme_id} 缺少内置默认封面")
+            self.assertTrue(cover.exists())
+            self.assertEqual(cover.suffix, ".png")
+        # 自定义/未知主题与空标识无内置封面
+        self.assertIsNone(get_builtin_theme_cover("my-custom-theme"))
+        self.assertIsNone(get_builtin_theme_cover(""))
+
+    def test_plain_text_code_block_not_tokenized(self):
+        """测试 text/plain/无语言代码块不做词法高亮拆分，保持 ASCII 目录树纯文本完整性"""
+        tree_md = """```text
+public/
+├── 数据大屏/
+│   └── 看板.html
+└── 报告/
+```"""
+        html = markdown_to_wechat_html(tree_md, theme_name="acid-bold")
+        # 目录树字符完整保留，未被包裹彩色 span
+        self.assertIn("├── 数据大屏/", html)
+        self.assertIn("└── 报告/", html)
+        self.assertNotIn('<span style="color: #94a3b8;">/</span>', html)
+        # 编程语言仍正常高亮
+        code_html = markdown_to_wechat_html("```python\ndef hi(): pass\n```", theme_name="acid-bold")
+        self.assertIn("<span", code_html)
+
     def test_custom_theme_file_loading_and_fallback(self):
         """测试从外部临时 JSON 文件直接加载并应用主题，以及部分字段缺失时的自动深度兜底"""
         custom_theme_data = {

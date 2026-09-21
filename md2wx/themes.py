@@ -109,6 +109,16 @@ def get_user_themes_dir() -> Path:
     """获取用户自定义主题配置目录 (~/.config/md2wx/themes)"""
     return Path.home() / ".config" / "md2wx" / "themes"
 
+def get_builtin_theme_cover(theme_id: str) -> Optional[Path]:
+    """
+    获取指定内置主题的默认封面图 (md2wx/themes/covers/cover-<id>.png, 2.35:1 头条比例)
+    与 Web Studio Cover Studio 的主题预设一一对应；未内置封面的自定义主题返回 None
+    """
+    if not theme_id:
+        return None
+    cover_path = get_builtin_themes_dir() / "covers" / f"cover-{theme_id}.png"
+    return cover_path if cover_path.exists() else None
+
 def scan_themes() -> Dict[str, dict]:
     """
     全量扫描可用主题：

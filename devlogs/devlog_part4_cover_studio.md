@@ -45,47 +45,47 @@ cover: assets/covers/cover-v1.0.2-article.png
 ### 1. 先锋野兽派 (`acid-bold`)
 超高饱和明黄底色、纯黑加粗边框、硬核立体硬投影与张力粗黑体，极具视觉冲击力与态度发声感。
 
-![先锋野兽派封面](assets/covers/cover-acid-bold.png)
+![先锋野兽派封面](md2wx/themes/covers/cover-acid-bold.png)
 
 ### 2. 现代科技蓝 (`tech-blue`)
 深邃蓝黑径向渐变、冰蓝光晕与现代科技卡片，专为深度技术架构与工程复盘量身定制。
 
-![现代科技蓝封面](assets/covers/cover-tech-blue.png)
+![现代科技蓝封面](md2wx/themes/covers/cover-tech-blue.png)
 
 ### 3. 暗黑极客风 (`dark-night`)
 暗曜石深黑底色、微发光冷蓝指示条与高对比度信息胶囊，尽显深夜沉思与黑客理性美学。
 
-![暗黑极客风封面](assets/covers/cover-dark-night.png)
+![暗黑极客风封面](md2wx/themes/covers/cover-dark-night.png)
 
 ### 4. 先锋优雅紫 (`elegant-purple`)
 高级紫罗兰雅致渐变、现代杂志留白美学与细腻层次分割，带来极具温度的审美享受。
 
-![先锋优雅紫封面](assets/covers/cover-elegant-purple.png)
+![先锋优雅紫封面](md2wx/themes/covers/cover-elegant-purple.png)
 
 ### 5. 极客终端 (`terminal-geek`)
 仿真 macOS/Linux 终端顶栏（经典红黄绿圆点）、命令行提示符 `❯ bash` 与荧光绿等宽字符，极客味十足。
 
-![极客终端封面](assets/covers/cover-terminal-geek.png)
+![极客终端封面](md2wx/themes/covers/cover-terminal-geek.png)
 
 ### 6. 复古报刊 (`vintage-news`)
 古典浅牛皮纸色、双细线报头边框、宋体衬线大标题与创刊号排印风，散发浓郁的人文书卷气息。
 
-![复古报刊封面](assets/covers/cover-vintage-news.png)
+![复古报刊封面](md2wx/themes/covers/cover-vintage-news.png)
 
 ### 7. 温暖便签 (`warm-memo`)
 治愈浅奶油底、暖阳橙圆角胶囊与便签贴纸分割，适合记录日常微光与生活散文。
 
-![温暖便签封面](assets/covers/cover-warm-memo.png)
+![温暖便签封面](md2wx/themes/covers/cover-warm-memo.png)
 
 ### 8. 温暖活力橙 (`warm-orange`)
 元气橙色渐变搭配饱满圆润卡片，充满正向能量，是读书感悟与成长手记的绝佳搭档。
 
-![温暖活力橙封面](assets/covers/cover-warm-orange.png)
+![温暖活力橙封面](md2wx/themes/covers/cover-warm-orange.png)
 
 ### 9. 微信生态绿 (`wechat-green`)
 微信官方深绿质感与规范认证徽章，平实克制，适合权威资讯与行业深度报告。
 
-![微信生态绿封面](assets/covers/cover-wechat-green.png)
+![微信生态绿封面](md2wx/themes/covers/cover-wechat-green.png)
 
 ---
 
