@@ -55,6 +55,8 @@ def hello():
         # 微信白名单安全换行结构: 换行 -> <br>，缩进空格 -> &nbsp;，pre 内不再依赖裸换行
         self.assertIn("<br>", html)
         self.assertNotIn("\n", html.split("<code>")[1].split("</code>")[0])
+        # 横向滚动由 div 包裹层承载 (微信剥离 pre 自身的 overflow-x)
+        self.assertIn('overflow-x: auto; -webkit-overflow-scrolling: touch;', html)
 
     def test_table_rendering(self):
         """测试 Markdown 表格解析与斑马纹样式"""

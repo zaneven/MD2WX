@@ -391,6 +391,11 @@ def render_code(raw_code: str, code_lang: str, theme: dict) -> str:
     # 纯内联语法着色（微信后台不褪色），并把换行/空格转为微信白名单安全的自包含结构
     highlighted = _wechat_safe_line_structure(highlight_code(raw_code, code_lang))
 
+    # 微信会剥离 pre 自身的 overflow-x，但放行 div/section 容器上的横向滚动
+    # (与 render_table 的滚动容器同款策略)，由外层包裹层承载横向滑动
+    code_scroll_open = '<div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">'
+    code_scroll_close = '</div>'
+
     if style == "terminal":
         # 纯黑终端状态栏风格
         top_bar = (
@@ -402,14 +407,18 @@ def render_code(raw_code: str, code_lang: str, theme: dict) -> str:
         return (
             f'<div style="margin: 22px 0; border-radius: 6px; overflow: hidden; border: 1px solid {border_color}; box-shadow: 0 4px 14px rgba(0,0,0,0.15);">'
             f'{top_bar}'
-            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: \'SF Mono\', SFMono-Regular, Menlo, Consolas, \'Liberation Mono\', \'Courier New\', monospace;"><code>{highlighted}</code></pre>'
+            f'{code_scroll_open}'
+            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; font-family: \'SF Mono\', SFMono-Regular, Menlo, Consolas, \'Liberation Mono\', \'Courier New\', monospace;"><code>{highlighted}</code></pre>'
+            f'{code_scroll_close}'
             f'</div>'
         )
     elif style == "clean_flat":
         # 极简扁平圆角无指示灯
         return (
             f'<div style="margin: 22px 0; border-radius: 8px; overflow: hidden; border: 1px solid {border_color};">'
-            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: \'SF Mono\', SFMono-Regular, Menlo, Consolas, \'Liberation Mono\', \'Courier New\', monospace;"><code>{highlighted}</code></pre>'
+            f'{code_scroll_open}'
+            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; font-family: \'SF Mono\', SFMono-Regular, Menlo, Consolas, \'Liberation Mono\', \'Courier New\', monospace;"><code>{highlighted}</code></pre>'
+            f'{code_scroll_close}'
             f'</div>'
         )
     else:
@@ -425,7 +434,9 @@ def render_code(raw_code: str, code_lang: str, theme: dict) -> str:
         return (
             f'<div style="margin: 22px 0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.08);">'
             f'{mac_dots}'
-            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: \'SF Mono\', SFMono-Regular, Menlo, Consolas, \'Liberation Mono\', \'Courier New\', monospace;"><code>{highlighted}</code></pre>'
+            f'{code_scroll_open}'
+            f'<pre style="margin: 0; padding: 14px 16px; background: {code_bg}; color: {code_text}; font-size: 13.5px; line-height: 1.6; font-family: \'SF Mono\', SFMono-Regular, Menlo, Consolas, \'Liberation Mono\', \'Courier New\', monospace;"><code>{highlighted}</code></pre>'
+            f'{code_scroll_close}'
             f'</div>'
         )
 

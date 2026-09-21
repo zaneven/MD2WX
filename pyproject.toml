@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "md2wx"
-version = "1.1.1"
+version = "1.1.2"
 description = "Markdown to WeChat Official Account Formatter: 高质感微信排版转换器与草稿箱自动化发布工具"
 readme = "README.md"
 authors = [{ name = "野生宝藏箱" }]
