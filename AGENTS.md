@@ -42,11 +42,14 @@ MD2WX/
 │   ├── cli.py                  # 命令行参数解析、交互与系统剪贴板注入 (pbcopy/osascript)
 │   ├── parser.py               # 核心解析引擎：AST构建、Token化、内联样式注入、外链转脚注
 │   ├── highlighter.py          # 纯内联语法高亮器（词法分词 + 微信兼容内联 span）
+│   ├── cover.py                # 动态主题封面渲染引擎（无头浏览器截图 2350x1000，零第三方依赖）
+│   ├── uploader.py             # 微信素材上传（正文图 CDN 换链 + 封面永久素材，md5 缓存）
 │   ├── publisher.py            # 微信公众号后台交互（access_token、素材上传、草稿箱推送）
 │   └── themes/                 # 9大主题 JSON 配置文件夹
 │       ├── tech-blue.json      # 现代科技蓝（默认）
 │       ├── terminal-geek.json  # 极客终端黑
 │       ├── acid-bold.json      # 先锋野兽派
+│       ├── covers/             # 9大主题默认封面 (随包分发，动态渲染不可用时的降级兜底)
 │       └── ...
 │
 ├── web/                        # 纯前端 Web Studio 工作台
@@ -58,13 +61,16 @@ MD2WX/
 │       ├── core/
 │       │   ├── parser.js       # 浏览器端轻量 Markdown 解析与样式内联引擎
 │       │   ├── highlighter.js  # 纯内联 JS 语法高亮
+│       │   ├── cover.js        # 主题封面 HTML 渲染与元数据提取 (与 CLI cover.py 预设同步)
+│       │   ├── canvas_exporter.js # 封面光栅化导出 (SVG foreignObject + Canvas 2D 双引擎)
 │       │   └── clipboard.js    # 现代浏览器 Clipboard API 富文本注入
 │       ├── themes/             # Web 端主题配置定义
 │       └── styles/             # Vanilla CSS 设计系统与仿真视口样式
 │
 ├── tests/                      # Python 自动化测试套件
 │   ├── test_parser.py          # 解析器、内联转换、主题注入与边界单测
-│   └── test_publisher.py       # 草稿箱发布逻辑与 Mock 测试
+│   ├── test_publisher.py       # 草稿箱发布逻辑与 Mock 测试
+│   └── test_cover.py           # 动态封面渲染引擎单测（元数据截断、主题视觉、降级链路）
 │
 └── .github/workflows/          # GitHub Actions 自动化工作流
     ├── deploy.yml              # Web Studio 部署至 GitHub Pages (md2wx.zaneven.com)
@@ -90,6 +96,11 @@ MD2WX/
 5. **单图文封面 1:1 裁切安全区**：
    - 微信头条封面比例为 2.35:1（900x383 或 2350x1000），但在微信对话框分享、朋友圈二次转发时会被自动裁剪为正方形 1:1。
    - 设计或渲染封面图时，核心文字与视觉主体必须置于中部的 1:1 安全区内。
+6. **代码块微信兼容三原则（v1.1.1 - v1.1.4 真机验证沉淀，严禁回归）**：
+   - **换行结构必须自包含**：微信净化流程对 `<pre>` 标签语义与 `white-space` 内联属性的保留不可靠，裸换行符会被塌缩成一行。代码内容必须转换为换行符 -> `<br>`、空格 -> `&nbsp;` 的自包含结构（`br` 在微信标签白名单中永远保留）。转换只作用于文本节点，严禁触碰高亮 `<span>` 与 `style` 属性内的字符。实现见 `parser.py` / `parser.js` 的 `_wechat_safe_line_structure` / `wechatSafeLineStructure`。
+   - **横向滚动由 div 容器承载**：微信会剥离 `<pre>` 自身的 `overflow-x`，但放行 div/section 容器上的横向滚动（与表格滚动容器同款策略）。必须用 `<div style="overflow-x: auto; -webkit-overflow-scrolling: touch; ...">` 包裹 `<pre>`。
+   - **背景色必须画在滚动容器上**：微信将 `pre` 按普通块级处理时背景只覆盖可视宽度，且会剥离 `display: inline-block` / `min-width` 等布局属性（v1.1.3 方案已验证失效）。依据 CSS 规范，滚动容器的背景固定于可视盒、不随内容滚动，因此代码块底色与内边距必须放在滚动容器 div 上，长行溢出文字直接绘制在容器底色上。严禁再依赖任何"让元素随内容变宽"的布局属性方案。
+   - 字体栈使用 `'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'Courier New', monospace`（`Consolas`/`Monaco` 在移动端不存在，会导致制表符 `├ └ │ ─` 因字体回退错位）；`text`/`plain`/无语言代码块严禁做词法高亮拆分。
 
 ---
 
