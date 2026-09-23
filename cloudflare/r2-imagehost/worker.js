@@ -67,6 +67,21 @@ function originAllowed(request, env) {
   return allowed.includes(origin);
 }
 
+/**
+ * 公开路由限流：单 IP 每分钟上限（由 wrangler.toml [[ratelimits]] 配置）。
+ * 仅在 /api/public/uploads 生效，不影响令牌路由与取图。超限返回 429 响应，否则返回 null。
+ */
+async function enforceRateLimit(request, env, cors) {
+  const limiter = env.UPLOAD_RATE_LIMITER;
+  if (!limiter || typeof limiter.limit !== 'function') return null;
+  const ip = request.headers.get('cf-connecting-ip') || 'unknown';
+  const { success } = await limiter.limit({ key: `public-upload:${ip}` });
+  if (!success) {
+    return json({ error: '上传过于频繁，请稍后再试' }, 429, cors);
+  }
+  return null;
+}
+
 function extFromType(type) {
   return ({ 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' })[type] || 'png';
 }
@@ -147,6 +162,8 @@ export default {
       if (!originAllowed(request, env)) {
         return json({ error: '来源站点不在允许列表内' }, 403, cors);
       }
+      const limited = await enforceRateLimit(request, env, cors);
+      if (limited) return limited;
       return handleUpload(request, env, url, cors);
     }
 

@@ -13,3 +13,13 @@ PUBLIC_BASE = ""
 # 公开上传路由 (/api/public/uploads) 的 Origin 白名单，逗号分隔
 ALLOWED_ORIGINS = "https://md2wx.zaneven.com,http://localhost:3000,http://127.0.0.1:3000"
 # UPLOAD_TOKEN 通过 `wrangler secret put UPLOAD_TOKEN` 注入，不写在此处
+
+# 公开上传路由限流：单 IP 每 60 秒最多 60 次（仅作用于 /api/public/uploads）
+[[ratelimits]]
+name = "UPLOAD_RATE_LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 60
+  period = 60
+

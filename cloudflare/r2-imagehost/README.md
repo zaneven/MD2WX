@@ -65,6 +65,11 @@ VITE_IMAGE_HOST_UPLOAD_URL=https://md2wx-imagehost.<sub>.workers.dev/api/public/
 
 ## 生产加固
 
-- 对 `/api/public/uploads` 配置 Cloudflare **Rate Limiting** 规则，限制单 IP 上传频率（免费额度 1 条）。
+- **内置限流**：`/api/public/uploads` 已通过 Workers Rate Limiting binding 限制为**单 IP 每 60 秒 60 次**
+  （见 `wrangler.toml` 的 `[[ratelimits]]`）。日常手动上传（每篇几张到几十张）远低于阈值，不受影响；
+  仅高频突发（脚本刷量）会被返回 429，一个窗口后自动恢复。该 binding 为「最终一致、偏宽松」设计，
+  是防滥用而非精确计量。如需调整，改 `limit` 后重新 `wrangler deploy`。
 - 在 Cloudflare 给 Worker 绑定自定义域名（如 `img.你的域.com`），把 `PUBLIC_BASE` 设为该域名。
 - 收紧 `ALLOWED_ORIGINS` 只保留你的站点域名。
+- 如需更强的防刷，可在 Cloudflare 控制台为该自定义域名再加 zone 级 WAF Rate Limiting 规则，
+  或接入 Turnstile（注意 `*.workers.dev` 不归你的 zone 管理，zone 级规则需先绑自定义域名）。
