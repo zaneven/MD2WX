@@ -16,7 +16,14 @@ from . import __version__
 from .parser import markdown_to_wechat_html, parse_frontmatter, strip_markdown, extract_quote_text
 from .themes import list_themes, get_theme, get_builtin_themes_dir, get_user_themes_dir, get_builtin_theme_cover
 from .cover import render_article_cover_png
-from .uploader import get_access_token, upload_image_to_wechat_cdn
+from .envutil import load_env, is_placeholder
+from .imagehost import (
+    get_image_host_config,
+    upload_image_file as upload_image_to_host,
+    download_image_bytes,
+    CONFIG_HINT as IMAGE_HOST_HINT,
+)
+from .uploader import get_access_token, upload_image_to_wechat_cdn, upload_image_bytes_to_wechat_cdn
 from .publisher import publish_draft_to_wechat
 
 # 各主题封面徽标预设 (与 Web Studio THEME_COVER_PRESETS 保持一致)
@@ -66,46 +73,15 @@ def print_themes_list():
     print("================================================================================")
 
 def load_env_credentials() -> Dict[str, str]:
-    """从环境变量或常见 .env 路径加载微信凭证"""
-    creds = {
-        "app_id": os.environ.get("WECHAT_APP_ID", ""),
-        "app_secret": os.environ.get("WECHAT_APP_SECRET", "")
-    }
-    if creds["app_id"] and creds["app_secret"]:
-        return creds
-
-    # 按优先级尝试读取 .env（utf-8-sig 兼容 BOM，支持 export 前缀与注释行）
-    candidate_envs = [
-        Path.cwd() / ".env",
-        Path.home() / ".config" / "md2wx" / ".env",
-        Path(__file__).resolve().parent.parent / ".env",
-    ]
-    for env_file in candidate_envs:
-        if creds["app_id"] and creds["app_secret"]:
-            break
-        if not env_file.exists():
-            continue
-        try:
-            with open(env_file, "r", encoding="utf-8-sig") as f:
-                lines = f.readlines()
-        except OSError:
-            continue
-        for line in lines:
-            line = line.strip()
-            if line.startswith("export "):
-                line = line[len("export "):].strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, val = line.split("=", 1)
-            val = val.strip().strip("'\"")
-            if not val or val.startswith("your_") or val.startswith("<"):
-                continue
-            key = key.strip()
-            if key == "WECHAT_APP_ID" and not creds["app_id"]:
-                creds["app_id"] = val
-            elif key == "WECHAT_APP_SECRET" and not creds["app_secret"]:
-                creds["app_secret"] = val
-    return creds
+    """从环境变量或常见 .env 路径加载微信凭证（统一走 envutil.load_env）"""
+    env = load_env()
+    app_id = env.get("WECHAT_APP_ID", "")
+    app_secret = env.get("WECHAT_APP_SECRET", "")
+    if is_placeholder(app_id):
+        app_id = ""
+    if is_placeholder(app_secret):
+        app_secret = ""
+    return {"app_id": app_id, "app_secret": app_secret}
 
 def copy_html_to_clipboard(html: str) -> bool:
     """在 macOS 环境下将 HTML 作为富文本写入剪贴板 (可以直接 Cmd+V 粘贴到微信后台)"""
@@ -146,6 +122,7 @@ def main():
     parser.add_argument("--title", help="指定文章标题 (默认读取 Frontmatter 或首个 H1)")
     parser.add_argument("--app-id", help="微信 AppID (默认从环境变量或 .env 读取)")
     parser.add_argument("--no-cover", action="store_true", help="不在正文顶部注入封面卡片")
+    parser.add_argument("--upload-image", metavar="PATH", help="将本地图片上传到 .env 配置的在线图床并输出图片链接 (需配置 IMAGE_HOST_UPLOAD_URL)")
 
     args = parser.parse_args()
 
@@ -193,6 +170,24 @@ def main():
     # 处理 --list-themes 选项
     if args.list_themes:
         print_themes_list()
+        sys.exit(0)
+
+    # 处理 --upload-image 选项：上传本地图片到在线图床并输出链接
+    if args.upload_image:
+        host_cfg = get_image_host_config()
+        if not host_cfg:
+            print(f"[-] 错误: {IMAGE_HOST_HINT}", file=sys.stderr)
+            print("    配置示例 (.env):", file=sys.stderr)
+            print("      IMAGE_HOST_UPLOAD_URL=https://your-image-host/api/uploads", file=sys.stderr)
+            print("      IMAGE_HOST_TOKEN=your_token  # 可选", file=sys.stderr)
+            sys.exit(1)
+        try:
+            url = upload_image_to_host(args.upload_image, host_cfg)
+            print(f"[+] 图片已上传到图床:", file=sys.stderr)
+            sys.stdout.write(url + "\n")
+        except Exception as e:
+            print(f"[-] 图片上传失败: {e}", file=sys.stderr)
+            sys.exit(1)
         sys.exit(0)
 
     # 1. 校验主题配置：交给 get_theme 统一解析（含文件路径加载与回退），
@@ -272,23 +267,56 @@ def main():
             print(f"[-] 获取 Token 失败: {e}", file=sys.stderr)
             sys.exit(1)
 
-        # 扫描本地图片并上传 (支持 title 语法与 URL 编码路径，精确捕获 src)
+        # 扫描正文图片引用并上传至微信官方 CDN (支持 title 语法与 URL 编码路径，精确捕获 src)
         img_matches = list(re.finditer(r'!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)', body_md))
         if img_matches:
             print(f">>> 2. 检测到 {len(img_matches)} 处图片引用，正在上传至微信官方 CDN...")
             upload_failed = []
             for m in img_matches:
                 img_src = unquote(m.group(2))
-                if img_src.startswith(("http://", "https://")):
-                    # 外部网络图直接透传；仅微信 CDN 图无需处理
+
+                # 已是微信 CDN 图，无需处理
+                if "mmbiz.qpic.cn" in img_src:
                     continue
-                # 本地相对路径查找
+                if img_src in image_map:
+                    continue
+
+                # A. 外链 http(s) 图片：下载字节后转存微信 CDN，规避微信外链防盗链
+                if img_src.startswith(("http://", "https://")):
+                    try:
+                        print(f"    正在下载外链图片并转存微信: {img_src} ...")
+                        data, filename, mime = download_image_bytes(img_src)
+                        cdn_url = upload_image_bytes_to_wechat_cdn(token, data, filename, mime)
+                        image_map[img_src] = cdn_url
+                        print(f"    -> 成功换链: {cdn_url[:60]}...")
+                    except Exception as e:
+                        upload_failed.append(img_src)
+                        print(f"    [-] 外链图片转存失败 ({img_src}): {e}", file=sys.stderr)
+                    continue
+
+                # B. Base64 内嵌图片 (data:image/...;base64,...)：解码后转存微信 CDN
+                if img_src.startswith("data:image/") and ";base64," in img_src:
+                    try:
+                        import base64
+                        header, b64 = img_src.split(";base64,", 1)
+                        mime = header.replace("data:", "") or "image/png"
+                        data = base64.b64decode(b64)
+                        ext = mime.split("/")[-1].split("+")[0] or "png"
+                        filename = f"pasted.{ext}"
+                        print(f"    正在转存内嵌 Base64 图片 ...")
+                        cdn_url = upload_image_bytes_to_wechat_cdn(token, data, filename, mime)
+                        image_map[img_src] = cdn_url
+                        print(f"    -> 成功换链: {cdn_url[:60]}...")
+                    except Exception as e:
+                        upload_failed.append(img_src)
+                        print(f"    [-] Base64 图片转存失败: {e}", file=sys.stderr)
+                    continue
+
+                # C. 本地相对路径图片
                 local_img_path = (base_dir / img_src).resolve()
                 if not local_img_path.exists():
                     upload_failed.append(img_src)
                     print(f"    [-] 本地图片不存在，发布后将保持原样: {img_src}", file=sys.stderr)
-                    continue
-                if img_src in image_map:
                     continue
                 try:
                     print(f"    正在上传图片: {img_src} ...")

@@ -1,0 +1,15 @@
+name = "md2wx-imagehost"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+# R2 存储桶绑定（bucket_name 改成你账号下的桶名，需先在 Cloudflare 创建）
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "md2wx-images"
+
+[vars]
+# 图片访问域名：留空则用 *.workers.dev；生产建议绑定自定义域名
+PUBLIC_BASE = ""
+# 公开上传路由 (/api/public/uploads) 的 Origin 白名单，逗号分隔
+ALLOWED_ORIGINS = "https://md2wx.zaneven.com,http://localhost:3000,http://127.0.0.1:3000"
+# UPLOAD_TOKEN 通过 `wrangler secret put UPLOAD_TOKEN` 注入，不写在此处

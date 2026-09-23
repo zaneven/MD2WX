@@ -9,6 +9,12 @@ import { markdownToWechatHtml, parseFrontmatter } from './core/parser.js';
 import { copyWechatHtml, downloadHtmlFile } from './core/clipboard.js';
 import { COVER_DIMENSIONS, extractCoverMeta, renderCoverHtml, THEME_COVER_PRESETS } from './core/cover.js';
 import { domToPngBlob, copyImageToClipboard, downloadImageBlob } from './core/canvas_exporter.js';
+import {
+  isImageHostConfigured,
+  uploadImageFile,
+  validateImageFile,
+  IMAGE_HOST_UNCONFIGURED_HINT,
+} from './core/imagehost.js';
 
 // 官方排版示范长文
 const DEFAULT_SAMPLE_ARTICLE = `---
@@ -539,7 +545,87 @@ function bindEvents() {
   document.getElementById('tool-list').addEventListener('click', () => insertFormatting('- ', '\n', '核心列表项'));
   document.getElementById('tool-hr').addEventListener('click', () => insertFormatting('\n---\n', '', ''));
   document.getElementById('tool-link').addEventListener('click', () => insertFormatting('[', '](https://example.com)', '链接说明'));
-  document.getElementById('tool-image').addEventListener('click', () => insertFormatting('![图片说明](', ')', 'https://example.com/image.png'));
+
+  // 图片插入菜单 (图床上传 / 粘贴链接)，参考 WePost 插入图片浮层交互
+  const imageMenu = document.getElementById('image-menu');
+  const imageUrlInput = document.getElementById('image-url-input');
+  const imageHostHint = document.getElementById('image-host-hint');
+  const imageUploadTrigger = document.getElementById('image-upload-trigger');
+  const imageFileInput = document.getElementById('image-file-input');
+  const imageHostConfigured = isImageHostConfigured();
+
+  /**
+   * 上传本地图片文件到图床并插入正文；未配置时提示不支持
+   */
+  async function handleImageUpload(file, altLabel = '图片') {
+    if (!file) return;
+    const precheck = validateImageFile(file);
+    if (precheck) {
+      showToast(precheck, 'error');
+      return;
+    }
+    if (!imageHostConfigured) {
+      showToast(IMAGE_HOST_UNCONFIGURED_HINT, 'error');
+      return;
+    }
+    showToast('正在上传图片到图床…');
+    try {
+      const url = await uploadImageFile(file);
+      insertFormatting(`![${altLabel}](`, ')', url);
+      showToast('图片已上传并插入正文');
+    } catch (e) {
+      showToast(`图床上传失败: ${e.message || '未知错误'}`, 'error');
+    }
+  }
+
+  if (imageHostHint) {
+    imageHostHint.textContent = imageHostConfigured ? '' : '当前未配置图床，本地上传不可用';
+  }
+  if (imageUploadTrigger && !imageHostConfigured) {
+    imageUploadTrigger.classList.add('is-disabled');
+    imageUploadTrigger.title = IMAGE_HOST_UNCONFIGURED_HINT;
+  }
+
+  document.getElementById('tool-image').addEventListener('click', (e) => {
+    e.stopPropagation();
+    imageMenu?.classList.toggle('show');
+  });
+  document.addEventListener('click', (e) => {
+    if (imageMenu && !e.target.closest('.image-tool-wrap')) {
+      imageMenu.classList.remove('show');
+    }
+  });
+  if (imageUrlInput) {
+    imageUrlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('image-url-insert')?.click();
+      }
+    });
+  }
+  document.getElementById('image-url-insert')?.addEventListener('click', () => {
+    const url = (imageUrlInput?.value || '').trim();
+    if (!/^https?:\/\//i.test(url)) {
+      showToast('请输入 http/https 开头的图片链接', 'error');
+      return;
+    }
+    insertFormatting('![图片](', ')', url);
+    if (imageUrlInput) imageUrlInput.value = '';
+    imageMenu?.classList.remove('show');
+  });
+  imageUploadTrigger?.addEventListener('click', () => {
+    if (!imageHostConfigured) {
+      showToast(IMAGE_HOST_UNCONFIGURED_HINT, 'error');
+      return;
+    }
+    imageFileInput?.click();
+  });
+  imageFileInput?.addEventListener('change', async () => {
+    const file = imageFileInput.files && imageFileInput.files[0];
+    imageFileInput.value = '';
+    await handleImageUpload(file, file ? file.name.replace(/\.[^.]+$/, '') : '图片');
+    imageMenu?.classList.remove('show');
+  });
 
   document.getElementById('tool-clear').addEventListener('click', () => {
     if (confirm('确定要清空当前的编辑器内容吗？')) {
@@ -596,7 +682,7 @@ function bindEvents() {
     }
   });
 
-  // 本地图片粘贴支持 (支持剪贴板中的截图直接转 Base64 嵌入)
+  // 本地图片粘贴支持 (剪贴板截图上传图床，未配置时提示不支持)
   textarea.addEventListener('paste', (e) => {
     const items = (e.clipboardData || window.clipboardData)?.items;
     if (!items) return;
@@ -605,21 +691,13 @@ function bindEvents() {
       if (item.type.indexOf('image') !== -1) {
         e.preventDefault();
         const file = item.getAsFile();
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            const base64Url = event.target.result;
-            insertFormatting('![粘贴图片](', ')', base64Url);
-            showToast('已将剪贴板图片转换为 Markdown 嵌入');
-          };
-          reader.readAsDataURL(file);
-        }
+        if (file) handleImageUpload(file, '粘贴图片');
         return;
       }
     }
   });
 
-  // 本地图片拖拽上传与防盗链感知
+  // 本地图片拖拽上传 (上传图床，未配置时提示不支持)
   const textareaWrapper = document.querySelector('.editor-textarea-wrapper');
   if (textareaWrapper) {
     textareaWrapper.addEventListener('dragover', (e) => {
@@ -636,13 +714,7 @@ function bindEvents() {
       if (files && files.length > 0) {
         const file = files[0];
         if (file.type.startsWith('image/')) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            const base64Url = event.target.result;
-            insertFormatting(`![${file.name}](`, ')', base64Url);
-            showToast(`已插入拖拽图片: ${file.name}`);
-          };
-          reader.readAsDataURL(file);
+          handleImageUpload(file, file.name.replace(/\.[^.]+$/, '') || '图片');
         }
       }
     });

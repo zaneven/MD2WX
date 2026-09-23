@@ -137,3 +137,125 @@
   outline-offset: -4px;
   background: rgba(52, 211, 153, 0.05);
 }
+
+/* ==============================================================================
+   图片插入浮层 (图床上传 / 粘贴链接)
+   ============================================================================== */
+.image-tool-wrap {
+  position: relative;
+  display: flex;
+}
+
+.image-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 60;
+  width: 260px;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+  padding: 10px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
+}
+
+.image-menu.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.image-menu-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  padding: 0 2px;
+}
+
+.image-menu-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.image-url-input {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  padding: 0 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.image-url-input:focus {
+  border-color: var(--border-focus);
+}
+
+.image-menu-btn {
+  height: 30px;
+  padding: 0 12px;
+  background: var(--accent-color, #2563eb);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.image-menu-btn:hover {
+  filter: brightness(1.12);
+}
+
+.image-menu-upload {
+  width: 100%;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.image-menu-upload:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--border-focus);
+}
+
+.image-menu-upload.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.image-menu-upload.is-disabled:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-subtle);
+}
+
+.image-menu-hint {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  min-height: 0;
+}
+
+.image-menu-hint:not(:empty) {
+  min-height: 16px;
+}

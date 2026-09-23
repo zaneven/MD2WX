@@ -43,6 +43,8 @@ MD2WX/
 │   ├── parser.py               # 核心解析引擎：AST构建、Token化、内联样式注入、外链转脚注
 │   ├── highlighter.py          # 纯内联语法高亮器（词法分词 + 微信兼容内联 span）
 │   ├── cover.py                # 动态主题封面渲染引擎（无头浏览器截图 2350x1000，零第三方依赖）
+│   ├── envutil.py              # 通用环境变量与 .env 读取工具（os.environ 优先，零依赖）
+│   ├── imagehost.py            # 在线图床客户端（通用自定义上传接口，上传/下载/配置探测）
 │   ├── uploader.py             # 微信素材上传（正文图 CDN 换链 + 封面永久素材，md5 缓存）
 │   ├── publisher.py            # 微信公众号后台交互（access_token、素材上传、草稿箱推送）
 │   └── themes/                 # 9大主题 JSON 配置文件夹
@@ -70,7 +72,8 @@ MD2WX/
 ├── tests/                      # Python 自动化测试套件
 │   ├── test_parser.py          # 解析器、内联转换、主题注入与边界单测
 │   ├── test_publisher.py       # 草稿箱发布逻辑与 Mock 测试
-│   └── test_cover.py           # 动态封面渲染引擎单测（元数据截断、主题视觉、降级链路）
+│   ├── test_cover.py           # 动态封面渲染引擎单测（元数据截断、主题视觉、降级链路）
+│   └── test_imagehost.py       # 在线图床客户端单测（配置探测、multipart、响应解析、下载）
 │
 └── .github/workflows/          # GitHub Actions 自动化工作流
     ├── deploy.yml              # Web Studio 部署至 GitHub Pages (md2wx.zaneven.com)

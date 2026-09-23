@@ -139,7 +139,18 @@
             <button class="tool-btn" id="tool-list" type="button" title="列表项 (- 项目)"><span id="icon-list"></span></button>
             <button class="tool-btn" id="tool-hr" type="button" title="分割线 (---)"><span id="icon-minus"></span></button>
             <button class="tool-btn" id="tool-link" type="button" title="超链接 (Cmd+K)"><span id="icon-link"></span></button>
-            <button class="tool-btn" id="tool-image" type="button" title="插入图片 (支持拖拽/粘贴截图)"><span id="icon-image"></span></button>
+            <div class="image-tool-wrap">
+              <button class="tool-btn" id="tool-image" type="button" title="插入图片 (图床上传 / 粘贴链接)"><span id="icon-image"></span></button>
+              <div class="image-menu" id="image-menu">
+                <div class="image-menu-title">插入图片</div>
+                <div class="image-menu-row">
+                  <input type="text" id="image-url-input" class="image-url-input" placeholder="粘贴图片链接 https://…" autocomplete="off" />
+                  <button class="image-menu-btn" id="image-url-insert" type="button" title="插入图片链接">插入</button>
+                </div>
+                <button class="image-menu-upload" id="image-upload-trigger" type="button" title="选择本地图片上传到图床">上传本地图片（图床）</button>
+                <div class="image-menu-hint" id="image-host-hint"></div>
+              </div>
+            </div>
           </div>
 
           <div class="toolbar-group">
@@ -159,6 +170,7 @@
             ></textarea>
           </div>
         </div>
+        <input type="file" id="image-file-input" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
 
         <!-- Editor Status Bar -->
         <footer class="editor-statusbar">

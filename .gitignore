@@ -8,3 +8,10 @@ build/
 .DS_Store
 node_modules/
 
+
+# Vite 本地环境变量 (含图床令牌，禁止提交)
+.env.local
+web/.env.local
+
+# Wrangler 本地缓存
+.wrangler/

@@ -42,6 +42,13 @@ jobs:
       - name: Build web application
         working-directory: web
         run: npm run build
+        env:
+          # 在线图床公开上传路由 (可选，在仓库 Settings → Variables 中设置)
+          # 建议指向 Worker 的 /api/public/uploads（免密，Origin 白名单校验），
+          # 避免把 UPLOAD_TOKEN 打进公开产物；VITE_ 变量会进公开 JS
+          VITE_IMAGE_HOST_UPLOAD_URL: ${{ vars.IMAGE_HOST_PUBLIC_UPLOAD_URL }}
+          VITE_IMAGE_HOST_FILE_FIELD: ${{ vars.IMAGE_HOST_FILE_FIELD }}
+          VITE_IMAGE_HOST_RESPONSE_PATH: ${{ vars.IMAGE_HOST_RESPONSE_PATH }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

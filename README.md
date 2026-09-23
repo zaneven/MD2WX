@@ -35,7 +35,8 @@
 - **标准主题文件解耦 (Theme Files)**：所有主题均抽象为独立的 `.json` 文件，支持内置自动发现、用户目录扩展与指定外部 JSON 运行；
 - **连续多行引文聚合器**：智能聚合连续的 `> ` 引文行，合成连贯带主题色边条的「文章导读/元信息卡片」，彻底消除割裂感；
 - **Mac 终端三色指示灯代码框**：红黄绿小圆点装饰、右上角语言标签、深色背景与等宽字体；
-- **微信官方 CDN 自动搬运换链**：调用官方 `media/uploadimg` 接口把本地相对路径图片自动上传并替换为永久官方 CDN 地址；
+- **微信官方 CDN 自动搬运换链**：调用官方 `media/uploadimg` 接口把本地相对路径图片、外链/图床图片、Base64 内嵌图片自动下载并转存为永久官方 CDN 地址，彻底规避微信外链防盗链破图；
+- **在线图床一键上传（`--upload-image`）**：对接自建图床或 WePost 的 `/api/uploads`，本地图片秒传获取外链，配置项写入 `.env`，未配置时自动提示不支持；
 - **macOS 原生剪贴板富文本注入（`--clip`）**：直接以 `«class HTML»` 富文本写入系统剪贴板，在公众号后台按 **Cmd+V** 即可直接贴入排版；
 - **微信公众平台草稿箱一键推送（`--publish`）**：支持自动绑定封面、生成带样式草稿，并返回微信官方临时预览链接。
 
@@ -336,6 +337,41 @@ WECHAT_APP_SECRET=20827782e3e1f62xxxxxx
 ```
 
 > **凭据自动探测**：MD2WX 会按顺序自动探测当前目录的 `.env`、`~/Develop/wx-serv/.env` 或全局环境变量，您无需重复配置。
+
+---
+
+## 配置在线图床（可选，用于 `--upload-image` 与 Web Studio 上传）
+
+MD2WX 的图床对接参考 WePost 的 `/api/uploads` 能力：向一个可配置的接口 POST `multipart/form-data`，从返回 JSON 中提取图片 URL。未配置时，CLI 与 Web Studio 均会提示「暂不支持上传图片」。
+
+在 `.env` 中配置：
+
+```bash
+# 必填，上传接口完整地址
+IMAGE_HOST_UPLOAD_URL=https://your-image-host/api/uploads
+# 可选，鉴权令牌（默认作为 Authorization 请求头发送）
+# IMAGE_HOST_TOKEN=your_token
+# 可选，令牌前缀，默认空（如需 "Bearer " 显式设置）
+# IMAGE_HOST_AUTH_PREFIX=Bearer 
+# 可选，文件表单字段名，默认 file
+# IMAGE_HOST_FILE_FIELD=file
+# 可选，响应中图片 URL 的路径，支持点号嵌套，默认 url
+# IMAGE_HOST_RESPONSE_PATH=data.url
+```
+
+### CLI 上传本地图片到图床
+
+```bash
+# 配置好 .env 后，秒传本地图片并输出外链
+md2wx --upload-image assets/photo.png
+# 输出示例: https://cdn.example.com/photo.png
+```
+
+### Web Studio 构建期图床配置（GitHub Pages 部署）
+
+Web Studio 是纯静态站点，图床配置通过 Vite 构建期环境变量（`VITE_` 前缀）注入。在仓库 Settings → Variables 中设置 `IMAGE_HOST_UPLOAD_URL` 等，`.github/workflows/deploy.yml` 会自动将其透传至构建。
+
+> **安全提示**：`VITE_` 变量会被打包进公开产物，请勿填入敏感令牌；仅用于无鉴权的公开上传端点（如自建 Cloudflare Worker + R2）。
 
 ---
 
