@@ -244,7 +244,7 @@ function renderThemeDropdown() {
         </div>
         <div class="theme-desc">${t.description || ''}</div>
       </div>
-      <span style="font-size: 11px; color: #64748b; font-family: monospace;">${t.id}</span>
+      <span style="font-size: 11px; color: #8a8a8a; font-family: monospace;">${t.id}</span>
     `;
 
     item.addEventListener('click', () => {
@@ -829,8 +829,8 @@ function initCoverStudio() {
     if (shareThumbEl) {
       const preset = THEME_COVER_PRESETS[coverThemeId] || THEME_COVER_PRESETS['tech-blue'];
       shareThumbEl.innerHTML = `
-        <div style="width:100%;height:100%;background:#090d16;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:4px;gap:2px;">
-          <span style="font-size:9px;font-weight:900;color:#38bdf8;line-height:1;">${(preset.badgeText || 'COVER').slice(0, 6)}</span>
+        <div style="width:100%;height:100%;background:#0a0a0a;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:4px;gap:2px;">
+          <span style="font-size:9px;font-weight:900;color:#34d399;line-height:1;">${(preset.badgeText || 'COVER').slice(0, 6)}</span>
           <span style="font-size:8px;font-weight:700;color:#10b981;line-height:1;">1:1截取</span>
         </div>
       `;

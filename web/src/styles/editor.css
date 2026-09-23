@@ -133,7 +133,7 @@
 }
 
 .editor-textarea-wrapper.drag-over {
-  outline: 2px dashed #2563eb;
+  outline: 2px dashed var(--border-focus);
   outline-offset: -4px;
-  background: rgba(37, 99, 235, 0.05);
+  background: rgba(52, 211, 153, 0.05);
 }

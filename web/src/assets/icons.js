@@ -7,21 +7,21 @@ export const ICONS = {
   logo: `<svg width="30" height="30" viewBox="0 0 128 128" fill="none">
     <defs>
       <linearGradient id="nav-logo-bg" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#0b1329"/>
-        <stop offset="60%" stop-color="#090f1d"/>
-        <stop offset="100%" stop-color="#042017"/>
+        <stop offset="0%" stop-color="#171717"/>
+        <stop offset="60%" stop-color="#0f0f0f"/>
+        <stop offset="100%" stop-color="#022c22"/>
       </linearGradient>
       <linearGradient id="nav-logo-border" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.85"/>
-        <stop offset="50%" stop-color="#818cf8" stop-opacity="0.3"/>
-        <stop offset="100%" stop-color="#10b981" stop-opacity="0.95"/>
+        <stop offset="0%" stop-color="#34d399" stop-opacity="0.9"/>
+        <stop offset="50%" stop-color="#14b8a6" stop-opacity="0.55"/>
+        <stop offset="100%" stop-color="#0891b2" stop-opacity="0.95"/>
       </linearGradient>
       <linearGradient id="nav-logo-wx" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stop-color="#10b981"/>
         <stop offset="100%" stop-color="#047857"/>
       </linearGradient>
     </defs>
-    <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#nav-logo-bg)" stroke="url(#nav-logo-border)" stroke-width="3"/>
+    <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#nav-logo-bg)" stroke="url(#nav-logo-border)" stroke-width="3" style="filter: drop-shadow(0 2px 6px rgba(2, 44, 34, 0.85));"/>
     <path d="M22 60C22 37.9 39.9 20 62 20C84.1 20 102 37.9 102 60C102 82.1 84.1 100 62 100C54.8 100 48.1 98.1 42.3 94.8L20 102L26 83.5C23.5 76.5 22 68.6 22 60Z" fill="url(#nav-logo-wx)"/>
     <path d="M37 73V47L51 61L65 47V73" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="M76 52L86 60L76 68" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
