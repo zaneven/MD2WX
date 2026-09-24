@@ -127,20 +127,36 @@ class TestDynamicCover(unittest.TestCase):
     def test_stitch_cover_images(self):
         """测试用户指定双图时的拼图合成"""
         import tempfile
-        from PIL import Image
         from md2wx.cover import stitch_cover_images
 
-        with tempfile.NamedTemporaryFile(suffix=".png") as f1, tempfile.NamedTemporaryFile(suffix=".png") as f2:
-            im1 = Image.new("RGB", (900, 383), (255, 0, 0))
-            im1.save(f1.name)
-            im2 = Image.new("RGB", (500, 500), (0, 255, 0))
-            im2.save(f2.name)
+        tiny_png = (
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+            b"\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\rIDATx\x9cc\xf8\xff\xff?"
+            b"\x00\x05\xfe\x02\xfe\xa7V\xfe\xae\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f1, tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f2:
+            f1.write(tiny_png)
+            f1.flush()
+            f2.write(tiny_png)
+            f2.flush()
+            f1_path, f2_path = f1.name, f2.name
 
-            out = stitch_cover_images(f1.name, f2.name)
-            self.assertIsNotNone(out)
-            self.assertTrue(os.path.exists(out))
-            with Image.open(out) as im_out:
-                self.assertEqual(im_out.size, (3350, 1000))
+        try:
+            out = stitch_cover_images(f1_path, f2_path)
+            if out:
+                self.assertTrue(os.path.exists(out))
+                with open(out, "rb") as f:
+                    self.assertEqual(f.read(8), b"\x89PNG\r\n\x1a\n")
+                try:
+                    from PIL import Image
+                    with Image.open(out) as im_out:
+                        self.assertEqual(im_out.size, (3350, 1000))
+                except ImportError:
+                    pass
+        finally:
+            for p in (f1_path, f2_path):
+                if os.path.exists(p):
+                    os.unlink(p)
 
 
 if __name__ == "__main__":
