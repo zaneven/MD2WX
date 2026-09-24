@@ -13,7 +13,8 @@ devlogs/
 ├── devlog_part2_studio.md             # Part 2: 纯前端 Web Studio 上线与真机仿真视口
 ├── devlog_part3_cloud_deploy.md        # Part 3: GitHub Pages 自动化部署与微信排版黑科技
 ├── devlog_part4_cover_studio.md       # Part 4: 9大主题专属封面、1:1安全区与真机大字排版
-└── devlog_part5_dual_cover_architecture.md # Part 5: 双比例封面合拼引擎、草稿箱坐标直推与架构全面演进
+├── devlog_part5_dual_cover_architecture.md # Part 5: 双比例封面合拼引擎、草稿箱坐标直推与架构全面演进
+└── devlog_imagehost_feature.md        # 专题: 图床体系、Cloudflare R2 搭建与微信自动换链
 ```
 
 ---
@@ -63,6 +64,14 @@ devlogs/
   - 推导高精度归一化裁剪坐标（`pic_crop_235_1="0_0_0.701493_1"`、`pic_crop_1_1="0.701493_0_1_1"`，误差 $< 0.0001\%$），直推微信官方草稿箱并自动配准。
   - 纯前端 Web Studio 同步上线 3350x1000 双图合拼预览画板、双引擎超清导出与裁剪坐标一键复制工具。
   - 全面总结代码块“微信四重净化”真机兼容规范（自包含换行、滚动容器底色防漏底、字体栈优化）及 Cloudflare R2 极速在线图床与自动换链体系。
+
+### [专题指南: 图床体系、Cloudflare R2 搭建与微信自动换链](devlog_imagehost_feature.md)
+- **关联模块**：`md2wx/imagehost.py`、`cloudflare/r2-imagehost/`、`md2wx/uploader.py`
+- **主要内容**：
+  - 剖析微信公众号外部图片防盗链拦截与本地相对路径无法直接复制的痛点。
+  - 介绍基于 Cloudflare Worker + R2 的轻量级开源模板，实现零出流量费的自建图床。
+  - 阐述 Web 端免密白名单与单 IP 速率限制设计，保障静态托管站的凭据安全。
+  - 详解发布草稿箱时本地图片与外链全自动转存微信官方 CDN 机制。
 
 ---
 
