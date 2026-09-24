@@ -2,7 +2,7 @@
 title: 告别微信防盗链红叉：MD2WX 图床系统、Cloudflare R2 零成本搭建与自动换链实践
 author: 野生宝藏箱
 digest: 微信公众平台对外部图片有着严格的防盗链机制，直接粘贴外链经常遭遇红叉与未授权提示，而本地图片相对路径又无法被后台识别。本文详解 MD2WX 的图床体系与自动换链能力：基于 Cloudflare Worker + R2 的轻量级开源模板、Web 静态端免密安全上传、CLI 一键传图，以及发布草稿箱时全自动搬运至微信官方 CDN 的闭环方案。
-cover: assets/covers/cover-tech-blue.png
+cover: assets/features/imagehost-cover-banner.jpg
 date: 2026-09-24
 tags:
   - MD2WX
@@ -21,6 +21,8 @@ tags:
 > **核心主题**：图床系统演进、Cloudflare R2 零成本搭建与微信 CDN 自动换链
 
 ---
+
+![MD2WX 图床与 Cloudflare R2 自动化流水线](assets/features/imagehost-cover-banner.jpg)
 
 ## 00. 痛点：为什么写公众号时，配图总在折磨创作者？
 
@@ -42,6 +44,8 @@ tags:
 - 对很多仅仅想写写文章的个人创作者来说，配置一整套存储桶权限、CORS 规则和鉴权算法门槛过高。
 
 针对上述问题，MD2WX 在最近的更新中提供了一套完整的图片处理闭环方案。
+
+![微信外部图片防盗链拦截（左）与 MD2WX 自动转存对比（右）](assets/features/imagehost-pain-comparison.jpg)
 
 ---
 
@@ -88,6 +92,8 @@ tags:
 - **免费额度充足**：每个 Cloudflare 账户享有每月 10GB 的免费存储额度，数百万次标准读写操作；
 - **完全免收出流量费（Zero Egress Fee）**：与 AWS S3 等产品不同，Cloudflare R2 不对数据传出计费，彻底消除被盗刷流量导致巨额账单的后顾之忧；
 - **全球边缘 CDN 加速**：依托 Cloudflare 全球 Anycast 网络，图片访问速度极快。
+
+![Cloudflare Worker 双路由隔离、R2 存储与微信 CDN 自动同步架构拓扑](assets/features/imagehost-architecture-flow.jpg)
 
 ---
 
@@ -198,6 +204,8 @@ md2wx article.md --publish
 1. **直接上传与插入**：在编辑区域上方工具栏中，点击“插入图片”下拉菜单中的“上传图片”，选择本地文件即可完成上传，光标处会自动插入上传后的 Markdown 链接；
 2. **免密安全防护**：静态网页端请求的是 `/api/public/uploads` 接口，前端代码中没有任何私密密钥，仅通过 Origin 白名单校验来源；
 3. **未配置环境的主动提示**：如果前端未检测到有效的图床环境变量，点击上传时会弹出温和的指引提示，避免用户误操作。
+
+![MD2WX CLI 单图秒传与 Web Studio 拖拽插入实时渲染工作流](assets/features/imagehost-studio-workflow.jpg)
 
 ---
 
