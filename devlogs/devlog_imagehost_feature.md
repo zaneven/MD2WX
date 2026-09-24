@@ -1,8 +1,7 @@
 ---
-title: 告别微信防盗链红叉：MD2WX 图床系统、Cloudflare R2 零成本搭建与自动换链实践
+title: MD2WX 图床系统与自动换链指南
 author: 野生宝藏箱
-digest: 微信公众平台对外部图片有着严格的防盗链机制，直接粘贴外链经常遭遇红叉与未授权提示，而本地图片相对路径又无法被后台识别。本文详解 MD2WX 的图床体系与自动换链能力：基于 Cloudflare Worker + R2 的轻量级开源模板、Web 静态端免密安全上传、CLI 一键传图，以及发布草稿箱时全自动搬运至微信官方 CDN 的闭环方案。
-cover: assets/features/imagehost-cover-banner.jpg
+digest: 基于 R2 搭建零成本图床，支持 Web 与 CLI 上传，推稿时自动换链至微信 CDN。
 date: 2026-09-24
 tags:
   - MD2WX
@@ -14,7 +13,7 @@ tags:
   - 效率工具
 ---
 
-# 告别微信防盗链红叉：MD2WX 图床系统、Cloudflare R2 零成本搭建与自动换链实践
+# MD2WX 图床系统与自动换链指南
 
 > **作者**：野生宝藏箱  
 > **项目**：MD2WX（微信公众号 Markdown 排版转换器与草稿箱直推工具）  

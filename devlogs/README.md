@@ -13,8 +13,8 @@ devlogs/
 ├── devlog_part2_studio.md             # Part 2: 纯前端 Web Studio 上线与真机仿真视口
 ├── devlog_part3_cloud_deploy.md        # Part 3: GitHub Pages 自动化部署与微信排版黑科技
 ├── devlog_part4_cover_studio.md       # Part 4: 9大主题专属封面、1:1安全区与真机大字排版
-├── devlog_part5_dual_cover_architecture.md # Part 5: 双比例封面合拼引擎、草稿箱坐标直推与架构全面演进
-└── devlog_imagehost_feature.md        # 专题: 图床体系、Cloudflare R2 搭建与微信自动换链
+├── devlog_part5_dual_cover_architecture.md # Part 5: MD2WX 双封面拼接与坐标直推实践
+└── devlog_imagehost_feature.md        # 专题指南: MD2WX 图床系统与自动换链指南
 ```
 
 ---
@@ -56,7 +56,7 @@ devlogs/
   - 优化移动端字号与层级：推出“真机大字版”正文排版（16px 正文字号、1.85 行高、精调行距）。
   - 支持封面图免下载、一键复制并直粘微信后台。
 
-### [Part 5: 双比例封面合拼引擎、草稿箱坐标直推与架构全面演进](devlog_part5_dual_cover_architecture.md)
+### [Part 5: MD2WX 双封面拼接与坐标直推实践](devlog_part5_dual_cover_architecture.md)
 - **版本关联**：`v1.1.0 ~ v1.2.0`
 - **主要内容**：
   - 彻底解决微信头条大图（2.35:1）与次条/会话小方图（1:1）长宽比冲突痛点。
@@ -65,7 +65,7 @@ devlogs/
   - 纯前端 Web Studio 同步上线 3350x1000 双图合拼预览画板、双引擎超清导出与裁剪坐标一键复制工具。
   - 全面总结代码块“微信四重净化”真机兼容规范（自包含换行、滚动容器底色防漏底、字体栈优化）及 Cloudflare R2 极速在线图床与自动换链体系。
 
-### [专题指南: 图床体系、Cloudflare R2 搭建与微信自动换链](devlog_imagehost_feature.md)
+### [专题指南: MD2WX 图床系统与自动换链指南](devlog_imagehost_feature.md)
 - **关联模块**：`md2wx/imagehost.py`、`cloudflare/r2-imagehost/`、`md2wx/uploader.py`
 - **主要内容**：
   - 剖析微信公众号外部图片防盗链拦截与本地相对路径无法直接复制的痛点。
