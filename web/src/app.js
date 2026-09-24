@@ -7,7 +7,7 @@ import { ICONS, setIcon } from './assets/icons.js';
 import { BUILTIN_THEMES, DEFAULT_THEME_ID, getTheme, isDarkTheme } from './core/themes.js';
 import { markdownToWechatHtml, parseFrontmatter } from './core/parser.js';
 import { copyWechatHtml, downloadHtmlFile } from './core/clipboard.js';
-import { COVER_DIMENSIONS, extractCoverMeta, renderCoverHtml, THEME_COVER_PRESETS } from './core/cover.js';
+import { COVER_DIMENSIONS, extractCoverMeta, renderCoverHtml, THEME_COVER_PRESETS, WECHAT_CROP_COORDINATES } from './core/cover.js';
 import { domToPngBlob, copyImageToClipboard, downloadImageBlob } from './core/canvas_exporter.js';
 import {
   isImageHostConfigured,
@@ -129,6 +129,8 @@ function initIcons() {
   setIcon('#icon-cover-close', 'x');
   setIcon('#icon-ratio-banner', 'rectangle');
   setIcon('#icon-ratio-square', 'square');
+  setIcon('#icon-ratio-dual', 'dual');
+  setIcon('#icon-copy-coords', 'crop');
   setIcon('#icon-action-hint', 'info');
   setIcon('#icon-copy-cover', 'copy');
   setIcon('#icon-download-cover', 'download');
@@ -814,9 +816,11 @@ function initCoverStudio() {
   const btnClose = document.getElementById('btn-close-cover-modal');
   const tabBanner = document.getElementById('tab-ratio-banner');
   const tabSquare = document.getElementById('tab-ratio-square');
+  const tabDual = document.getElementById('tab-ratio-dual');
   const toggleSafeArea = document.getElementById('toggle-safe-area');
   const selectThemeEl = document.getElementById('select-cover-theme');
   const btnSync = document.getElementById('btn-sync-from-article');
+  const btnCopyCoords = document.getElementById('btn-copy-crop-coords');
   const btnCopy = document.getElementById('btn-copy-cover-image');
   const btnDownload = document.getElementById('btn-download-cover-image');
 
@@ -946,6 +950,7 @@ function initCoverStudio() {
   tabBanner.addEventListener('click', () => {
     tabBanner.classList.add('active');
     tabSquare.classList.remove('active');
+    if (tabDual) tabDual.classList.remove('active');
     coverRatio = 'banner';
     renderCover();
   });
@@ -953,9 +958,32 @@ function initCoverStudio() {
   tabSquare.addEventListener('click', () => {
     tabSquare.classList.add('active');
     tabBanner.classList.remove('active');
+    if (tabDual) tabDual.classList.remove('active');
     coverRatio = 'square';
     renderCover();
   });
+
+  if (tabDual) {
+    tabDual.addEventListener('click', () => {
+      tabDual.classList.add('active');
+      tabBanner.classList.remove('active');
+      tabSquare.classList.remove('active');
+      coverRatio = 'dual';
+      renderCover();
+    });
+  }
+
+  if (btnCopyCoords) {
+    btnCopyCoords.addEventListener('click', async () => {
+      const coordsSnippet = `pic_crop_235_1: "${WECHAT_CROP_COORDINATES.crop_235_1}"\npic_crop_1_1: "${WECHAT_CROP_COORDINATES.crop_1_1}"`;
+      try {
+        await navigator.clipboard.writeText(coordsSnippet);
+        showToast('微信双封面裁剪坐标已复制到剪贴板！', 'success');
+      } catch (err) {
+        showToast(`复制失败: ${err.message}`, 'error');
+      }
+    });
+  }
 
   // 安全区标线切换
   toggleSafeArea.addEventListener('change', (e) => {

@@ -357,6 +357,45 @@
   height: 600px;
 }
 
+/* Dual (双图合拼画布: 1675x500 逻辑尺寸, 2x 导出即 3350x1000) */
+.cover-canvas-dual {
+  display: flex;
+  flex-direction: row;
+  width: 1675px;
+  height: 500px;
+  overflow: hidden;
+  box-sizing: border-box;
+  background: #000000;
+}
+
+.cover-canvas-dual .cover-canvas.ratio-banner {
+  width: 1175px;
+  height: 500px;
+  flex-shrink: 0;
+}
+
+.cover-canvas-dual .cover-canvas.ratio-square {
+  width: 500px;
+  height: 500px;
+  flex-shrink: 0;
+}
+
+.cover-canvas-dual .ratio-square .cover-inner {
+  padding: 34px 36px;
+}
+
+.cover-canvas-dual .ratio-square .square-main-title {
+  font-size: 40px;
+}
+
+.cover-canvas-dual .ratio-square .square-digest {
+  font-size: 20px;
+}
+
+.cover-canvas-dual .ratio-square .author-wrap {
+  font-size: 19px;
+}
+
 .cover-inner {
   width: 100%;
   height: 100%;

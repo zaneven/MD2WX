@@ -213,6 +213,16 @@ export const ICONS = {
     <rect width="18" height="18" x="3" y="3" rx="2"/>
   </svg>`,
 
+  dual: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect width="18" height="18" x="3" y="3" rx="2"/>
+    <path d="M14 3v18"/>
+  </svg>`,
+
+  crop: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 2v14a2 2 0 0 0 2 2h14"/>
+    <path d="M18 22V8a2 2 0 0 0-2-2H2"/>
+  </svg>`,
+
   rectangle: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <rect width="20" height="12" x="2" y="6" rx="2"/>
   </svg>`,

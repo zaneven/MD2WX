@@ -15,7 +15,13 @@ from urllib.parse import unquote
 from . import __version__
 from .parser import markdown_to_wechat_html, parse_frontmatter, strip_markdown, extract_quote_text
 from .themes import list_themes, get_theme, get_builtin_themes_dir, get_user_themes_dir, get_builtin_theme_cover
-from .cover import render_article_cover_png
+from .cover import (
+    render_article_cover_png,
+    render_article_dual_cover_png,
+    stitch_cover_images,
+    WECHAT_CROP_235_1,
+    WECHAT_CROP_1_1,
+)
 from .envutil import load_env, is_placeholder
 from .imagehost import (
     get_image_host_config,
@@ -117,7 +123,9 @@ def main():
     parser.add_argument("--list-themes", action="store_true", help="列出所有可用的内置与用户自定义设计主题")
     parser.add_argument("--web", action="store_true", help="启动 MD2WX Web Studio 可视化排版工作台并在浏览器中打开")
     parser.add_argument("-p", "--publish", action="store_true", help="一键推送到微信公众号草稿箱")
-    parser.add_argument("--cover", help="指定封面图片路径 (默认优先级: 此参数 > frontmatter cover: > 动态渲染主题封面 > 正文首图)")
+    parser.add_argument("--cover", help="指定头条封面图片路径 (默认优先级: 此参数 > frontmatter cover: > 动态渲染主题双封面 > 正文首图)")
+    parser.add_argument("--cover-square", help="指定次条/会话 1:1 方形封面图片路径 (与 --cover 搭配时将自动拼接为双比例合图)")
+    parser.add_argument("--no-dual-cover", action="store_true", help="禁用双比例拼接封面，仅生成单张 2.35:1 头条封面")
     parser.add_argument("--author", help="指定文章作者 (默认读取 Frontmatter 或 '野生宝藏箱')")
     parser.add_argument("--title", help="指定文章标题 (默认读取 Frontmatter 或首个 H1)")
     parser.add_argument("--app-id", help="微信 AppID (默认从环境变量或 .env 读取)")
@@ -368,27 +376,61 @@ def main():
     # 选项 D: 一键发布到微信公众号草稿箱
     if args.publish:
         print(">>> 3. 准备提交草稿至微信公众号...")
-        # 确定封面图，优先级: --cover 参数 > frontmatter cover: > 主题默认封面 > 正文首图
+        # 确定封面图与裁剪坐标，优先级: 用户指定双封面 > frontmatter双封面 > 命令行--cover > frontmatter cover > 动态双比例封面 > 动态单版封面 > 主题静态封面 > 首图
         cover_path = None
-        if args.cover:
+        pic_crop_235_1 = None
+        pic_crop_1_1 = None
+
+        if args.cover and args.cover_square:
+            print(f"    检测到用户自定义双封面: 头条({args.cover}) + 次条/方图({args.cover_square})")
+            stitched = stitch_cover_images(args.cover, args.cover_square)
+            if stitched:
+                cover_path = stitched
+                pic_crop_235_1 = WECHAT_CROP_235_1
+                pic_crop_1_1 = WECHAT_CROP_1_1
+                print("    已完成双封面拼图合成 (3350x1000)")
+            else:
+                cover_path = str(Path(args.cover).resolve())
+        elif args.cover:
             cover_path = str(Path(args.cover).resolve())
+        elif meta.get("cover") and meta.get("cover_square"):
+            b_file = str((base_dir / meta["cover"]).resolve())
+            s_file = str((base_dir / meta["cover_square"]).resolve())
+            stitched = stitch_cover_images(b_file, s_file)
+            if stitched:
+                cover_path = stitched
+                pic_crop_235_1 = WECHAT_CROP_235_1
+                pic_crop_1_1 = WECHAT_CROP_1_1
+                print("    已自文章 Frontmatter 完成双封面拼图合成 (3350x1000)")
+            else:
+                cover_path = b_file
         elif meta.get("cover"):
             cover_path = str((base_dir / meta["cover"]).resolve())
         else:
             theme_id = theme_cfg.get("id")
-            # 优先动态渲染文章专属主题封面 (与 Web Studio Cover Studio 同款视觉，
-            # 标题/摘要/作者/标签自动排版进主题设计稿，输出 2350x1000 头条尺寸)
-            cover_path = render_article_cover_png(
-                theme_id, title=title, digest=digest, author=author, tags=meta.get("tags")
-            )
-            if cover_path:
-                print(f"    已动态生成 '{theme_cfg.get('name')}' 主题专属封面 (文章标题/摘要自动渲染)。")
-            else:
-                # 无头浏览器不可用时降级为内置静态主题封面
-                theme_cover = get_builtin_theme_cover(theme_id)
-                if theme_cover:
-                    cover_path = str(theme_cover)
-                    print(f"    未检测到无头浏览器，使用 '{theme_cfg.get('name')}' 主题静态默认封面。")
+            if not args.no_dual_cover:
+                # 默认优先动态渲染文章专属主题双封面 (3350x1000，左侧 2350x1000 头条 + 右侧 1000x1000 方图)
+                dual_res = render_article_dual_cover_png(
+                    theme_id, title=title, digest=digest, author=author, tags=meta.get("tags")
+                )
+                if dual_res:
+                    cover_path, pic_crop_235_1, pic_crop_1_1 = dual_res
+                    print(f"    已动态生成 '{theme_cfg.get('name')}' 主题专属双比例拼接封面 (3350x1000):")
+                    print(f"      - 2.35:1 头条裁剪坐标: {pic_crop_235_1}")
+                    print(f"      - 1:1 次条/方图裁剪坐标: {pic_crop_1_1}")
+
+            if not cover_path:
+                cover_path = render_article_cover_png(
+                    theme_id, title=title, digest=digest, author=author, tags=meta.get("tags")
+                )
+                if cover_path:
+                    print(f"    已动态生成 '{theme_cfg.get('name')}' 主题专属单版封面 (2350x1000)。")
+                else:
+                    # 无头浏览器不可用时降级为内置静态主题封面
+                    theme_cover = get_builtin_theme_cover(theme_id)
+                    if theme_cover:
+                        cover_path = str(theme_cover)
+                        print(f"    未检测到无头浏览器，使用 '{theme_cfg.get('name')}' 主题静态默认封面。")
             if not cover_path and image_map:
                 # 取第一张本地图片作为默认封面候选
                 first_local = list(image_map.keys())[0]
@@ -408,11 +450,15 @@ def main():
                 author=author,
                 digest=digest,
                 cover_image_path=cover_path,
+                pic_crop_235_1=pic_crop_235_1,
+                pic_crop_1_1=pic_crop_1_1,
                 content_source_url=source_url
             )
             print("[+] 恭喜！文章已成功推送到微信公众号草稿箱！")
             print(f"    草稿标题: {res['title']}")
             print(f"    草稿 ID:   {res['media_id']}")
+            if res.get("pic_crop_235_1"):
+                print(f"    双图裁剪坐标已同步生效 (头条: {res['pic_crop_235_1']}, 方图: {res['pic_crop_1_1']})")
             if res.get("preview_url"):
                 print(f"    临时预览: {res['preview_url']}")
         except Exception as e:

@@ -24,7 +24,7 @@
         <div class="brand-title">
           <h1>MD2WX Studio</h1>
           <span class="brand-badge">Web 排版工作台</span>
-          <button class="brand-version-badge" id="btn-version-badge" type="button" title="点击查看 MD2WX v1.1.5 版本亮点与更新日志">v1.1.5</button>
+          <button class="brand-version-badge" id="btn-version-badge" type="button" title="点击查看 MD2WX v1.2.0 版本亮点与更新日志">v1.2.0</button>
         </div>
       </div>
 
@@ -297,6 +297,10 @@
                   <span id="icon-ratio-square"></span>
                   <span>1:1 次条/方图</span>
                 </button>
+                <button type="button" class="ratio-tab-btn" id="tab-ratio-dual" data-ratio="dual">
+                  <span id="icon-ratio-dual"></span>
+                  <span>双图合拼 (3350x1000)</span>
+                </button>
               </div>
 
               <label class="cover-safe-toggle" title="在画布上叠加微信聊天转发默认 1:1 截取线与订阅号列表安全范围">
@@ -321,6 +325,10 @@
                 <span id="cover-dimensions-hint">导出分辨率: 2350 × 1000 像素 (Retina 2x 高清)</span>
               </div>
               <div class="bottom-action-buttons">
+                <button class="btn btn-secondary" id="btn-copy-crop-coords" type="button" title="复制微信草稿箱双封面裁剪坐标 (pic_crop_235_1 与 pic_crop_1_1)">
+                  <span id="icon-copy-coords"></span>
+                  <span>复制裁剪坐标</span>
+                </button>
                 <button class="btn btn-secondary" id="btn-copy-cover-image" type="button" title="直接复制 PNG 图像到系统剪贴板，微信公众号后台可直接粘贴">
                   <span id="icon-copy-cover"></span>
                   <span>复制封面图片</span>
@@ -422,7 +430,7 @@
             <div>
               <div class="cover-header-title" id="changelog-modal-title">
                 <span>MD2WX Studio 版本速递</span>
-                <span class="cover-header-badge">v1.1.5</span>
+                <span class="cover-header-badge">v1.2.0</span>
               </div>
             </div>
           </div>
@@ -434,41 +442,41 @@
         <div class="changelog-content">
           <div>
             <div class="changelog-ver-tag">
-              <span class="cover-badge" style="background:#059669;color:#fff;font-size:12px;padding:3px 10px;">RELEASE 1.1.5</span>
+              <span class="cover-badge" style="background:#059669;color:#fff;font-size:12px;padding:3px 10px;">RELEASE 1.2.0</span>
               <span style="font-size:13px;color:#a3a3a3;">2026 年 9 月</span>
             </div>
-            <h3 class="changelog-title">全新 WePost 同源视觉体系上线</h3>
+            <h3 class="changelog-title">双比例封面合拼引擎与微信草稿箱坐标直推上线</h3>
           </div>
 
           <div class="changelog-features-list">
             <div class="changelog-feature-item">
               <div class="changelog-feature-icon" id="icon-feat-theme"></div>
               <div class="changelog-feature-text">
-                <h4>全站配色对齐姊妹产品 WePost</h4>
-                <p>设计系统全面切换为 emerald 翠绿强调色 + neutral 中性灰双档底色，与 WePost 共享同一套品牌视觉语言，双站体验浑然一体。</p>
+                <h4>3350x1000 双封面左右并排合拼</h4>
+                <p>将 2.35:1 头条横图（2350x1000）与 1:1 分享方图（1000x1000）水平无缝拼接，单张合图兼顾订阅号大图气势与转发聊天卡片方图完整性。</p>
               </div>
             </div>
 
             <div class="changelog-feature-item">
               <div class="changelog-feature-icon" id="icon-feat-ratio"></div>
               <div class="changelog-feature-text">
-                <h4>品牌 Logo 同源化焕新</h4>
-                <p>徽标描边采用 WePost 同款 emerald→teal→cyan 三色渐变与同源深绿投影，保留微信气泡识别度的同时与姊妹产品形成正负片呼应。</p>
+                <h4>高精度归一化裁剪坐标自动上报</h4>
+                <p>推导百万分之一极低误差的归一化裁剪参数（0_0_0.701493_1 与 0.701493_0_1_1），调用微信草稿箱接口时秒级自动配准双裁切视框。</p>
               </div>
             </div>
 
             <div class="changelog-feature-item">
               <div class="changelog-feature-icon" id="icon-feat-copy"></div>
               <div class="changelog-feature-text">
-                <h4>交互反馈全面翠绿化</h4>
-                <p>复制成功改为亮绿反色高亮闪烁，表单聚焦、拖拽导入、主题选中与封面工作台同步焕新，关键文字对比度全部达到 WCAG AA 标准。</p>
+                <h4>Web 工作台画板联动与坐标一键复制</h4>
+                <p>新增双图合拼 (3350x1000) 预览画板与等比自适应缩放，底部提供一键复制裁剪坐标工具，并升级 Canvas/SVG 双引擎超清导出。</p>
               </div>
             </div>
           </div>
 
           <div class="changelog-rules-card">
             <strong>版本更新机制规则说明</strong>：<br>
-            MD2WX 当前基准版本为 <strong>1.1.5</strong>。后续演进遵循语义化规范：日常体验优化与小功能更新只变动最后一位（Patch: 1.1.x），大版本与重要模块升级更新第二位（Minor: 1.x.0）。
+            MD2WX 当前基准版本为 <strong>1.2.0</strong>。后续演进遵循语义化规范：日常体验优化与小功能更新只变动最后一位（Patch: 1.2.x），大版本与重要模块升级更新第二位（Minor: 1.x.0）。
           </div>
         </div>
       </div>

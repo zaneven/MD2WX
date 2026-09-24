@@ -12,7 +12,8 @@ devlogs/
 ├── devlog_part1_cli_engine.md         # Part 1: 核心 CLI 引擎诞生与纯标准库 AST 解析器
 ├── devlog_part2_studio.md             # Part 2: 纯前端 Web Studio 上线与真机仿真视口
 ├── devlog_part3_cloud_deploy.md        # Part 3: GitHub Pages 自动化部署与微信排版黑科技
-└── devlog_part4_cover_studio.md       # Part 4: 9大主题专属封面、1:1安全区与真机大字排版
+├── devlog_part4_cover_studio.md       # Part 4: 9大主题专属封面、1:1安全区与真机大字排版
+└── devlog_part5_dual_cover_architecture.md # Part 5: 双比例封面合拼引擎、草稿箱坐标直推与架构全面演进
 ```
 
 ---
@@ -54,7 +55,16 @@ devlogs/
   - 优化移动端字号与层级：推出“真机大字版”正文排版（16px 正文字号、1.85 行高、精调行距）。
   - 支持封面图免下载、一键复制并直粘微信后台。
 
+### [Part 5: 双比例封面合拼引擎、草稿箱坐标直推与架构全面演进](devlog_part5_dual_cover_architecture.md)
+- **版本关联**：`v1.1.0 ~ v1.2.0`
+- **主要内容**：
+  - 彻底解决微信头条大图（2.35:1）与次条/会话小方图（1:1）长宽比冲突痛点。
+  - 采用**单图双裁切方案**：将头条横图（2350x1000）与方图（1000x1000）左右水平拼接为 **3350x1000** 合图。
+  - 推导高精度归一化裁剪坐标（`pic_crop_235_1="0_0_0.701493_1"`、`pic_crop_1_1="0.701493_0_1_1"`，误差 $< 0.0001\%$），直推微信官方草稿箱并自动配准。
+  - 纯前端 Web Studio 同步上线 3350x1000 双图合拼预览画板、双引擎超清导出与裁剪坐标一键复制工具。
+  - 全面总结代码块“微信四重净化”真机兼容规范（自包含换行、滚动容器底色防漏底、字体栈优化）及 Cloudflare R2 极速在线图床与自动换链体系。
+
 ---
 
 ## 变更记录与版本发布
-自 `v1.0.2` 起，后续常规版本更新及特性总结将统一在项目的 **[GitHub Releases](https://github.com/zaneven/MD2WX/releases)** 中发布和维护。历史各篇长文 DevLog 保留在本目录，作为产品技术演进与设计哲学的深度记录。
+后续常规版本更新及特性总结将统一在项目的 **[GitHub Releases](https://github.com/zaneven/MD2WX/releases)** 中发布和维护。各篇长文 DevLog 保留在本目录，作为产品技术演进与设计哲学的深度记录。

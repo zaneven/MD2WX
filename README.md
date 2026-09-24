@@ -137,13 +137,17 @@ md2wx article.md -t vintage-news -o article.html
 
 ### 5. 一键直推微信公众号草稿箱
 
-配置好微信凭据后，全自动完成图片上传 + 封面绑定 + 提交草稿：
+配置好微信凭据后，全自动完成正文图床换链 + 专属主题双封面合成（3350x1000）+ 裁剪坐标注入 + 提交草稿：
 
 ```bash
-md2wx article.md --publish --cover assets/cover.png
+# 默认全自动：动态生成 3350x1000 双比例合拼封面，自动绑定微信头条(2.35:1)与次条/会话(1:1)裁剪坐标
+md2wx article.md --publish
+
+# 自定义双封面：分别指定头条与次条/方图封面，自动拼接并上报裁剪坐标
+md2wx article.md --publish --cover assets/banner.png --cover-square assets/square.png
 ```
 
-如果未显式指定 `--cover`，工具会自动从 Frontmatter 的 `cover` 字段或正文第一张本地图片推断封面。
+如果未显式指定封面，CLI 默认优先调用内置动态渲染引擎生成匹配当前排版主题的专属双比例拼接封面（头条 2350x1000 + 方图 1000x1000 并排合成，零第三方硬依赖）。
 
 ### 6. 管道与标准输入流支持
 

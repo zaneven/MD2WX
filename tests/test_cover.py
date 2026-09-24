@@ -77,6 +77,71 @@ class TestDynamicCover(unittest.TestCase):
         # 2x 采样自 1175x500
         self.assertGreater(os.path.getsize(out), 10000)
 
+    def test_dual_cover_html_and_coordinates(self):
+        """测试双封面画板结构与裁剪坐标比例数学精度"""
+        from md2wx.cover import build_dual_cover_html, WECHAT_CROP_235_1, WECHAT_CROP_1_1
+
+        meta = build_cover_meta("tech-blue", title="测试双封面", digest="测试双封面摘要")
+        dual_html = build_dual_cover_html("tech-blue", meta)
+        self.assertIn("cover-canvas-dual", dual_html)
+        self.assertIn("ratio-banner", dual_html)
+        self.assertIn("ratio-square", dual_html)
+        self.assertIn("测试双封面", dual_html)
+
+        # 校验坐标格式 X1_Y1_X2_Y2
+        c235 = [float(x) for x in WECHAT_CROP_235_1.split("_")]
+        c11 = [float(x) for x in WECHAT_CROP_1_1.split("_")]
+        self.assertEqual(len(c235), 4)
+        self.assertEqual(len(c11), 4)
+
+        # 归一化区间在 0 到 1 之间
+        for val in c235 + c11:
+            self.assertTrue(0.0 <= val <= 1.0)
+
+        # 比例精度验证 (基于总宽 3350, 总高 1000)
+        w_banner = (c235[2] - c235[0]) * 3350
+        h_banner = (c235[3] - c235[1]) * 1000
+        ratio_banner = w_banner / h_banner
+        self.assertAlmostEqual(ratio_banner, 2.35, places=3)
+
+        w_square = (c11[2] - c11[0]) * 3350
+        h_square = (c11[3] - c11[1]) * 1000
+        ratio_square = w_square / h_square
+        self.assertAlmostEqual(ratio_square, 1.0, places=3)
+
+    def test_render_dual_cover_png(self):
+        """测试双比例合拼封面真实渲染 (3350x1000 像素)"""
+        from md2wx.cover import render_article_dual_cover_png, WECHAT_CROP_235_1, WECHAT_CROP_1_1
+        if not find_headless_browser():
+            self.skipTest("本机未安装 Chrome/Edge/Chromium，跳过真实渲染测试")
+
+        res = render_article_dual_cover_png("tech-blue", title="双比例封面单测", digest="双比例封面摘要")
+        self.assertIsNotNone(res)
+        out_path, crop_235, crop_11 = res
+        self.assertTrue(os.path.exists(out_path))
+        self.assertEqual(crop_235, WECHAT_CROP_235_1)
+        self.assertEqual(crop_11, WECHAT_CROP_1_1)
+        with open(out_path, "rb") as f:
+            self.assertEqual(f.read(8), b"\x89PNG\r\n\x1a\n")
+
+    def test_stitch_cover_images(self):
+        """测试用户指定双图时的拼图合成"""
+        import tempfile
+        from PIL import Image
+        from md2wx.cover import stitch_cover_images
+
+        with tempfile.NamedTemporaryFile(suffix=".png") as f1, tempfile.NamedTemporaryFile(suffix=".png") as f2:
+            im1 = Image.new("RGB", (900, 383), (255, 0, 0))
+            im1.save(f1.name)
+            im2 = Image.new("RGB", (500, 500), (0, 255, 0))
+            im2.save(f2.name)
+
+            out = stitch_cover_images(f1.name, f2.name)
+            self.assertIsNotNone(out)
+            self.assertTrue(os.path.exists(out))
+            with Image.open(out) as im_out:
+                self.assertEqual(im_out.size, (3350, 1000))
+
 
 if __name__ == "__main__":
     unittest.main()

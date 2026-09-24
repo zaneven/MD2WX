@@ -30,12 +30,13 @@ MD2WX/
 ├── sample_article.md           # 标准 Markdown 排版评测样例文章
 ├── render_cover.html           # 9大主题封面无头/本地渲染与导出画板
 │
-├── devlogs/                    # 完整研发演进日志合集 (Part 1 - Part 4)
+├── devlogs/                    # 完整研发演进日志合集 (Part 1 - Part 5)
 │   ├── README.md               # 开发日志导航索引
 │   ├── devlog_part1_cli_engine.md
 │   ├── devlog_part2_studio.md
 │   ├── devlog_part3_cloud_deploy.md
-│   └── devlog_part4_cover_studio.md
+│   ├── devlog_part4_cover_studio.md
+│   └── devlog_part5_dual_cover_architecture.md
 │
 ├── md2wx/                      # Python CLI 核心包
 │   ├── __init__.py
@@ -96,9 +97,10 @@ MD2WX/
    - **强制要求**：解析器遇到 `[链接文本](https://example.com)` 时，必须渲染为 `链接文本 [1]`，并在文章末尾自动追加 `### 参考链接 / 脚注` 列表。
 4. **空字节与防静默截断防护**：
    - 微信草稿箱 API 对内容严禁含有 `\x00`（Null Byte）等非打印控制字符，否则会导致后续文章正文被静默截断。解析前必须做控制字符 Sanitization 清理。
-5. **单图文封面 1:1 裁切安全区**：
+5. **封面设计与双比例拼接引擎（3350x1000 + 归一化双裁切）**：
    - 微信头条封面比例为 2.35:1（900x383 或 2350x1000），但在微信对话框分享、朋友圈二次转发时会被自动裁剪为正方形 1:1。
-   - 设计或渲染封面图时，核心文字与视觉主体必须置于中部的 1:1 安全区内。
+   - **双封面合拼黑科技**：MD2WX 默认将 2.35:1 头条横图（2350x1000）与 1:1 方图（1000x1000）左右水平无缝拼接为 3350x1000 超清合图，并在提交草稿箱时上报高精度归一化裁剪坐标：`pic_crop_235_1="0_0_0.701493_1"`、`pic_crop_1_1="0.701493_0_1_1"`，实现大图与分享方图完美共存。
+   - 若用户仅提供单张 2.35:1 封面，则回退至中部 1:1 核心安全区居中策略。
 6. **代码块微信兼容三原则（v1.1.1 - v1.1.4 真机验证沉淀，严禁回归）**：
    - **换行结构必须自包含**：微信净化流程对 `<pre>` 标签语义与 `white-space` 内联属性的保留不可靠，裸换行符会被塌缩成一行。代码内容必须转换为换行符 -> `<br>`、空格 -> `&nbsp;` 的自包含结构（`br` 在微信标签白名单中永远保留）。转换只作用于文本节点，严禁触碰高亮 `<span>` 与 `style` 属性内的字符。实现见 `parser.py` / `parser.js` 的 `_wechat_safe_line_structure` / `wechatSafeLineStructure`。
    - **横向滚动由 div 容器承载**：微信会剥离 `<pre>` 自身的 `overflow-x`，但放行 div/section 容器上的横向滚动（与表格滚动容器同款策略）。必须用 `<div style="overflow-x: auto; -webkit-overflow-scrolling: touch; ...">` 包裹 `<pre>`。

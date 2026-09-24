@@ -9,9 +9,20 @@ import urllib.request
 from urllib.parse import quote as url_quote
 from pathlib import Path
 from typing import Dict, Optional
+from .envutil import load_env
 
 # 永久素材本地缓存：按文件内容 md5 记录 media_id，避免重复上传消耗配额
 MATERIAL_CACHE_PATH = Path.home() / ".config" / "md2wx" / "material_cache.json"
+
+def _get_proxy_url() -> Optional[str]:
+    proxy = load_env().get("WECHAT_PROXY_URL")
+    return proxy.strip() if proxy and proxy.strip() else None
+
+def _proxy_headers(content_type: str) -> dict:
+    return {
+        "Content-Type": content_type,
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+    }
 
 def _load_material_cache() -> Dict[str, str]:
     try:
@@ -31,6 +42,15 @@ def _save_material_cache(cache: Dict[str, str]) -> None:
 
 def get_access_token(app_id: str, app_secret: str) -> str:
     """获取微信公众平台全局唯一后台接口调用凭据 (access_token)"""
+    proxy_url = _get_proxy_url()
+    if proxy_url:
+        payload = json.dumps({"action": "token", "appId": app_id, "appSecret": app_secret}).encode("utf-8")
+        req = urllib.request.Request(proxy_url, data=payload, headers=_proxy_headers("application/json"))
+        res = json.loads(urllib.request.urlopen(req, timeout=15).read().decode("utf-8"))
+        if "access_token" not in res:
+            raise RuntimeError(f"获取微信 Access Token 失败 (via proxy): {res.get('errmsg', res)}")
+        return res["access_token"]
+
     url = f"https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid={app_id}&secret={app_secret}"
     req = urllib.request.urlopen(url, timeout=15)
     res = json.loads(req.read().decode("utf-8"))
@@ -64,6 +84,30 @@ def upload_image_bytes_to_wechat_cdn(token: str, file_bytes: bytes, filename: st
     支持本地文件、外链下载字节、Base64 解码字节，用于发布前统一换链。
     """
     mime = mime_type or mimetypes.guess_type(filename)[0] or "image/png"
+    proxy_url = _get_proxy_url()
+    if proxy_url:
+        safe_name = url_quote(filename.replace("\\", "").replace('"', ""), safe="()<>@,;:\\\"/[]?={}")
+        body = (
+            f"--{_UPLOAD_BOUNDARY}\r\n"
+            f'Content-Disposition: form-data; name="action"\r\n\r\n'
+            f"uploadimg\r\n"
+            f"--{_UPLOAD_BOUNDARY}\r\n"
+            f'Content-Disposition: form-data; name="token"\r\n\r\n'
+            f"{token}\r\n"
+            f"--{_UPLOAD_BOUNDARY}\r\n"
+            f'Content-Disposition: form-data; name="media"; filename="{safe_name}"\r\n'
+            f"Content-Type: {mime}\r\n\r\n"
+        ).encode("utf-8") + file_bytes + f"\r\n--{_UPLOAD_BOUNDARY}--\r\n".encode("utf-8")
+        req = urllib.request.Request(
+            proxy_url,
+            data=body,
+            headers=_proxy_headers(f"multipart/form-data; boundary={_UPLOAD_BOUNDARY}")
+        )
+        res = json.loads(urllib.request.urlopen(req, timeout=30).read().decode("utf-8"))
+        if "url" not in res:
+            raise RuntimeError(f"正文图片上传微信失败 ({filename}): {res.get('errmsg', res)}")
+        return res["url"]
+
     req = urllib.request.Request(
         f"https://api.weixin.qq.com/cgi-bin/media/uploadimg?access_token={token}",
         data=_build_multipart_body_bytes(file_bytes, filename, mime),
@@ -96,6 +140,35 @@ def upload_cover_material(token: str, filepath: str) -> str:
     cache = _load_material_cache()
     if content_md5 in cache:
         return cache[content_md5]
+
+    proxy_url = _get_proxy_url()
+    filename = os.path.basename(filepath)
+    mime = mimetypes.guess_type(filename)[0] or "image/png"
+
+    if proxy_url:
+        safe_name = url_quote(filename.replace("\\", "").replace('"', ""), safe="()<>@,;:\\\"/[]?={}")
+        body = (
+            f"--{_UPLOAD_BOUNDARY}\r\n"
+            f'Content-Disposition: form-data; name="action"\r\n\r\n'
+            f"material\r\n"
+            f"--{_UPLOAD_BOUNDARY}\r\n"
+            f'Content-Disposition: form-data; name="token"\r\n\r\n'
+            f"{token}\r\n"
+            f"--{_UPLOAD_BOUNDARY}\r\n"
+            f'Content-Disposition: form-data; name="media"; filename="{safe_name}"\r\n'
+            f"Content-Type: {mime}\r\n\r\n"
+        ).encode("utf-8") + file_bytes + f"\r\n--{_UPLOAD_BOUNDARY}--\r\n".encode("utf-8")
+        req = urllib.request.Request(
+            proxy_url,
+            data=body,
+            headers=_proxy_headers(f"multipart/form-data; boundary={_UPLOAD_BOUNDARY}")
+        )
+        res = json.loads(urllib.request.urlopen(req, timeout=30).read().decode("utf-8"))
+        if "media_id" not in res:
+            raise RuntimeError(f"封面素材上传微信失败 ({filename}): {res.get('errmsg', res)}")
+        cache[content_md5] = res["media_id"]
+        _save_material_cache(cache)
+        return res["media_id"]
 
     req = urllib.request.Request(
         f"https://api.weixin.qq.com/cgi-bin/material/add_material?access_token={token}&type=image",

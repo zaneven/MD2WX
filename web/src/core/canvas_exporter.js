@@ -14,6 +14,27 @@ import coverCssText from '../styles/cover.css?inline';
  * 当 SVG 遇到跨域/沙箱限制时自动启用，零依赖秒级出图
  */
 export function renderCoverDirectCanvas(themeId, ratio, meta, scale = 2) {
+  if (ratio === 'dual') {
+    const bannerCanvas = renderCoverDirectCanvas(themeId, 'banner', meta, scale);
+    const squareCanvas = renderCoverDirectCanvas(themeId, 'square', meta, scale);
+    const dualDim = COVER_DIMENSIONS.dual;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(dualDim.width * scale);
+    canvas.height = Math.round(dualDim.height * scale);
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(bannerCanvas, 0, 0);
+    const squareTargetW = Math.round(500 * scale);
+    const squareTargetH = Math.round(500 * scale);
+    ctx.drawImage(
+      squareCanvas,
+      0, 0, squareCanvas.width, squareCanvas.height,
+      bannerCanvas.width, 0, squareTargetW, squareTargetH
+    );
+    return canvas;
+  }
+
   const isSquare = ratio === 'square';
   const dim = COVER_DIMENSIONS[ratio] || COVER_DIMENSIONS.banner;
   const width = Math.round(dim.width * scale);

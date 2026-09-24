@@ -11,7 +11,14 @@ import { parseFrontmatter, stripMarkdown, escapeHtml } from './parser.js';
 // 封面推荐逻辑尺寸配置
 export const COVER_DIMENSIONS = {
   banner: { width: 1175, height: 500, ratioName: '2.35:1 头条大图' },
-  square: { width: 600, height: 600, ratioName: '1:1 次条/分享方图' }
+  square: { width: 600, height: 600, ratioName: '1:1 次条/分享方图' },
+  dual: { width: 1675, height: 500, ratioName: '双图合拼 (3350x1000)' }
+};
+
+// 微信公众号草稿箱推荐双封面裁剪坐标 (针对 3350x1000 左右并排合成图)
+export const WECHAT_CROP_COORDINATES = {
+  crop_235_1: "0_0_0.701493_1",
+  crop_1_1: "0.701493_0_1_1"
 };
 
 /**
@@ -136,6 +143,17 @@ function escapeMultiline(str) {
  * @param {boolean} showSafeGuide - 是否叠加安全参考线
  */
 export function renderCoverHtml(themeId = 'tech-blue', ratio = 'banner', meta = {}, showSafeGuide = false) {
+  if (ratio === 'dual') {
+    const bannerHtml = renderCoverHtml(themeId, 'banner', meta, false);
+    const squareHtml = renderCoverHtml(themeId, 'square', meta, false);
+    return `
+      <div class="cover-canvas-dual">
+        ${bannerHtml}
+        ${squareHtml}
+      </div>
+    `.trim();
+  }
+
   const safeTitle = escapeMultiline(meta.title || '在喧嚣时代重塑深度思考');
   const safeDigest = escapeMultiline(meta.digest || '真正的专注，是充满干扰的世界中守住内心的秩序');
   const safeAuthor = escapeHtml(meta.author || '野生宝藏箱');
