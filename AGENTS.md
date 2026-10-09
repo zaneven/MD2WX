@@ -13,7 +13,7 @@
    - CLI 核心引擎使用纯 Python 3.8+ 标准库（`re`, `json`, `urllib` 等），不依赖庞大笨重的第三方三方库。
    - Web 工作台坚持纯原生轻量设计（Vite + 原生 JavaScript + Vanilla CSS），不引入 React/Vue 等框架或 TailwindCSS。
 2. **极客美学与视觉骨架（Aesthetic & Themes）**：
-   - 内置 9 大经过真机像素级调校的独立视觉骨架主题（科技蓝、极客黑、先锋酸性、学术优雅、报刊经典等）。
+   - 内置 13 大经过真机像素级调校的独立视觉骨架主题（科技蓝、极客黑、先锋酸性、学术优雅、报刊经典等）。
    - 彻底摆脱粗糙简陋的排版风格，兼顾移动端真机阅读的排版节奏与字号层级（16px 正文、1.85 行高）。
 3. **闭环生产力（End-to-End Workflow）**：
    - 支持本地富文本剪贴板原生注入、一键直推微信官方草稿箱，以及主题专属封面工坊（Cover Studio）。
@@ -28,7 +28,7 @@ MD2WX/
 ├── README.md                   # 官方中英文开源说明与特性画廊
 ├── pyproject.toml              # Python CLI 打包配置 (setuptools)
 ├── sample_article.md           # 标准 Markdown 排版评测样例文章
-├── render_cover.html           # 9大主题封面无头/本地渲染与导出画板
+├── render_cover.html           # 主题封面无头/本地渲染与导出画板
 │
 ├── devlogs/                    # 完整研发演进日志合集 (Part 1 - Part 5)
 │   ├── README.md               # 开发日志导航索引
@@ -48,11 +48,11 @@ MD2WX/
 │   ├── imagehost.py            # 在线图床客户端（通用自定义上传接口，上传/下载/配置探测）
 │   ├── uploader.py             # 微信素材上传（正文图 CDN 换链 + 封面永久素材，md5 缓存）
 │   ├── publisher.py            # 微信公众号后台交互（access_token、素材上传、草稿箱推送）
-│   └── themes/                 # 9大主题 JSON 配置文件夹
+│   └── themes/                 # 13大主题 JSON 配置文件夹
 │       ├── tech-blue.json      # 现代科技蓝（默认）
 │       ├── terminal-geek.json  # 极客终端黑
 │       ├── acid-bold.json      # 先锋野兽派
-│       ├── covers/             # 9大主题默认封面 (随包分发，动态渲染不可用时的降级兜底)
+│       ├── covers/             # 13大主题默认封面 (随包分发，动态渲染不可用时的降级兜底)
 │       └── ...
 │
 ├── web/                        # 纯前端 Web Studio 工作台

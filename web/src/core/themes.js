@@ -6,8 +6,12 @@
 import themeAcidBold from '../../../md2wx/themes/acid-bold.json';
 import themeDarkNight from '../../../md2wx/themes/dark-night.json';
 import themeElegantPurple from '../../../md2wx/themes/elegant-purple.json';
+import themeForestGreen from '../../../md2wx/themes/forest-green.json';
+import themeMorandiMist from '../../../md2wx/themes/morandi-mist.json';
+import themePastelCream from '../../../md2wx/themes/pastel-cream.json';
 import themeTechBlue from '../../../md2wx/themes/tech-blue.json';
 import themeTerminalGeek from '../../../md2wx/themes/terminal-geek.json';
+import themeTerracottaClay from '../../../md2wx/themes/terracotta-clay.json';
 import themeVintageNews from '../../../md2wx/themes/vintage-news.json';
 import themeWarmMemo from '../../../md2wx/themes/warm-memo.json';
 import themeWarmOrange from '../../../md2wx/themes/warm-orange.json';
@@ -54,8 +58,12 @@ export const BUILTIN_THEMES = {
   'acid-bold': themeAcidBold,
   'dark-night': themeDarkNight,
   'elegant-purple': themeElegantPurple,
+  'forest-green': themeForestGreen,
+  'morandi-mist': themeMorandiMist,
+  'pastel-cream': themePastelCream,
   'tech-blue': themeTechBlue,
   'terminal-geek': themeTerminalGeek,
+  'terracotta-clay': themeTerracottaClay,
   'vintage-news': themeVintageNews,
   'warm-memo': themeWarmMemo,
   'warm-orange': themeWarmOrange,

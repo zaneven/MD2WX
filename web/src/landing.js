@@ -3,7 +3,7 @@
  * 遵循规范：无任何 Emoji，全矢量 SVG，原生 JS，毫秒级响应
  */
 
-// 9 套内置主题展示元数据
+// 13 套内置主题展示元数据
 const THEMES_DATA = [
   {
     id: 'tech-blue',
@@ -94,6 +94,46 @@ const THEMES_DATA = [
     desc: '护眼深邃纯黑。深空灰渐变过渡、冷色夜光文字、低对比度柔和背景，夜间微信阅读绝佳伴侣。',
     preview: './assets/previews/dark-night.png',
     features: ['低蓝光护眼深色', '冷调荧光微光点缀', '沉浸式无噪阅读']
+  },
+  {
+    id: 'forest-green',
+    name: '森野墨绿',
+    color: '#2f6b4f',
+    badge: 'NATURAL',
+    scene: '自然随笔 · 慢生活记录 · 深度书评',
+    desc: '深林墨绿与米纸底色的自然书卷气。衬线字体排印、菱形项目符号、渐变分割线，沉静克制的自然系书写。',
+    preview: './assets/previews/forest-green.png',
+    features: ['深林墨绿双色条', '米纸底衬线书卷气', '菱形符号自然节奏']
+  },
+  {
+    id: 'terracotta-clay',
+    name: '陶土亚麻',
+    color: '#b25b38',
+    badge: 'HANDMADE',
+    scene: '生活方式 · 器物手作 · 人文随笔',
+    desc: '陶土橙棕与亚麻米色调的手作质感。温润质朴的方图引言卡、高亮小节标记，器物与生活之美自然流露。',
+    preview: './assets/previews/terracotta-clay.png',
+    features: ['陶土暖棕低饱和', '亚麻米色温润底', '手作质感引言卡']
+  },
+  {
+    id: 'morandi-mist',
+    name: '莫兰迪雾灰',
+    color: '#6e7f8d',
+    badge: 'MINIMAL',
+    scene: '文艺随笔 · 影评乐评 · 极简书写',
+    desc: '低饱和灰蓝调的莫兰迪色系。极简左线标题、圆点序号、浅色代码块与三线学术表，安静克制的极简主义。',
+    preview: './assets/previews/morandi-mist.png',
+    features: ['雾霾蓝灰莫兰迪调', '浅色代码块三线表', '极简克制排版节奏']
+  },
+  {
+    id: 'pastel-cream',
+    name: '奶油粉彩',
+    color: '#b76e79',
+    badge: 'PASTEL',
+    scene: '情感随笔 · 手账日记 · 美学生活',
+    desc: '奶油白与豆沙粉的柔和低饱和配色。胶囊标题、气泡引言卡与暖粉高亮，轻甜治愈的阅读氛围。',
+    preview: './assets/previews/pastel-cream.png',
+    features: ['豆沙玫瑰柔粉调', '奶油白治愈底色', '气泡卡轻甜气质']
   }
 ];
 

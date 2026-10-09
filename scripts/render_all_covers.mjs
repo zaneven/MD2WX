@@ -92,6 +92,38 @@ const THEME_CASES = [
     tag: '官方资讯 · 行业前沿',
     badge: 'WECHAT OFFICIAL',
     vol: '2026 · ISSUE 02'
+  },
+  {
+    id: 'forest-green',
+    title: '山野徒步笔记：在林间重新学会慢下来',
+    digest: '沿着溪流与苔藓深入林海，用脚步丈量季节的更替，把呼吸交给风与鸟鸣。',
+    tag: '自然随笔 · 森林手记',
+    badge: 'FOREST NOTE',
+    vol: '2026 · WOODS #02'
+  },
+  {
+    id: 'terracotta-clay',
+    title: '一只手作陶杯的成型与窑变之旅',
+    digest: '从揉泥拉坯到入窑烧制，泥土在指尖与炉火之间，慢慢沉淀为温润质朴的器物之美。',
+    tag: '手作日常 · 器物之美',
+    badge: 'CLAY CRAFT',
+    vol: '2026 · KILN #02'
+  },
+  {
+    id: 'morandi-mist',
+    title: '极简主义生活提案：为空间与心绪留白',
+    digest: '在低饱和的灰调秩序里，保留真正重要的事物，让每一天都回到安静克制的节奏。',
+    tag: '极简美学 · 静谧书写',
+    badge: 'MORANDI',
+    vol: '2026 · MIST #02'
+  },
+  {
+    id: 'pastel-cream',
+    title: '治愈系手账入门：把日常写成温柔的段落',
+    digest: '用奶油色系与细碎贴纸记录心情，让每一个普通午后都值得被认真收藏与回味。',
+    tag: '治愈手账 · 柔光日常',
+    badge: 'PASTEL DAY',
+    vol: '2026 · CREAM #02'
   }
 ];
 

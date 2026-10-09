@@ -1,0 +1,34 @@
+{
+  "id": "morandi-mist",
+  "name": "莫兰迪雾灰 (Morandi Mist)",
+  "description": "低饱和灰蓝调莫兰迪色系，克制安静的极简排版，浅色代码块与三线表，适合文艺随笔、影评乐评与极简主义书写",
+  "colors": {
+    "accent": "#6e7f8d",
+    "accent_bg": "#eef1f3",
+    "text_color": "#40464b",
+    "sub_color": "#8d9499",
+    "border_color": "#dadedf",
+    "code_bg": "#2f3438",
+    "code_text": "#e3e7e9",
+    "quote_bg": "#f4f5f6",
+    "page_bg": "#f9f9f7"
+  },
+  "typography": {
+    "font_family": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    "font_size_base": "15.5px",
+    "line_height_base": "1.8",
+    "letter_spacing": "0.4px",
+    "paragraph_indent": false
+  },
+  "styles": {
+    "container": "clean",
+    "h1": "underline",
+    "h2": "left_bar",
+    "h3": "circle_badge",
+    "quote": "left_stripe",
+    "code": "clean_flat",
+    "table": "three_line",
+    "list": "square",
+    "hr": "line"
+  }
+}

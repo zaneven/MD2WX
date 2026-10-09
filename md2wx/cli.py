@@ -52,6 +52,10 @@ COVER_BADGE_PRESETS = {
     "warm-memo": "HEALING NOTE",
     "warm-orange": "SUNSHINE",
     "wechat-green": "WECHAT OFFICIAL",
+    "forest-green": "FOREST NOTE",
+    "terracotta-clay": "CLAY CRAFT",
+    "morandi-mist": "MORANDI",
+    "pastel-cream": "PASTEL DAY",
 }
 
 # 微信公众平台字段长度上限

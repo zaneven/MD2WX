@@ -217,7 +217,8 @@ kind: Pod
         """测试所有内置主题均有随包分发的默认封面图，自定义主题则安全返回 None"""
         from md2wx.themes import get_builtin_theme_cover
         for theme_id in ["tech-blue", "terminal-geek", "acid-bold", "vintage-news",
-                         "warm-memo", "warm-orange", "dark-night", "elegant-purple", "wechat-green"]:
+                         "warm-memo", "warm-orange", "dark-night", "elegant-purple", "wechat-green",
+                         "forest-green", "terracotta-clay", "morandi-mist", "pastel-cream"]:
             cover = get_builtin_theme_cover(theme_id)
             self.assertIsNotNone(cover, f"主题 {theme_id} 缺少内置默认封面")
             self.assertTrue(cover.exists())

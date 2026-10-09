@@ -78,6 +78,30 @@ export const THEME_COVER_PRESETS = {
     defaultTag: '官方资讯 · 行业前沿',
     badgeText: 'WECHAT OFFICIAL',
     volText: '2026 · ISSUE 02'
+  },
+  'forest-green': {
+    name: '森野墨绿',
+    defaultTag: '自然随笔 · 森林手记',
+    badgeText: 'FOREST NOTE',
+    volText: '2026 · WOODS #02'
+  },
+  'terracotta-clay': {
+    name: '陶土亚麻',
+    defaultTag: '手作日常 · 器物之美',
+    badgeText: 'CLAY CRAFT',
+    volText: '2026 · KILN #02'
+  },
+  'morandi-mist': {
+    name: '莫兰迪雾灰',
+    defaultTag: '极简美学 · 静谧书写',
+    badgeText: 'MORANDI',
+    volText: '2026 · MIST #02'
+  },
+  'pastel-cream': {
+    name: '奶油粉彩',
+    defaultTag: '治愈手账 · 柔光日常',
+    badgeText: 'PASTEL DAY',
+    volText: '2026 · CREAM #02'
   }
 };
 
@@ -404,6 +428,67 @@ export function renderWechatArticleHeaderCover(themeId = 'tech-blue', meta = {})
   <p style="font-size: 16px; line-height: 1.6; color: #e9d5ff; margin: 0 0 18px 0; font-weight: 500;">${safeDigest}</p>
   <div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 12px; display: flex; align-items: center; justify-content: space-between;">
     <span style="font-size: 14px; font-weight: 800; color: #c084fc;">美学设计 · ${safeAuthor}</span>
+  </div>
+</section>`.trim();
+  }
+
+  if (themeId === 'forest-green') {
+    return `
+<section style="margin: 0 0 28px 0; background: #fbfaf4; border: 1px solid #d5e0d8; border-radius: 10px; padding: 24px 20px; box-sizing: border-box; font-family: 'Songti SC', 'Noto Serif SC', Georgia, serif; text-align: left;">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+    <span style="background: #2f6b4f; color: #ffffff; font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 4px; letter-spacing: 1px;">${safeBadge}</span>
+    <span style="font-size: 13px; color: #7d8880; font-weight: 600;">${safeVol}</span>
+  </div>
+  <div style="width: 44px; height: 5px; background: #2f6b4f; border-radius: 3px; margin-bottom: 14px;"></div>
+  <h1 style="font-size: 25px; font-weight: 900; line-height: 1.32; color: #2b322e; margin: 0 0 12px 0; letter-spacing: 0.5px;">${safeTitle}</h1>
+  <p style="font-size: 16px; line-height: 1.65; color: #4b554e; margin: 0 0 16px 0;">${safeDigest}</p>
+  <div style="border-top: 1px solid #d5e0d8; padding-top: 12px; display: flex; align-items: center; justify-content: space-between;">
+    <span style="font-size: 14px; font-weight: 800; color: #2f6b4f;">森林手记 · ${safeAuthor}</span>
+  </div>
+</section>`.trim();
+  }
+
+  if (themeId === 'terracotta-clay') {
+    return `
+<section style="margin: 0 0 28px 0; background: #fdfaf5; border: 1.5px solid #e9d7c8; border-radius: 14px; padding: 24px 20px; box-sizing: border-box; text-align: left; box-shadow: 0 4px 16px rgba(178, 91, 56, 0.08);">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+    <span style="background: #b25b38; color: #ffffff; font-size: 13px; font-weight: 800; padding: 4px 12px; border-radius: 999px;">${safeBadge}</span>
+    <span style="font-size: 13px; color: #8c7d72; font-weight: 700;">${safeVol}</span>
+  </div>
+  <h1 style="font-size: 24px; font-weight: 900; line-height: 1.32; color: #3a2f29; margin: 0 0 12px 0;">${safeTitle}</h1>
+  <p style="font-size: 15.5px; line-height: 1.6; color: #6b5d53; margin: 0 0 16px 0;">${safeDigest}</p>
+  <div style="border-top: 1px dashed #e9d7c8; padding-top: 12px; display: flex; align-items: center; justify-content: space-between;">
+    <span style="font-size: 14px; font-weight: 800; color: #b25b38;">手作日常 · ${safeAuthor}</span>
+  </div>
+</section>`.trim();
+  }
+
+  if (themeId === 'morandi-mist') {
+    return `
+<section style="margin: 0 0 28px 0; background: #f9f9f7; border: 1px solid #dadedf; border-radius: 10px; padding: 24px 20px; box-sizing: border-box; text-align: left;">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+    <span style="background: #6e7f8d; color: #ffffff; font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 6px; letter-spacing: 1px;">${safeBadge}</span>
+    <span style="font-size: 13px; color: #8d9499; font-weight: 600;">${safeVol}</span>
+  </div>
+  <h1 style="font-size: 24px; font-weight: 700; line-height: 1.32; color: #40464b; margin: 0 0 12px 0; letter-spacing: 0.3px;">${safeTitle}</h1>
+  <p style="font-size: 15.5px; line-height: 1.6; color: #5d656c; margin: 0 0 16px 0;">${safeDigest}</p>
+  <div style="border-top: 1px solid #dadedf; padding-top: 12px; display: flex; align-items: center; justify-content: space-between;">
+    <span style="font-size: 14px; font-weight: 700; color: #6e7f8d;">静谧书写 · ${safeAuthor}</span>
+  </div>
+</section>`.trim();
+  }
+
+  if (themeId === 'pastel-cream') {
+    return `
+<section style="margin: 0 0 28px 0; background: #fffdf8; border: 1.5px solid #f0ddd9; border-radius: 16px; padding: 24px 20px; box-sizing: border-box; text-align: left; box-shadow: 0 4px 16px rgba(183, 110, 121, 0.08);">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+    <span style="background: #b76e79; color: #ffffff; font-size: 13px; font-weight: 800; padding: 4px 12px; border-radius: 999px;">${safeBadge}</span>
+    <span style="font-size: 13px; color: #b76e79; font-weight: 700;">${safeVol}</span>
+  </div>
+  <h1 style="font-size: 24px; font-weight: 900; line-height: 1.32; color: #4a403d; margin: 0 0 12px 0;">${safeTitle}</h1>
+  <p style="font-size: 15.5px; line-height: 1.6; color: #7d6f6a; margin: 0 0 16px 0;">${safeDigest}</p>
+  <div style="border-top: 1px dashed #f0ddd9; padding-top: 12px; display: flex; align-items: center; justify-content: space-between;">
+    <span style="font-size: 14px; font-weight: 800; color: #b76e79;">柔光手账 · ${safeAuthor}</span>
   </div>
 </section>`.trim();
   }

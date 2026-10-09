@@ -1,0 +1,34 @@
+{
+  "id": "pastel-cream",
+  "name": "奶油粉彩 (Pastel Cream)",
+  "description": "奶油白与豆沙粉的柔和低饱和配色，轻甜治愈的阅读氛围，适合情感随笔、手账日记与美学生活分享",
+  "colors": {
+    "accent": "#b76e79",
+    "accent_bg": "#fdf0f0",
+    "text_color": "#4a403d",
+    "sub_color": "#9c8d89",
+    "border_color": "#f0ddd9",
+    "code_bg": "#3a3134",
+    "code_text": "#f8eae8",
+    "quote_bg": "#fdf6f3",
+    "page_bg": "#fffdf8"
+  },
+  "typography": {
+    "font_family": "-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif",
+    "font_size_base": "15.5px",
+    "line_height_base": "1.85",
+    "letter_spacing": "0.4px",
+    "paragraph_indent": false
+  },
+  "styles": {
+    "container": "card",
+    "h1": "capsule",
+    "h2": "pill_badge",
+    "h3": "highlight_bg",
+    "quote": "bubble_card",
+    "code": "mac_dark",
+    "table": "zebra",
+    "list": "bullet",
+    "hr": "gradient"
+  }
+}

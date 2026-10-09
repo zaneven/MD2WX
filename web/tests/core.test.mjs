@@ -6,7 +6,7 @@ import { getTheme, isDarkTheme, BUILTIN_THEMES, DEFAULT_THEME_ID } from '../src/
 import { highlightCode } from '../src/core/highlighter.js';
 
 test('内置主题数量与默认主题', () => {
-  assert.equal(Object.keys(BUILTIN_THEMES).length, 9);
+  assert.equal(Object.keys(BUILTIN_THEMES).length, 13);
   assert.ok(BUILTIN_THEMES[DEFAULT_THEME_ID]);
 });
 

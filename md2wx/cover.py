@@ -74,6 +74,30 @@ THEME_COVER_PRESETS: Dict[str, Dict[str, str]] = {
         "badgeText": "WECHAT OFFICIAL",
         "volText": "2026 · ISSUE 02",
     },
+    "forest-green": {
+        "name": "森野墨绿",
+        "defaultTag": "自然随笔 · 森林手记",
+        "badgeText": "FOREST NOTE",
+        "volText": "2026 · WOODS #02",
+    },
+    "terracotta-clay": {
+        "name": "陶土亚麻",
+        "defaultTag": "手作日常 · 器物之美",
+        "badgeText": "CLAY CRAFT",
+        "volText": "2026 · KILN #02",
+    },
+    "morandi-mist": {
+        "name": "莫兰迪雾灰",
+        "defaultTag": "极简美学 · 静谧书写",
+        "badgeText": "MORANDI",
+        "volText": "2026 · MIST #02",
+    },
+    "pastel-cream": {
+        "name": "奶油粉彩",
+        "defaultTag": "治愈手账 · 柔光日常",
+        "badgeText": "PASTEL DAY",
+        "volText": "2026 · CREAM #02",
+    },
 }
 
 COVER_WIDTH = 1175
@@ -254,6 +278,42 @@ html, body { margin: 0; padding: 0; background: #ffffff; }
 .cover-theme-wechat-green .card-quote-icon { color: #4ade80; }
 .cover-theme-wechat-green .cover-category-chip { background: rgba(7, 193, 96, 0.25); color: #86efac; }
 .cover-theme-wechat-green .author-dot { background: #07c160; box-shadow: 0 0 8px #07c160; }
+
+.cover-theme-forest-green { background: #fbfaf4; color: #2b322e; border: 1px solid #d5e0d8; }
+.cover-theme-forest-green .headline-indicator { background: #2f6b4f; border-radius: 4px; height: 8px; }
+.cover-theme-forest-green .cover-badge { background: #2f6b4f; color: #ffffff; border-radius: 4px; }
+.cover-theme-forest-green .banner-right-card { background: #f3f7f3; border: 1px solid #d5e0d8; border-radius: 16px; box-shadow: 0 10px 25px rgba(47, 107, 79, 0.12); }
+.cover-theme-forest-green .card-quote-icon { color: #2f6b4f; }
+.cover-theme-forest-green .card-signature { color: #2f6b4f; font-weight: 800; }
+.cover-theme-forest-green .cover-category-chip { background: #eef5ef; color: #2f6b4f; }
+.cover-theme-forest-green .author-dot { background: #2f6b4f; }
+
+.cover-theme-terracotta-clay { background: #fdfaf5; color: #3a2f29; border: 1px solid #e9d7c8; }
+.cover-theme-terracotta-clay .headline-indicator { background: #b25b38; border-radius: 999px; height: 8px; }
+.cover-theme-terracotta-clay .cover-badge { background: #b25b38; color: #ffffff; border-radius: 999px; }
+.cover-theme-terracotta-clay .banner-right-card { background: #faf3ec; border: 2px solid #e9d7c8; border-radius: 24px; box-shadow: 0 10px 25px rgba(178, 91, 56, 0.12); }
+.cover-theme-terracotta-clay .card-quote-icon { color: #b25b38; }
+.cover-theme-terracotta-clay .card-signature { color: #b25b38; font-weight: 800; }
+.cover-theme-terracotta-clay .cover-category-chip { background: #f9efe7; color: #b25b38; }
+.cover-theme-terracotta-clay .author-dot { background: #b25b38; }
+
+.cover-theme-morandi-mist { background: #f9f9f7; color: #40464b; border: 1px solid #dadedf; }
+.cover-theme-morandi-mist .headline-indicator { background: #6e7f8d; height: 8px; }
+.cover-theme-morandi-mist .cover-badge { background: #6e7f8d; color: #ffffff; border-radius: 8px; }
+.cover-theme-morandi-mist .banner-right-card { background: #f4f5f6; border: 1px solid #dadedf; border-radius: 12px; box-shadow: 0 10px 25px rgba(110, 127, 141, 0.14); }
+.cover-theme-morandi-mist .card-quote-icon { color: #6e7f8d; }
+.cover-theme-morandi-mist .card-signature { color: #6e7f8d; font-weight: 800; }
+.cover-theme-morandi-mist .cover-category-chip { background: #eef1f3; color: #6e7f8d; }
+.cover-theme-morandi-mist .author-dot { background: #6e7f8d; }
+
+.cover-theme-pastel-cream { background: #fffdf8; color: #4a403d; border: 1px solid #f0ddd9; }
+.cover-theme-pastel-cream .headline-indicator { background: #b76e79; border-radius: 999px; height: 8px; }
+.cover-theme-pastel-cream .cover-badge { background: #b76e79; color: #ffffff; border-radius: 999px; }
+.cover-theme-pastel-cream .banner-right-card { background: #fdf6f3; border: 2px solid #f0ddd9; border-radius: 24px; box-shadow: 0 10px 25px rgba(183, 110, 121, 0.12); }
+.cover-theme-pastel-cream .card-quote-icon { color: #b76e79; }
+.cover-theme-pastel-cream .card-signature { color: #b76e79; font-weight: 800; }
+.cover-theme-pastel-cream .cover-category-chip { background: #fdf0f0; color: #b76e79; }
+.cover-theme-pastel-cream .author-dot { background: #b76e79; }
 """
 
 _QUOTE_ICON_SVG = (
