@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" fill="none">
+  <defs>
+    <!-- Background Squircle Gradient: Deep Tech Obsidian to Dark Jade -->
+    <linearGradient id="logo-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1329"/>
+      <stop offset="60%" stop-color="#090f1d"/>
+      <stop offset="100%" stop-color="#042017"/>
+    </linearGradient>
+
+    <!-- Outer Precision Border Glow Gradient: Cyan to Emerald -->
+    <linearGradient id="logo-border" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.85"/>
+      <stop offset="50%" stop-color="#818cf8" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#10b981" stop-opacity="0.95"/>
+    </linearGradient>
+
+    <!-- WeChat Bubble Gradient: Vibrant Emerald to Forest Jade -->
+    <linearGradient id="logo-wx" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+
+    <!-- Glass Bevel Highlight -->
+    <linearGradient id="logo-glass" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25"/>
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.12"/>
+    </linearGradient>
+
+    <!-- Layer Drop Shadow -->
+    <filter id="logo-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000000" flood-opacity="0.55"/>
+      <feDropShadow dx="0" dy="2" stdDeviation="6" flood-color="#10b981" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Squircle Base Frame -->
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#logo-bg)" stroke="url(#logo-border)" stroke-width="2.5"/>
+
+  <!-- Subtle Ambient Glow -->
+  <circle cx="86" cy="76" r="32" fill="#10b981" opacity="0.18" filter="blur(16px)"/>
+  <circle cx="42" cy="42" r="28" fill="#38bdf8" opacity="0.12" filter="blur(16px)"/>
+
+  <!-- WeChat Bubble Mark with Depth -->
+  <g filter="url(#logo-shadow)">
+    <!-- Base Bubble Silhouette -->
+    <path d="M22 60C22 37.9 39.9 20 62 20C84.1 20 102 37.9 102 60C102 82.1 84.1 100 62 100C54.8 100 48.1 98.1 42.3 94.8L20 102L26 83.5C23.5 76.5 22 68.6 22 60Z" 
+          fill="url(#logo-wx)"/>
+    
+    <!-- Glass Bevel Highlight Overlay -->
+    <path d="M22 60C22 37.9 39.9 20 62 20C84.1 20 102 37.9 102 60C102 82.1 84.1 100 62 100C54.8 100 48.1 98.1 42.3 94.8L20 102L26 83.5C23.5 76.5 22 68.6 22 60Z" 
+          fill="url(#logo-glass)" stroke="rgba(255,255,255,0.22)" stroke-width="1.2"/>
+
+    <!-- Razor-Crisp Markdown 'M' -->
+    <path d="M37 73V47L51 61L65 47V73" stroke="#ffffff" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Razor-Crisp Transition Arrow '->' -->
+    <path d="M76 52L86 60L76 68" stroke="#ffffff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <line x1="84" y1="60" x2="72" y2="60" stroke="#ffffff" stroke-width="5.5" stroke-linecap="round"/>
+  </g>
+</svg>

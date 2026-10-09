@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MD2WX Studio - 微信公众号高质感 Markdown 排版工作台</title>
+  <meta name="description" content="零沉重依赖的微信公众号 Markdown 排版工具，多视觉骨架风格主题与实时预览，一键复制微信内联富文本">
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="alternate icon" type="image/png" href="./favicon.png">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+
+  <link rel="stylesheet" href="./src/styles/main.css">
+  <link rel="stylesheet" href="./src/styles/editor.css">
+  <link rel="stylesheet" href="./src/styles/preview.css">
+  <link rel="stylesheet" href="./src/styles/toast.css">
+  <link rel="stylesheet" href="./src/styles/cover.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header Bar -->
+    <header class="header-bar">
+      <div class="brand-section">
+        <div class="brand-logo" id="logo-icon"></div>
+        <div class="brand-title">
+          <h1>MD2WX Studio</h1>
+          <span class="brand-badge">Web 排版工作台</span>
+          <button class="brand-version-badge" id="btn-version-badge" type="button" title="点击查看 MD2WX v1.2.0 版本亮点与更新日志">v1.2.0</button>
+        </div>
+      </div>
+
+      <!-- Header Actions -->
+      <div class="header-actions">
+        <a href="./index.html" class="btn btn-secondary" id="btn-back-home" title="返回 MD2WX 官网落地页" style="text-decoration:none;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;">
+            <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          <span>官网主页</span>
+        </a>
+        <button class="btn btn-secondary" id="btn-open-cover" type="button" title="封面生成器 (生成适配当前主题风格的公众号大图与方图)">
+          <span id="icon-cover-trigger"></span>
+          <span>生成封面</span>
+        </button>
+        <!-- Settings Popover -->
+        <div class="settings-wrapper">
+          <button class="btn btn-secondary" id="btn-settings-trigger" type="button" title="排版微调（字号、行距、外链脚注与同步滚动）">
+            <span id="icon-settings"></span>
+            <span>排版微调</span>
+          </button>
+          <div class="settings-dropdown" id="settings-dropdown-menu" role="menu">
+            <div class="settings-header">
+              <span id="icon-sliders-title"></span>
+              <span>排版与联动偏好</span>
+            </div>
+            
+            <div class="settings-item">
+              <div class="settings-label">正文字号</div>
+              <div class="segmented-control" id="control-font-size">
+                <button type="button" class="segment-btn" data-val="14px">14px</button>
+                <button type="button" class="segment-btn active" data-val="15.5px">15.5</button>
+                <button type="button" class="segment-btn" data-val="16.5px">16.5</button>
+                <button type="button" class="segment-btn" data-val="17.5px">17.5</button>
+              </div>
+            </div>
+
+            <div class="settings-item">
+              <div class="settings-label">正文行距</div>
+              <div class="segmented-control" id="control-line-height">
+                <button type="button" class="segment-btn" data-val="1.6">1.6</button>
+                <button type="button" class="segment-btn active" data-val="1.8">1.8</button>
+                <button type="button" class="segment-btn" data-val="1.95">1.95</button>
+                <button type="button" class="segment-btn" data-val="2.1">2.1</button>
+              </div>
+            </div>
+
+            <div class="settings-divider"></div>
+
+            <div class="settings-toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-title">在正文顶部插入封面图</div>
+                <div class="toggle-desc">微信排版预览与复制时，自动在文章开头嵌入当前主题封面</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="toggle-insert-cover" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+
+            <div class="settings-toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-title">外链转文末脚注</div>
+                <div class="toggle-desc">微信公众号链接自动编号并在文末生成文献引用列表</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="toggle-footnotes" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+
+            <div class="settings-toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-title">双栏同步滚动</div>
+                <div class="toggle-desc">左侧 Markdown 编辑滚动时右侧预览窗按比例联动</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="toggle-sync-scroll" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-secondary" id="btn-load-sample" type="button" title="载入官方排版示范长文">
+          <span id="icon-sample"></span>
+          <span>载入示例</span>
+        </button>
+
+        <button class="btn btn-secondary" id="btn-export-html" type="button" title="导出自包含的微信排版 HTML 文件">
+          <span id="icon-download"></span>
+          <span>导出 HTML</span>
+        </button>
+
+        <button class="btn btn-primary" id="btn-copy-header" type="button" title="写入系统剪贴板 (快捷键: Cmd+Enter 或 Ctrl+Enter)">
+          <span id="icon-copy-header"></span>
+          <span>复制到微信</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace Split Pane -->
+    <main class="workspace-container">
+      <!-- Left: Editor Pane -->
+      <section class="pane pane-editor" id="editor-pane" aria-label="Markdown 编辑区">
+        <!-- Editor Formatting Toolbar -->
+        <div class="editor-toolbar">
+          <div class="toolbar-group">
+            <button class="tool-btn" id="tool-bold" type="button" title="粗体 (Cmd+B)"><span id="icon-bold"></span></button>
+            <button class="tool-btn" id="tool-italic" type="button" title="斜体 (Cmd+I)"><span id="icon-italic"></span></button>
+            <div class="toolbar-divider"></div>
+            <button class="tool-btn" id="tool-h1" type="button" title="一级标题 (# 标题)"><span id="icon-h1"></span></button>
+            <button class="tool-btn" id="tool-h2" type="button" title="二级标题 (## 标题)"><span id="icon-h2"></span></button>
+            <div class="toolbar-divider"></div>
+            <button class="tool-btn" id="tool-quote" type="button" title="引用导读块 (> 引言)"><span id="icon-quote"></span></button>
+            <button class="tool-btn" id="tool-code" type="button" title="代码块 (```代码```)"><span id="icon-code"></span></button>
+            <button class="tool-btn" id="tool-table" type="button" title="插入三线/斑马纹表格"><span id="icon-table"></span></button>
+            <button class="tool-btn" id="tool-list" type="button" title="列表项 (- 项目)"><span id="icon-list"></span></button>
+            <button class="tool-btn" id="tool-hr" type="button" title="分割线 (---)"><span id="icon-minus"></span></button>
+            <button class="tool-btn" id="tool-link" type="button" title="超链接 (Cmd+K)"><span id="icon-link"></span></button>
+            <div class="image-tool-wrap">
+              <button class="tool-btn" id="tool-image" type="button" title="插入图片 (图床上传 / 粘贴链接)"><span id="icon-image"></span></button>
+              <div class="image-menu" id="image-menu">
+                <div class="image-menu-title">插入图片</div>
+                <div class="image-menu-row">
+                  <input type="text" id="image-url-input" class="image-url-input" placeholder="粘贴图片链接 https://…" autocomplete="off" />
+                  <button class="image-menu-btn" id="image-url-insert" type="button" title="插入图片链接">插入</button>
+                </div>
+                <button class="image-menu-upload" id="image-upload-trigger" type="button" title="选择本地图片上传到图床">上传本地图片（图床）</button>
+                <div class="image-menu-hint" id="image-host-hint"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="toolbar-group">
+            <button class="tool-btn" id="tool-clear" type="button" title="清空编辑器内容"><span id="icon-trash"></span></button>
+          </div>
+        </div>
+
+        <!-- Editor Input Body -->
+        <div class="editor-body">
+          <div class="editor-gutter" id="editor-gutter" aria-hidden="true">1</div>
+          <div class="editor-textarea-wrapper">
+            <textarea
+              class="editor-textarea"
+              id="markdown-input"
+              placeholder="在此输入或粘贴 Markdown 文章内容...&#10;&#10;支持 Frontmatter 元信息、连续引用导读块聚合、ASCII 架构图保护、多视觉风格组件化标题与三线表。"
+              spellcheck="false"
+            ></textarea>
+          </div>
+        </div>
+        <input type="file" id="image-file-input" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
+
+        <!-- Editor Status Bar -->
+        <footer class="editor-statusbar">
+          <div class="statusbar-left">
+            <span class="status-tag">
+              <span class="status-dot"></span>
+              <span>实时秒级解析就绪</span>
+            </span>
+            <span id="status-theme-tag">主题: 现代科技蓝</span>
+          </div>
+          <div class="statusbar-right">
+            <span id="status-word-count">0 字</span>
+            <span id="status-read-time">约 1 分钟阅读</span>
+          </div>
+        </footer>
+      </section>
+
+      <!-- Right: Preview Pane -->
+      <section class="pane pane-preview" aria-label="微信排版实时预览区">
+        <!-- Preview Toolbar -->
+        <div class="preview-toolbar">
+          <div class="view-mode-tabs">
+            <button class="view-tab active" id="tab-mode-mobile" type="button">
+              <span id="icon-phone"></span>
+              <span>iPhone 仿真实机</span>
+            </button>
+            <button class="view-tab" id="tab-mode-desktop" type="button">
+              <span id="icon-desktop"></span>
+              <span>全宽桌面视图</span>
+            </button>
+          </div>
+
+          <!-- Theme Selector Dropdown (Relocated) -->
+          <div class="theme-selector-wrapper">
+            <button class="theme-selector-trigger" id="theme-trigger-btn" type="button" aria-haspopup="true" aria-expanded="false">
+              <span class="theme-color-dot" id="current-theme-dot"></span>
+              <span id="current-theme-name">现代科技蓝</span>
+              <span id="theme-chevron-icon"></span>
+            </button>
+            <div class="theme-dropdown" id="theme-dropdown-menu" role="menu">
+              <!-- Dynamic Theme Options Injected Here -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Preview Canvas -->
+        <div class="preview-canvas" id="preview-canvas">
+          <!-- Mobile Device Simulation Frame -->
+          <div class="mobile-device-frame" id="device-frame">
+            <!-- Dynamic Island Notch -->
+            <div class="phone-notch-area"></div>
+
+            <!-- iOS Status Bar -->
+            <div class="phone-status-bar" id="phone-status-bar">
+              <span id="phone-clock">09:41</span>
+              <div class="status-bar-icons">
+                <span id="icon-wifi"></span>
+                <span id="icon-battery"></span>
+              </div>
+            </div>
+
+            <!-- WeChat Navigation Bar -->
+            <div class="wechat-nav-bar" id="wechat-nav-bar">
+              <div class="wechat-nav-btn" id="icon-nav-back"></div>
+              <div class="wechat-nav-title" id="wechat-nav-title">文章详情</div>
+              <div class="wechat-nav-btn" id="icon-nav-more"></div>
+            </div>
+
+            <!-- Article Scroll Area -->
+            <div class="phone-content-scroll" id="phone-content-scroll">
+              <div id="preview-render-target">
+                <!-- Converted WeChat Rich HTML Output Injected Here -->
+              </div>
+            </div>
+
+            <!-- Bottom Home Indicator -->
+            <div class="phone-home-indicator"></div>
+          </div>
+
+          <!-- Floating Action Button -->
+          <div class="floating-actions">
+            <button class="floating-btn floating-btn-primary" id="btn-copy-floating" type="button">
+              <span id="icon-copy-floating"></span>
+              <span>复制公众号排版</span>
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Global Toast Feedback -->
+    <div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+    <!-- Cover Studio Modal -->
+    <div class="cover-modal-overlay" id="cover-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="cover-modal-title">
+      <div class="cover-modal-window">
+        <!-- Modal Header -->
+        <div class="cover-modal-header">
+          <div class="cover-header-title-group">
+            <div class="cover-header-icon" id="icon-cover-window-logo"></div>
+            <div>
+              <div class="cover-header-title" id="cover-modal-title">
+                <span>公众号封面生成工作台</span>
+                <span class="cover-header-badge">主题视觉同源</span>
+              </div>
+            </div>
+          </div>
+          <button class="cover-modal-close-btn" id="btn-close-cover-modal" type="button" title="关闭 (Esc)">
+            <span id="icon-cover-close"></span>
+          </button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="cover-modal-body">
+          <!-- Left: Preview Viewport -->
+          <div class="cover-preview-stage">
+            <div class="cover-preview-toolbar">
+              <div class="cover-ratio-tabs">
+                <button type="button" class="ratio-tab-btn active" id="tab-ratio-banner" data-ratio="banner">
+                  <span id="icon-ratio-banner"></span>
+                  <span>2.35:1 头条大图</span>
+                </button>
+                <button type="button" class="ratio-tab-btn" id="tab-ratio-square" data-ratio="square">
+                  <span id="icon-ratio-square"></span>
+                  <span>1:1 次条/方图</span>
+                </button>
+                <button type="button" class="ratio-tab-btn" id="tab-ratio-dual" data-ratio="dual">
+                  <span id="icon-ratio-dual"></span>
+                  <span>双图合拼 (3350x1000)</span>
+                </button>
+              </div>
+
+              <label class="cover-safe-toggle" title="在画布上叠加微信聊天转发默认 1:1 截取线与订阅号列表安全范围">
+                <input type="checkbox" id="toggle-safe-area">
+                <span>微信 1:1 裁切与安全线</span>
+              </label>
+            </div>
+
+            <!-- Canvas Viewport -->
+            <div class="cover-canvas-viewport" id="cover-canvas-viewport">
+              <div class="cover-scaler-container" id="cover-scaler-container">
+                <div id="cover-render-target">
+                  <!-- Cover Canvas Injected Here -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Preview Actions Bar -->
+            <div class="cover-preview-bottom-actions">
+              <div class="bottom-action-hint">
+                <span id="icon-action-hint"></span>
+                <span id="cover-dimensions-hint">导出分辨率: 2350 × 1000 像素 (Retina 2x 高清)</span>
+              </div>
+              <div class="bottom-action-buttons">
+                <button class="btn btn-secondary" id="btn-copy-crop-coords" type="button" title="复制微信草稿箱双封面裁剪坐标 (pic_crop_235_1 与 pic_crop_1_1)">
+                  <span id="icon-copy-coords"></span>
+                  <span>复制裁剪坐标</span>
+                </button>
+                <button class="btn btn-secondary" id="btn-copy-cover-image" type="button" title="直接复制 PNG 图像到系统剪贴板，微信公众号后台可直接粘贴">
+                  <span id="icon-copy-cover"></span>
+                  <span>复制封面图片</span>
+                </button>
+                <button class="btn btn-primary" id="btn-download-cover-image" type="button" title="下载 2x Retina 高清 PNG 文件">
+                  <span id="icon-download-cover"></span>
+                  <span>下载高清 PNG</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Controls Sidebar -->
+          <div class="cover-sidebar">
+            <div class="sidebar-section-title">
+              <span>视觉主题风格</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="select-cover-theme">匹配排版主题</label>
+              <select class="form-select" id="select-cover-theme">
+                <option value="tech-blue">现代科技蓝 (tech-blue)</option>
+                <option value="acid-bold">先锋野兽派 (acid-bold)</option>
+                <option value="dark-night">暗黑极客风 (dark-night)</option>
+                <option value="elegant-purple">先锋优雅紫 (elegant-purple)</option>
+                <option value="terminal-geek">极客终端 (terminal-geek)</option>
+                <option value="vintage-news">复古报刊 (vintage-news)</option>
+                <option value="warm-memo">温暖便签 (warm-memo)</option>
+                <option value="warm-orange">温暖活力橙 (warm-orange)</option>
+                <option value="wechat-green">微信生态绿 (wechat-green)</option>
+              </select>
+            </div>
+
+            <div class="sidebar-section-title" style="margin-top: 6px;">
+              <span>文案元素自定义</span>
+              <button type="button" class="sync-article-btn" id="btn-sync-from-article" title="重新从当前 Markdown 正文提取最新标题与摘要">
+                <span id="icon-sync-article"></span>
+                <span>同步正文</span>
+              </button>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="input-cover-title">封面主标题</label>
+              <input type="text" class="form-input" id="input-cover-title" placeholder="输入核心主标题...">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="input-cover-digest">封面副标题 / 摘要</label>
+              <textarea class="form-textarea" id="input-cover-digest" placeholder="输入副标题或精练导读..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="input-cover-tag">分类标签 / 亮点</label>
+              <input type="text" class="form-input" id="input-cover-tag" placeholder="如：深度架构 · 极客手记">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="input-cover-badge">顶部徽章 / 栏目</label>
+              <input type="text" class="form-input" id="input-cover-badge" placeholder="如：TECH BLOG">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="input-cover-vol">期号 / 年份</label>
+              <input type="text" class="form-input" id="input-cover-vol" placeholder="如：2026 · VOL.02">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="input-cover-author">作者 / 品牌落款</label>
+              <input type="text" class="form-input" id="input-cover-author" placeholder="输入作者或公众号名称...">
+            </div>
+
+            <!-- WeChat Share Card Live Preview -->
+            <div class="wechat-share-card-container">
+              <div class="wechat-share-card-title-row">
+                <span>微信转发好友卡片实时模拟</span>
+                <span style="color:#10b981;">1:1 截取对齐</span>
+              </div>
+              <div class="wechat-share-bubble">
+                <div class="wechat-share-text">
+                  <div class="wechat-share-main-title" id="preview-share-title">在喧嚣时代重塑深度思考</div>
+                  <div class="wechat-share-sub-desc" id="preview-share-digest">真正的专注，是在充满干扰的世界中守住内心的秩序</div>
+                </div>
+                <div class="wechat-share-thumb" id="preview-share-thumb">
+                  <div id="preview-share-thumb-box" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#34d399;">1:1</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Changelog Modal -->
+    <div class="cover-modal-overlay" id="changelog-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="changelog-modal-title">
+      <div class="changelog-modal-window">
+        <div class="cover-modal-header">
+          <div class="cover-header-title-group">
+            <div class="cover-header-icon" id="icon-changelog-header"></div>
+            <div>
+              <div class="cover-header-title" id="changelog-modal-title">
+                <span>MD2WX Studio 版本速递</span>
+                <span class="cover-header-badge">v1.2.0</span>
+              </div>
+            </div>
+          </div>
+          <button class="cover-modal-close-btn" id="btn-close-changelog-modal" type="button" title="关闭 (Esc)">
+            <span id="icon-changelog-close"></span>
+          </button>
+        </div>
+
+        <div class="changelog-content">
+          <div>
+            <div class="changelog-ver-tag">
+              <span class="cover-badge" style="background:#059669;color:#fff;font-size:12px;padding:3px 10px;">RELEASE 1.2.0</span>
+              <span style="font-size:13px;color:#a3a3a3;">2026 年 9 月</span>
+            </div>
+            <h3 class="changelog-title">双比例封面合拼引擎与微信草稿箱坐标直推上线</h3>
+          </div>
+
+          <div class="changelog-features-list">
+            <div class="changelog-feature-item">
+              <div class="changelog-feature-icon" id="icon-feat-theme"></div>
+              <div class="changelog-feature-text">
+                <h4>3350x1000 双封面左右并排合拼</h4>
+                <p>将 2.35:1 头条横图（2350x1000）与 1:1 分享方图（1000x1000）水平无缝拼接，单张合图兼顾订阅号大图气势与转发聊天卡片方图完整性。</p>
+              </div>
+            </div>
+
+            <div class="changelog-feature-item">
+              <div class="changelog-feature-icon" id="icon-feat-ratio"></div>
+              <div class="changelog-feature-text">
+                <h4>高精度归一化裁剪坐标自动上报</h4>
+                <p>推导百万分之一极低误差的归一化裁剪参数（0_0_0.701493_1 与 0.701493_0_1_1），调用微信草稿箱接口时秒级自动配准双裁切视框。</p>
+              </div>
+            </div>
+
+            <div class="changelog-feature-item">
+              <div class="changelog-feature-icon" id="icon-feat-copy"></div>
+              <div class="changelog-feature-text">
+                <h4>Web 工作台画板联动与坐标一键复制</h4>
+                <p>新增双图合拼 (3350x1000) 预览画板与等比自适应缩放，底部提供一键复制裁剪坐标工具，并升级 Canvas/SVG 双引擎超清导出。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="changelog-rules-card">
+            <strong>版本更新机制规则说明</strong>：<br>
+            MD2WX 当前基准版本为 <strong>1.2.0</strong>。后续演进遵循语义化规范：日常体验优化与小功能更新只变动最后一位（Patch: 1.2.x），大版本与重要模块升级更新第二位（Minor: 1.x.0）。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>
