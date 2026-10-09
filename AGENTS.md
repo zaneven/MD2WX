@@ -167,7 +167,7 @@ npm run preview
 ```
 
 ### 版本发布流程 (Release SOP)
-1. **更新版本号**：在 `pyproject.toml` 和 `web/package.json` 中同步更新版本号（例如 `1.0.3`）。
+1. **更新版本号（单一数据源）**：只在 `pyproject.toml` 中更新 `version` 字段。Web 端（落地页、工作台、更新日志弹窗）的版本号展示由 `vite.config.js` 构建期从 `pyproject.toml` 读取并注入（`web/src/version.js` + `data-app-version*` 占位符），**严禁在 HTML/JS 中硬编码版本号**；`web/package.json` 的 version 字段仅供参考，不参与构建。
 2. **运行全量测试与构建**：
    ```bash
    python3 -m pytest && cd web && npm run build && cd ..

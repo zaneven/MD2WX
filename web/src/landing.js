@@ -97,8 +97,11 @@ const THEMES_DATA = [
   }
 ];
 
+import { applyVersion } from './version.js';
+
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
+  applyVersion();
   initCopyButtons();
   initThemeShowcase();
   initHeroThemeSwitch();

@@ -14,12 +14,14 @@ import { bindShortcuts } from './app/shortcuts.js';
 import { bindPublishActions } from './app/publish.js';
 import { initCoverStudio } from './app/cover-studio.js';
 import { initChangelogModal } from './app/changelog.js';
+import { applyVersion } from './version.js';
 
 /**
  * 应用启动入口
  */
 function init() {
   initIcons();
+  applyVersion();
   renderThemeDropdown();
   initSettings();
   initCoverStudio();
