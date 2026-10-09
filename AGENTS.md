@@ -167,7 +167,11 @@ npm run preview
 ```
 
 ### 版本发布流程 (Release SOP)
-1. **更新版本号（单一数据源 + 递增规则）**：只在 `pyproject.toml` 中更新 `version` 字段，且**每次版本更新一律只递增最后一位**（Patch 位，如 `1.4.0` → `1.4.1`、`1.4.1` → `1.4.2`），不主动变动前两位。Web 端（落地页、工作台、更新日志弹窗）的版本号展示由 `vite.config.js` 构建期从 `pyproject.toml` 读取并注入（`web/src/version.js` + `data-app-version*` 占位符），**严禁在 HTML/JS 中硬编码版本号**；`web/package.json` 的 version 字段仅供参考，不参与构建。
+1. **更新版本号（单一数据源 + 递增判定规则）**：只在 `pyproject.toml` 中更新 `version` 字段。发布前按下表从上往下判定档位（命中即停），Web 端（落地页、工作台、更新日志弹窗）的版本号展示由 `vite.config.js` 构建期从 `pyproject.toml` 读取并注入（`web/src/version.js` + `data-app-version*` 占位符），**严禁在 HTML/JS 中硬编码版本号**；`web/package.json` 的 version 字段仅供参考，不参与构建。
+   - **Major（第一位 +1，如 `1.x` → `2.0.0`）——破坏性变更**：主题 JSON schema 与旧配置不兼容、CLI 参数移除或改名、微信兼容行为根本性改变、需要用户迁移数据或配置。除此之外一律不升 Major。
+   - **Minor（第二位 +1，末位归零，如 `1.4.x` → `1.5.0`）——新能力**：满足任一条即升 Minor：① 新增主题；② 新增用户可感知的功能模块（如 Mermaid 渲染、`--lint`、Cover Studio）；③ 新增 CLI 参数或 Web 交互入口；④ 双端新增渲染语法（GFM 扩展等）。
+   - **Patch（仅最后一位 +1，如 `1.4.0` → `1.4.1`）——默认档位**：以上均不命中时使用。Bug 修复、微信兼容性修正、文档/文案更新、测试补强、性能优化、既有主题样式微调。
+   - 判定存疑时，取更高档位。
 2. **运行全量测试与构建**：
    ```bash
    python3 -m pytest && cd web && npm run build && cd ..
