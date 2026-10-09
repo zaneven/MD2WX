@@ -41,8 +41,8 @@ def highlight_code(code: str, lang: str = "") -> str:
     elif clean_lang in ["html", "xml"]:
         token_rules.append(("comment", re.compile(r"<!--[\s\S]*?-->")))
     else:
-        # JS, CSS, SQL 等
-        token_rules.append(("comment", re.compile(r"//.*|/\*[\s\S]*?\*/")))
+        # JS, CSS, SQL 等 C-style 注释 (排除字符串中的 https:// 等协议双斜杠)
+        token_rules.append(("comment", re.compile(r"(?<!:)//.*|/\*[\s\S]*?\*/")))
 
     # 2. 字符串规则 (支持单双引号与反引号)
     token_rules.append(("string", re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`(?:\\.|[^`\\])*`')))

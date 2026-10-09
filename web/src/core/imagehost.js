@@ -134,3 +134,28 @@ export async function uploadImageFile(file) {
   }
   return url;
 }
+
+/**
+ * 外链图片一键转存图床：下载外链字节后走既有上传通道换链
+ * 用于规避微信编辑器对外站图床的封禁；跨域受限时抛出可读错误
+ * @param {string} url 外链图片地址
+ * @returns {Promise<string>} 图床新地址
+ */
+export async function rehostExternalImageUrl(url) {
+  if (!isImageHostConfigured()) {
+    throw new Error(IMAGE_HOST_UNCONFIGURED_HINT);
+  }
+  let res;
+  try {
+    res = await fetch(url, { mode: 'cors' });
+  } catch {
+    throw new Error('外链图片下载失败 (跨域或网络受限): ' + url);
+  }
+  if (!res.ok) {
+    throw new Error(`外链图片下载失败 HTTP ${res.status}: ${url}`);
+  }
+  const blob = await res.blob();
+  const ext = (blob.type.split('/')[1] || 'png').split('+')[0];
+  const file = new File([blob], `rehosted.${ext}`, { type: blob.type || 'image/png' });
+  return uploadImageFile(file);
+}

@@ -86,6 +86,45 @@ export function stripMarkdown(mdText, maxLen = 120) {
   return plain.slice(0, maxLen).trim();
 }
 
+// 微信官方图片 CDN 域名 (外链图片检测白名单，之外的图片会被微信编辑器封禁)
+export const WECHAT_CDN_HOSTS = ['mmbiz.qpic.cn', 'mmbiz.wpimg.cn'];
+
+/**
+ * 收集正文 Markdown 中的外链图片 URL (http/https 且非微信官方 CDN)。
+ * 跳过代码围栏段避免误报示例代码中的链接；按出现顺序去重。
+ */
+export function collectExternalImageUrls(mdText) {
+  const urls = [];
+  const seen = new Set();
+  const segments = String(mdText || '').split(/(```[\s\S]*?```|~~~[\s\S]*?~~~)/);
+  for (const seg of segments) {
+    if (seg.startsWith('```') || seg.startsWith('~~~')) continue;
+    const imgRe = /!\[[^\]]*\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g;
+    let m;
+    while ((m = imgRe.exec(seg)) !== null) {
+      let src = m[1];
+      try {
+        src = decodeURIComponent(src);
+      } catch {
+        // URL 编码异常时按原文处理
+      }
+      if (!/^https?:\/\//i.test(src)) continue;
+      let host = '';
+      try {
+        host = new URL(src).hostname.toLowerCase();
+      } catch {
+        continue;
+      }
+      if (WECHAT_CDN_HOSTS.some((h) => host.includes(h))) continue;
+      if (!seen.has(src)) {
+        seen.add(src);
+        urls.push(src);
+      }
+    }
+  }
+  return urls;
+}
+
 /**
  * 统一解析行内 Markdown 语法：
  * 1. 严格转义并保护行内代码，防止 <style> 破坏微信排版
@@ -148,16 +187,43 @@ export function formatInline(text, accent, codeFontSize = '13.5px', footnotes = 
     return k;
   });
 
+  // 2.2 自动链接：裸 http(s) URL 与 Markdown 链接同等待遇，自动转文末脚注
+  //     (微信不支持外链跳转，遗漏的裸 URL 在正文点击同样会被阻断)
+  const autolinkUrlRe = /https?:\/\/[^\s<>()\[\]"']+[^\s<>()\[\]"'.,;:!?]/g;
+  text = text.replace(autolinkUrlRe, (url) => {
+    const k = `@@MDURL_${tokenIdx++}@@`;
+    const label = url.length <= 60 ? url : url.slice(0, 57) + '...';
+    if (footnotes) {
+      let fIndex = footnotes.findIndex((f) => f.url === url);
+      if (fIndex === -1) {
+        footnotes.push({ label, url });
+        fIndex = footnotes.length;
+      } else {
+        fIndex = fIndex + 1;
+      }
+      tokens[k] = `<span style="color: ${accent}; font-weight: 500;">${label}</span><sup style="font-size: 11px; color: ${accent}; margin-left: 2px; font-weight: bold; vertical-align: super;">[${fIndex}]</sup>`;
+    } else {
+      tokens[k] = `<a href="${url}" style="color: ${accent}; text-decoration: none; border-bottom: 1px dashed ${accent};">${label}</a>`;
+    }
+    return k;
+  });
+
   // 2.5 对未受 token 保护的普通文本统一转义 HTML，
   //     防止正文中的 <tag> 破坏预览与微信粘贴输出
   text = text
-    .split(/(@@MD(?:CODE|LINK)_\d+@@)/)
+    .split(/(@@MD[A-Z]+_\d+@@)/)
     .map((seg) => (seg.startsWith('@@MD') ? seg : escapeHtml(seg)))
     .join('');
 
   // 3. 粗体与斜体 (严格界定符，避免内部跨越 ** 或穿透普通文本导致反转误加粗)
   text = text.replace(/\*\*(?![\*\s])((?:[^*]|\*(?!\*))+?)(?<![\*\s])\*\*/g, '<strong>$1</strong>');
   text = text.replace(/(^|[^*])\*(?![\*\s])([^*\n]+?)(?<![\*\s])\*(?!\*)/g, '$1<em>$2</em>');
+
+  // 3.5 GFM 删除线 ~~text~~ (del 标签在微信白名单内，内联样式保证不褪色)
+  text = text.replace(
+    /~~(?![\s~])((?:[^~]|~(?!~))+?)(?<![\s~])~~/g,
+    `<del style="color: ${accent}; opacity: 0.72;">$1</del>`
+  );
 
   // 4. 彻底还原保护的 tokens (支持嵌套多轮展开)
   let loops = 5;
@@ -513,6 +579,22 @@ export function renderListItem(itemText, theme) {
 </section>`;
 }
 
+export function renderTaskItem(itemText, checked, theme) {
+  // GFM 任务列表项 (纯 SVG 矢量勾选框，无 Emoji，微信兼容内联样式)
+  const accent = theme.accent;
+  const textColor = theme.text_color;
+
+  const checkbox = checked
+    ? `<svg width="15" height="15" viewBox="0 0 24 24" style="vertical-align: -2px; flex-shrink: 0;"><rect x="2" y="2" width="20" height="20" rx="5" fill="${accent}"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+    : `<svg width="15" height="15" viewBox="0 0 24 24" style="vertical-align: -2px; flex-shrink: 0;"><rect x="2.5" y="2.5" width="19" height="19" rx="5" fill="none" stroke="${accent}" stroke-width="2"/></svg>`;
+
+  return `
+<section style="display: flex; align-items: flex-start; margin-bottom: 8px; line-height: 1.75; font-size: 15.5px; color: ${textColor};">
+<span style="margin-right: 7px; line-height: 1.75;">${checkbox}</span>
+<span style="flex: 1;">${itemText}</span>
+</section>`;
+}
+
 export function renderHr(theme) {
   const style = theme.hr_style || theme.styles?.hr || 'line';
   const accent = theme.accent;
@@ -630,11 +712,8 @@ export function markdownToWechatHtml(mdText, themeName = DEFAULT_THEME_ID, custo
   }
 
   function flushCode() {
+    // highlightCode 内部统一做 HTML 转义，此处禁止预先转义 (会造成双重转义)
     let rawCode = codeLines.join('\n');
-    rawCode = rawCode
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
     const rendered = renderCode(rawCode, codeLang, theme);
     codeLines = [];
     inCodeBlock = false;
@@ -682,6 +761,14 @@ export function markdownToWechatHtml(mdText, themeName = DEFAULT_THEME_ID, custo
       continue;
     }
 
+    // 3.5 块级富文本占位 (Mermaid/块级公式，预览由 richrender.js 水合渲染，
+    //     复制/导出前由 rasterizeRichBlocks 光栅化为内联 PNG)
+    if (/^@@MD(?:MERMAID|MATH)_\d+@@$/.test(stripped)) {
+      htmlParts.push(`<div style="margin: 22px 0; text-align: center;" data-md-rich-token="${stripped}"></div>`);
+      idx++;
+      continue;
+    }
+
     // 4. 分割线
     if (['---', '***', '___'].includes(stripped)) {
       htmlParts.push(renderHr(theme));
@@ -691,12 +778,7 @@ export function markdownToWechatHtml(mdText, themeName = DEFAULT_THEME_ID, custo
 
     // 5. 一级标题
     if (stripped.startsWith('# ')) {
-      const titleText = stripped
-        .slice(2)
-        .trim()
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+      const titleText = escapeHtml(stripped.slice(2).trim());
       htmlParts.push(renderH1(titleText, theme));
       idx++;
       continue;
@@ -704,12 +786,7 @@ export function markdownToWechatHtml(mdText, themeName = DEFAULT_THEME_ID, custo
 
     // 6. 二级标题
     if (stripped.startsWith('## ')) {
-      const h2Text = stripped
-        .slice(3)
-        .trim()
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+      const h2Text = escapeHtml(stripped.slice(3).trim());
       htmlParts.push(renderH2(h2Text, theme));
       idx++;
       continue;
@@ -752,9 +829,16 @@ export function markdownToWechatHtml(mdText, themeName = DEFAULT_THEME_ID, custo
       continue;
     }
 
-    // 9. 列表项
+    // 9. 列表项 (含 GFM 任务列表 - [ ] / - [x])
     if (stripped.startsWith('- ') || stripped.startsWith('* ')) {
       const itemText = stripped.slice(2).trim();
+      const taskMatch = itemText.match(/^\[( |x|X)\]\s+(.*)$/);
+      if (taskMatch) {
+        const itemFmt = formatInline(taskMatch[2], accent, '13.5px', footnotes);
+        htmlParts.push(renderTaskItem(itemFmt, taskMatch[1].toLowerCase() === 'x', theme));
+        idx++;
+        continue;
+      }
       const itemFmt = formatInline(itemText, accent, '13.5px', footnotes);
       htmlParts.push(renderListItem(itemFmt, theme));
       idx++;

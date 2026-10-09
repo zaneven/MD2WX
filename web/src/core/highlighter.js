@@ -18,13 +18,14 @@ const COLORS = {
 };
 
 /**
- * HTML 特殊字符转义
+ * HTML 特殊字符转义 (与 Python 端 html.escape(quote=True) 对齐，引号同样转义)
  */
 function escapeHtml(text) {
   return text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 /**

@@ -13,7 +13,13 @@ from typing import Dict
 from urllib.parse import unquote
 
 from . import __version__
-from .parser import markdown_to_wechat_html, parse_frontmatter, strip_markdown, extract_quote_text
+from .parser import (
+    markdown_to_wechat_html,
+    parse_frontmatter,
+    strip_markdown,
+    extract_quote_text,
+    collect_external_image_urls,
+)
 from .themes import list_themes, get_theme, get_builtin_themes_dir, get_user_themes_dir, get_builtin_theme_cover
 from .cover import (
     render_article_cover_png,
@@ -26,11 +32,14 @@ from .envutil import load_env, is_placeholder
 from .imagehost import (
     get_image_host_config,
     upload_image_file as upload_image_to_host,
+    upload_image_bytes,
     download_image_bytes,
     CONFIG_HINT as IMAGE_HOST_HINT,
 )
 from .uploader import get_access_token, upload_image_to_wechat_cdn, upload_image_bytes_to_wechat_cdn
 from .publisher import publish_draft_to_wechat
+from .linter import lint_markdown, format_lint_report, has_errors
+from .richrender import extract_rich_blocks, resolve_rich_blocks, substitute_rich_html, rehost_data_uri_images
 
 # 各主题封面徽标预设 (与 Web Studio THEME_COVER_PRESETS 保持一致)
 COVER_BADGE_PRESETS = {
@@ -131,6 +140,8 @@ def main():
     parser.add_argument("--app-id", help="微信 AppID (默认从环境变量或 .env 读取)")
     parser.add_argument("--no-cover", action="store_true", help="不在正文顶部注入封面卡片")
     parser.add_argument("--upload-image", metavar="PATH", help="将本地图片上传到 .env 配置的在线图床并输出图片链接 (需配置 IMAGE_HOST_UPLOAD_URL)")
+    parser.add_argument("--lint", action="store_true", help="对文章执行发稿规范自检 (标题 20 字 / 摘要 50 字 / 禁填 cover / 控制字符 / 外链图片)")
+    parser.add_argument("--rehost-images", action="store_true", help="将正文外链图片自动转存到 .env 配置的在线图床并换链 (规避微信外链封禁)")
 
     args = parser.parse_args()
 
@@ -230,6 +241,24 @@ def main():
     # 3. 解析 Frontmatter 与正文
     meta, body_md = parse_frontmatter(raw_content)
 
+    # 3.5 发稿规范自检 (--lint 仅输出报告，存在阻断问题时以非零码退出)
+    if args.lint:
+        lint_issues = lint_markdown(raw_content)
+        print(format_lint_report(lint_issues))
+        sys.exit(1 if has_errors(lint_issues) else 0)
+
+    # 3.6 富文本块预处理：Mermaid 图表与数学公式抽取为占位 token 并无头预渲染
+    rich_blocks = []
+    try:
+        body_md, rich_blocks = extract_rich_blocks(body_md)
+        if rich_blocks:
+            print(f">>> 检测到 {len(rich_blocks)} 个 Mermaid 图表 / 数学公式，正在无头渲染...")
+            resolve_rich_blocks(rich_blocks)
+            print("    [+] 富文本块渲染完成。")
+    except Exception as e:
+        print(f"[-] 富文本块处理异常，相关位置将降级为文本形态: {e}", file=sys.stderr)
+        rich_blocks = []
+
     # 确定元数据
     title = args.title or meta.get("title")
     if not title:
@@ -257,6 +286,27 @@ def main():
     creds = load_env_credentials()
     app_id = args.app_id or creds["app_id"]
     app_secret = creds["app_secret"]
+
+    # 4.0 外链图片检测与可选图床换链 (微信编辑器会封禁外站图床)
+    external_images = collect_external_image_urls(body_md)
+    if external_images and not args.publish:
+        if args.rehost_images:
+            host_cfg = get_image_host_config()
+            if not host_cfg:
+                print(f"[-] 错误: {IMAGE_HOST_HINT}", file=sys.stderr)
+                sys.exit(1)
+            print(f">>> 检测到 {len(external_images)} 处外链图片，正在转存图床...")
+            for ext_url in external_images:
+                try:
+                    data, filename, mime = download_image_bytes(ext_url)
+                    hosted_url = upload_image_bytes(data, filename, mime, host_cfg)
+                    image_map[ext_url] = hosted_url
+                    print(f"    -> 已换链: {hosted_url[:60]}...")
+                except Exception as e:
+                    print(f"    [-] 外链图片转存失败 ({ext_url}): {e}", file=sys.stderr)
+        else:
+            print(f"[!] 检测到 {len(external_images)} 处正文外链图片，微信编辑器可能封禁外站图床。", file=sys.stderr)
+            print("    发布模式 (-p) 会自动转存微信官方 CDN；剪贴板模式可使用 --rehost-images 换链到图床。", file=sys.stderr)
 
     token = None
     if args.publish:
@@ -350,8 +400,13 @@ def main():
         theme_name=theme_input,
         image_map=image_map,
         insert_cover=not args.no_cover,
-        cover_meta=cover_meta
+        cover_meta=cover_meta,
+        rich_blocks=rich_blocks
     )
+
+    # 5.5 行内公式 token 后置替换 (块级 token 已在解析主循环直接落块)
+    if rich_blocks:
+        html_output = substitute_rich_html(html_output, rich_blocks)
 
     # 6. 输出处理
     # 选项 A: 写入输出文件
@@ -376,6 +431,22 @@ def main():
     # 选项 D: 一键发布到微信公众号草稿箱
     if args.publish:
         print(">>> 3. 准备提交草稿至微信公众号...")
+
+        # 发布前规范自检 (仅提示，不阻断发布)
+        pre_issues = lint_markdown(raw_content)
+        if pre_issues:
+            print("    [lint] 发布前规范自检发现以下问题 (不阻断):")
+            for line in format_lint_report(pre_issues).split("\n"):
+                print(f"      {line}")
+
+        # 富文本渲染产物 (base64 内联图) 统一转存微信官方 CDN，草稿箱正文不支持 data URI
+        if rich_blocks:
+            html_output, rich_ok, rich_fail = rehost_data_uri_images(token, html_output)
+            if rich_ok or rich_fail:
+                print(f"    富文本图片已转存微信 CDN: 成功 {rich_ok} 处 / 失败 {rich_fail} 处")
+                if rich_fail:
+                    print("    [!] 部分富文本图片转存失败，对应位置在草稿中将无法显示。", file=sys.stderr)
+
         # 确定封面图与裁剪坐标，优先级: 用户指定双封面 > frontmatter双封面 > 命令行--cover > frontmatter cover > 动态双比例封面 > 动态单版封面 > 主题静态封面 > 首图
         cover_path = None
         pic_crop_235_1 = None

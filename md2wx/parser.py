@@ -4,6 +4,7 @@ MD2WX Markdown -> 微信公众号专用内联 HTML 转换引擎
 """
 import re
 from typing import Dict, Tuple, Optional, List, Any
+from urllib.parse import unquote, urlparse
 from .themes import get_theme
 from .highlighter import highlight_code
 
@@ -51,6 +52,33 @@ def strip_markdown(md_text: str, max_len: int = 120) -> str:
     lines = [line.strip() for line in text.split("\n") if line.strip()]
     plain = " ".join(lines)
     return plain[:max_len].strip()
+
+# 微信官方图片 CDN 域名 (外链图片检测白名单，这些域名之外的图片会被微信编辑器封禁)
+WECHAT_CDN_HOSTS = ("mmbiz.qpic.cn", "mmbiz.wpimg.cn")
+
+def collect_external_image_urls(md_text: str) -> List[str]:
+    """
+    收集正文 Markdown 中的外链图片 URL (http/https 且非微信官方 CDN)。
+    微信编辑器会封禁外站图床的图片，调用方应提示用户转存或自动换链。
+    跳过代码围栏段避免误报示例代码中的链接；按出现顺序去重。
+    """
+    urls: List[str] = []
+    seen = set()
+    segments = re.split(r"(```.*?```|~~~.*?~~~)", md_text, flags=re.DOTALL)
+    for seg in segments:
+        if seg.startswith("```") or seg.startswith("~~~"):
+            continue
+        for m in re.finditer(r'!\[[^\]]*\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)', seg):
+            src = unquote(m.group(1))
+            if not src.lower().startswith(("http://", "https://")):
+                continue
+            host = urlparse(src).netloc.lower()
+            if any(h in host for h in WECHAT_CDN_HOSTS):
+                continue
+            if src not in seen:
+                seen.add(src)
+                urls.append(src)
+    return urls
 
 def format_inline(text: str, accent: str, code_font_size: str = "13.5px", footnotes: Optional[List[Dict[str, str]]] = None) -> str:
     """
@@ -124,9 +152,54 @@ def format_inline(text: str, accent: str, code_font_size: str = "13.5px", footno
 
     text = re.sub(r"\[(.*?)\]\((.*?)\)", save_link, text)
 
+    # 2.2 自动链接：裸 http(s) URL 与 Markdown 链接同等待遇，自动转文末脚注
+    #     (微信不支持外链跳转，遗漏的裸 URL 在正文点击同样会被阻断)
+    _AUTOLINK_URL_RE = re.compile(r"https?://[^\s<>()\[\]\"']+[^\s<>()\[\]\"'.,;:!?]")
+
+    def save_autolink(m: "re.Match") -> str:
+        nonlocal token_idx
+        k = f"@@MDURL_{token_idx}@@"
+        token_idx += 1
+        url = m.group(0)
+        if footnotes is not None:
+            match_idx = -1
+            for idx_, item in enumerate(footnotes):
+                if item["url"] == url:
+                    match_idx = idx_
+                    break
+            if match_idx == -1:
+                # 超长 URL 作为脚注标签截断显示，保持文献列表可读
+                label = url if len(url) <= 60 else url[:57] + "..."
+                footnotes.append({"label": label, "url": url})
+                f_num = len(footnotes)
+            else:
+                f_num = match_idx + 1
+            show_label = url if len(url) <= 60 else url[:57] + "..."
+            tokens[k] = f'<span style="color: {accent}; font-weight: 500;">{show_label}</span><sup style="font-size: 11px; color: {accent}; margin-left: 2px; font-weight: bold; vertical-align: super;">[{f_num}]</sup>'
+        else:
+            tokens[k] = f'<a href="{url}" style="color: {accent}; text-decoration: none; border-bottom: 1px dashed {accent};">{url}</a>'
+        return k
+
+    text = _AUTOLINK_URL_RE.sub(save_autolink, text)
+
+    # 2.5 对未受 token 保护的普通文本统一转义 HTML (与 Web 端 parser.js 对齐)，
+    #     防止正文中的 <tag> 破坏预览与微信粘贴输出
+    text = "".join(
+        seg if seg.startswith("@@MD")
+        else seg.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+        for seg in re.split(r"(@@MD[A-Z]+_\d+@@)", text)
+    )
+
     # 3. 粗体与斜体 (严格界定符，避免内部跨越 ** 或穿透普通文本导致反转误加粗)
     text = re.sub(r"\*\*(?![\*\s])((?:[^*]|\*(?!\*))+?)(?<![\*\s])\*\*", r"<strong>\1</strong>", text)
-    text = re.sub(r"(?<!\*)\*(?![\*\s])([^*\n]+?)(?<![\*\s])\*(?!\*)", r"<em>\1</em>", text)
+    text = re.sub(r"(^|[^*])\*(?![\*\s])([^*\n]+?)(?<![\*\s])\*(?!\*)", r"\1<em>\2</em>", text)
+
+    # 3.5 GFM 删除线 ~~text~~ (del 标签在微信白名单内，内联样式保证不褪色)
+    text = re.sub(
+        r"~~(?![\s~])((?:[^~]|~(?!~))+?)(?<![\s~])~~",
+        rf'<del style="color: {accent}; opacity: 0.72;">\1</del>',
+        text,
+    )
 
     # 4. 彻底还原保护的 tokens (支持多层嵌套展开)
     max_loops = 5
@@ -539,6 +612,31 @@ def render_list_item(item_text: str, theme: dict) -> str:
         f'</section>'
     )
 
+def render_task_item(item_text: str, checked: bool, theme: dict) -> str:
+    """渲染 GFM 任务列表项 (纯 SVG 矢量勾选框，无 Emoji，微信兼容内联样式)"""
+    accent = theme["accent"]
+    text_color = theme["text_color"]
+
+    if checked:
+        checkbox = (
+            f'<svg width="15" height="15" viewBox="0 0 24 24" style="vertical-align: -2px; flex-shrink: 0;">'
+            f'<rect x="2" y="2" width="20" height="20" rx="5" fill="{accent}"/>'
+            f'<path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#ffffff" stroke-width="2.5" '
+            f'stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        )
+    else:
+        checkbox = (
+            f'<svg width="15" height="15" viewBox="0 0 24 24" style="vertical-align: -2px; flex-shrink: 0;">'
+            f'<rect x="2.5" y="2.5" width="19" height="19" rx="5" fill="none" stroke="{accent}" stroke-width="2"/></svg>'
+        )
+
+    return (
+        f'<section style="display: flex; align-items: flex-start; margin-bottom: 8px; line-height: 1.75; font-size: 15.5px; color: {text_color};">'
+        f'<span style="margin-right: 7px; line-height: 1.75;">{checkbox}</span>'
+        f'<span style="flex: 1;">{item_text}</span>'
+        f'</section>'
+    )
+
 def render_hr(theme: dict) -> str:
     """渲染分割线"""
     style = theme.get("hr_style", theme.get("styles", {}).get("hr", "line"))
@@ -550,8 +648,8 @@ def render_hr(theme: dict) -> str:
         # 渐变双向淡出虚化线
         return f'<div style="height: 1px; background: linear-gradient(to right, transparent, {accent}, transparent); margin: 34px auto; width: 85%;"></div>'
     elif style == "asterisk":
-        # 文艺星号组居中
-        return f'<div style="text-align: center; color: {accent}; font-size: 14px; letter-spacing: 8px; margin: 32px 0;">✻  ✻  ✻</div>'
+        # 文艺星号组居中 (与 Web 端 parser.js 对齐，采用纯 SVG 三圆点矢量呈现)
+        return f'<div style="text-align: center; margin: 32px 0; line-height: 1;"><svg width="60" height="12" viewBox="0 0 60 12" fill="{accent}" style="display: inline-block;"><circle cx="10" cy="6" r="3"/><circle cx="30" cy="6" r="3"/><circle cx="50" cy="6" r="3"/></svg></div>'
     elif style == "terminal_dash":
         # 极客虚线
         return f'<div style="text-align: center; color: {sub_color}; font-family: monospace; font-size: 12px; letter-spacing: 2px; margin: 32px 0;">----------------------------------------</div>'
@@ -683,12 +781,21 @@ def markdown_to_wechat_html(
     image_map: Optional[Dict[str, str]] = None,
     link_to_footnote: bool = True,
     insert_cover: bool = True,
-    cover_meta: Optional[dict] = None
+    cover_meta: Optional[dict] = None,
+    rich_blocks: Optional[List[Dict[str, Any]]] = None
 ) -> str:
     """
     将 Markdown 文本转换为微信公众号完美适配的纯 Inline CSS HTML
     支持指定主题名称或自定义 JSON 主题文件路径
+    rich_blocks: 富文本块列表 (Mermaid/公式，由 richrender 预渲染)，
+    块级 token 独占一行时直接落块，避免 <div> 嵌入 <p> 被微信净化破坏
     """
+    # 块级富文本 token -> 渲染产物映射 (仅 display 块；行内公式仍走后置替换)
+    rich_block_map: Dict[str, str] = {
+        b["token"]: b.get("html", "")
+        for b in (rich_blocks or [])
+        if b.get("display", False)
+    }
     theme = get_theme(theme_name)
     accent = theme["accent"]
     text_color = theme["text_color"]
@@ -805,6 +912,12 @@ def markdown_to_wechat_html(
             idx += 1
             continue
 
+        # 3.5 块级富文本占位 token (Mermaid/块级公式，已由 richrender 预渲染为图片)
+        if stripped in rich_block_map:
+            html_parts.append(rich_block_map[stripped])
+            idx += 1
+            continue
+
         # 4. 分割线
         if stripped in ["---", "***", "___"]:
             html_parts.append(render_hr(theme))
@@ -813,21 +926,21 @@ def markdown_to_wechat_html(
 
         # 5. 一级标题
         if stripped.startswith("# "):
-            title_text = stripped[2:].strip().replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            title_text = stripped[2:].strip().replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
             html_parts.append(render_h1(title_text, theme))
             idx += 1
             continue
 
         # 6. 二级标题
         if stripped.startswith("## "):
-            h2_text = stripped[3:].strip().replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            h2_text = stripped[3:].strip().replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
             html_parts.append(render_h2(h2_text, theme))
             idx += 1
             continue
 
-        # 7. 三级标题
-        if stripped.startswith("### "):
-            h3_text = stripped[4:].strip().replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        # 7. 三级标题（含 #### 及更深级别，按三级样式渲染，避免字面输出 # 号）
+        if re.match(r"^#{3,} ", stripped):
+            h3_text = re.sub(r"^#+ +", "", stripped).strip().replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
             html_parts.append(render_h3(h3_text, theme))
             idx += 1
             continue
@@ -856,18 +969,25 @@ def markdown_to_wechat_html(
             html_parts.append(render_quote(inner_content, theme))
             continue
 
-        # 9. 列表项
+        # 9. 列表项 (含 GFM 任务列表 - [ ] / - [x])
         if stripped.startswith("- ") or stripped.startswith("* "):
             item_text = stripped[2:].strip()
+            task_match = re.match(r"^\[( |x|X)\]\s+(.*)$", item_text)
+            if task_match:
+                item_fmt = format_inline(task_match.group(2), accent, "13.5px", footnotes=footnotes)
+                html_parts.append(render_task_item(item_fmt, task_match.group(1).lower() == "x", theme))
+                idx += 1
+                continue
             item_fmt = format_inline(item_text, accent, "13.5px", footnotes=footnotes)
             html_parts.append(render_list_item(item_fmt, theme))
             idx += 1
             continue
 
-        # 10. 图片格式 ![alt](url) / ![alt](url "title")
+        # 10. 图片格式 ![alt](url) / ![alt](url "title")，alt 与 src 转义防止属性破坏
         img_match = re.match(r'^!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)$', stripped)
         if img_match:
-            alt, src = img_match.group(1), img_match.group(2)
+            alt = img_match.group(1).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+            src = img_match.group(2).replace('"', "&quot;")
             caption = f'<div style="text-align: center; color: {sub_color}; font-size: 13px; margin-top: 6px; font-style: italic;">{alt}</div>' if alt else ""
             html_parts.append(
                 f'<div style="margin: 24px 0; text-align: center;">'
