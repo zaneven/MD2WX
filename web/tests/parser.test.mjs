@@ -66,3 +66,160 @@ test('collectExternalImageUrls 检测外链图并跳过微信 CDN 与代码围�
   const urls = collectExternalImageUrls(md);
   assert.deepEqual(urls, ['https://cdn.example.com/a.png']);
 });
+
+// ==================== CommonMark + GFM + 扩展语法完整支持 (v1.5.0) ====================
+
+const render = (md, opts = {}) => markdownToWechatHtml(md, 'tech-blue', null, { insertCover: false, ...opts });
+
+test('段落合并：CJK 直接拼接，ASCII 补空格', () => {
+  assert.ok(render('第一行文字\n第二行文字').includes('第一行文字第二行文字'));
+  assert.ok(render('english words\nnext line').includes('english words next line'));
+});
+
+test('硬换行：行尾两空格与反斜杠', () => {
+  assert.ok(render('行尾两空格  \n下一行。').includes('<br />'));
+  assert.ok(render('行尾反斜杠\\\n下一行。').includes('<br />'));
+});
+
+test('Setext 标题与分割线歧义消解', () => {
+  const html = render('标题一\n===\n\n标题二\n---');
+  assert.ok(html.includes('标题一'));
+  assert.ok(html.includes('标题二'));
+  assert.ok(render('---').includes('<hr'));
+});
+
+test('分割线变体', () => {
+  for (const marker of ['----', '* * *', '- - -', '____']) {
+    assert.ok(render(marker).includes('<hr'), marker);
+  }
+});
+
+test('波浪围栏与四反引号围栏', () => {
+  assert.ok(render('~~~python\nprint(1)\n~~~').includes('print'));
+  assert.ok(render('````\ncode with ``` inside\n````').includes('code&nbsp;with'));
+});
+
+test('h1-h6 路由与标题行内格式化', () => {
+  const html = render('# 一\n## 二\n### 三\n#### 四\n##### 五\n###### 六');
+  for (const t of ['一', '二', '三', '四', '五', '六']) assert.ok(html.includes(t));
+  assert.ok(render('## 标题含 **加粗**').includes('<strong>加粗</strong>'));
+});
+
+test('有序列表保留源编号', () => {
+  const html = render('1. 第一\n2. 第二\n5. 第五');
+  assert.ok(html.replace(/ /g, '').includes('>1.</span>'));
+  assert.ok(html.replace(/ /g, '').includes('>5.</span>'));
+});
+
+test('加号列表标记', () => {
+  assert.ok(render('+ 加号项').includes('加号项'));
+});
+
+test('嵌套列表缩进层级', () => {
+  const html = render('- 顶级\n  - 子级\n    - 三级');
+  assert.equal((html.match(/padding-left: 16px/g) || []).length, 2);
+});
+
+test('有序嵌套与混合标记', () => {
+  const html = render('1. 父项\n   1. 子有序\n   - 子无序');
+  for (const t of ['父项', '子有序', '子无序']) assert.ok(html.includes(t));
+});
+
+test('有序列表内任务项', () => {
+  const html = render('1. [x] 已完成步骤');
+  assert.ok(html.includes('<svg'));
+  assert.ok(html.includes('已完成步骤'));
+});
+
+test('缩进代码块', () => {
+  assert.ok(render('段\n\n    code line one\n    two').includes('code&nbsp;line&nbsp;one'));
+});
+
+test('嵌套引用块', () => {
+  const html = render('> 外层\n>> 内层');
+  assert.ok(html.split('<blockquote').length - 1 >= 2);
+  assert.ok(html.includes('内层'));
+});
+
+test('表格对齐与转义管道', () => {
+  const html = render('| A | B | C |\n| :--- | :---: | ---: |\n| 左 | 中 | 右 |');
+  assert.ok(html.includes('text-align: center;'));
+  assert.ok(html.includes('text-align: right;'));
+  assert.ok(render('| 语法 |\n| --- |\n| a \\| b |').includes('<td'));
+});
+
+test('参考式链接与参考式图片', () => {
+  const md = '见 [手册][m] 与 [m] 折叠；图 ![图标][i]。\n\n[m]: https://ref.io/manual\n[i]: https://ref.io/logo.png';
+  const html = render(md);
+  assert.ok(html.includes('[1]'));
+  assert.ok(html.includes('<img src="https://ref.io/logo.png"'));
+  assert.ok(!html.includes('[m]:'));
+  assert.ok(!html.includes('[i]:'));
+});
+
+test('脚注语法 [^id]', () => {
+  const md = '引用[^1]与[^note]。\n\n[^1]: 第一条说明\n[^note]: 第二条说明';
+  const html = render(md);
+  assert.ok(html.includes('[1]'));
+  assert.ok(html.includes('[2]'));
+  assert.ok(html.includes('第一条说明'));
+  assert.ok(!html.includes('[^1]:'));
+});
+
+test('反斜杠转义', () => {
+  const html = render('\\*不是斜体\\* 与 1\\. 不是列表');
+  assert.ok(!html.includes('<em>'));
+  assert.ok(html.includes('不是斜体'));
+});
+
+test('实体透传不双重转义', () => {
+  const html = render('版权 &copy; 与 &amp; 和 &#123;');
+  assert.ok(html.includes('&copy;'));
+  assert.ok(!html.includes('&amp;copy;'));
+  assert.ok(!html.includes('&amp;amp;'));
+});
+
+test('HTML 白名单放行与其余转义', () => {
+  const html = render('<b>粗</b> <u>下划</u> <mark>标</mark> <script>evil</script> <kbd>键</kbd>');
+  assert.ok(html.includes('<b>粗</b>'));
+  assert.ok(html.includes('<u>下划</u>'));
+  assert.ok(html.includes('<mark>标</mark>'));
+  assert.ok(!html.includes('<script>'));
+  assert.ok(!html.includes('<kbd>'));
+});
+
+test('==高亮== 扩展语法', () => {
+  const html = render('重点==高亮内容==结束');
+  assert.ok(html.includes('<mark'));
+  assert.ok(html.includes('高亮内容'));
+});
+
+test('双反引号行内代码', () => {
+  const html = render('``内含 ` 井号`` 结束');
+  assert.ok(html.includes('<code'));
+  assert.ok(html.includes('内含'));
+});
+
+test('段落中行内图片', () => {
+  const html = render('段落中 ![小图](https://cdn.example.com/x.png) 内嵌');
+  assert.ok(html.includes('<img'));
+  assert.ok(html.includes('内嵌'));
+});
+
+test('尖括号自动链接', () => {
+  const html = render('访问 <https://auto.io/x> 与 <mail@test.io>');
+  assert.ok(html.includes('auto.io/x'));
+  assert.ok(html.includes('mail@test.io'));
+  assert.ok(!html.includes('&lt;https'));
+});
+
+test('词内下划线不触发斜体', () => {
+  assert.ok(!render('变量 foo_bar_baz 保持原样').includes('<em>'));
+});
+
+test('linkToFootnote=false 时 [^id] 脚注仍可用', () => {
+  const md = '脚注[^1]引用。\n\n[^1]: 说明文字';
+  const html = render(md, { linkToFootnote: false });
+  assert.ok(html.includes('说明文字'));
+  assert.ok(!html.includes('[^1]:'));
+});

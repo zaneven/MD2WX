@@ -299,6 +299,172 @@ public/
         self.assertIn("<strong>加粗2</strong>", html)
         self.assertNotIn("<strong> 中间普通文本", html)
 
+
+class TestMarkdownFullSyntax(unittest.TestCase):
+    """CommonMark + GFM + 扩展语法完整支持测试 (v1.5.0)"""
+
+    def _render(self, md: str) -> str:
+        return markdown_to_wechat_html(md, "tech-blue", insert_cover=False)
+
+    def test_paragraph_merging_cjk_and_ascii(self):
+        html = self._render("第一行文字\n第二行文字")
+        self.assertIn("<p", html)
+        self.assertIn("第一行文字第二行文字", html)
+        html2 = self._render("english words\nnext line")
+        self.assertIn("english words next line", html2)
+
+    def test_hard_break_two_spaces_and_backslash(self):
+        html = self._render("行尾两空格  \n下一行。")
+        self.assertIn("<br />", html)
+        html2 = self._render("行尾反斜杠\\\n下一行。")
+        self.assertIn("<br />", html2)
+
+    def test_setext_headings(self):
+        html = self._render("标题一\n===\n\n标题二\n---")
+        self.assertIn("标题一", html)
+        self.assertIn("标题二", html)
+        # --- 独立出现仍为分割线
+        html2 = self._render("---")
+        self.assertIn("<hr", html2)
+
+    def test_hr_variants(self):
+        for marker in ["----", "* * *", "- - -", "____"]:
+            self.assertIn("<hr", self._render(marker), marker)
+
+    def test_tilde_fences(self):
+        html = self._render("~~~python\nprint(1)\n~~~")
+        self.assertIn("print", html)
+        html2 = self._render("````\ncode with ``` inside\n````")
+        self.assertIn("code&nbsp;with", html2)
+
+    def test_heading_levels_and_inline_format(self):
+        html = self._render("# 一级\n## 二级\n### 三级\n#### 四级\n##### 五级\n###### 六级")
+        self.assertIn("一级", html)
+        self.assertIn("六级", html)
+        html2 = self._render("## 标题含 **加粗** 与 [链接](https://x.io/a)")
+        self.assertIn("<strong>加粗</strong>", html2)
+
+    def test_ordered_lists_preserve_number(self):
+        html = self._render("1. 第一\n2. 第二\n5. 第五")
+        self.assertIn(">1.</span>", html.replace(" ", ""))
+        self.assertIn(">5.</span>", html.replace(" ", ""))
+
+    def test_plus_marker_list(self):
+        html = self._render("+ 加号项")
+        self.assertIn("加号项", html)
+        self.assertIn("•", html)
+
+    def test_nested_lists_indentation(self):
+        md = "- 顶级\n  - 子级\n    - 三级"
+        html = self._render(md)
+        self.assertEqual(html.count("padding-left: 16px"), 2)
+
+    def test_ordered_nested_and_mixed(self):
+        md = "1. 父项\n   1. 子有序\n   - 子无序"
+        html = self._render(md)
+        self.assertIn("父项", html)
+        self.assertIn("子有序", html)
+        self.assertIn("子无序", html)
+
+    def test_task_in_ordered_list(self):
+        md = "1. [x] 已完成步骤"
+        html = self._render(md)
+        self.assertIn("<svg", html)
+        self.assertIn("已完成步骤", html)
+
+    def test_indented_code_block(self):
+        md = "段落前空行\n\n    code line one\n    code line two"
+        html = self._render(md)
+        self.assertIn("code&nbsp;line&nbsp;one", html)
+
+    def test_nested_blockquotes(self):
+        html = self._render("> 外层\n>> 内层")
+        self.assertGreaterEqual(html.count("<blockquote"), 2)
+        self.assertIn("内层", html)
+
+    def test_table_alignment_and_escaped_pipe(self):
+        md = "| A | B | C |\n| :--- | :---: | ---: |\n| 左 | 中 | 右 |"
+        html = self._render(md)
+        self.assertIn("text-align: center;", html)
+        self.assertIn("text-align: right;", html)
+        html2 = self._render("| 语法 |\n| --- |\n| a \\| b |")
+        self.assertIn("<td", html2)
+
+    def test_reference_links_and_images(self):
+        md = "见 [手册][m] 与 [m] 折叠；图 ![图标][i]。\n\n[m]: https://ref.io/manual\n[i]: https://ref.io/logo.png"
+        html = self._render(md)
+        self.assertIn("[1]", html)
+        self.assertIn('<img src="https://ref.io/logo.png"', html)
+        self.assertNotIn("[m]:", html)
+        self.assertNotIn("[i]:", html)
+
+    def test_footnote_syntax(self):
+        md = "引用[^1]与[^note]。\n\n[^1]: 第一条说明\n[^note]: 第二条说明"
+        html = self._render(md)
+        self.assertIn("[1]", html)
+        self.assertIn("[2]", html)
+        self.assertIn("第一条说明", html)
+        self.assertNotIn("[^1]:", html)
+
+    def test_backslash_escapes(self):
+        html = self._render("\\*不是斜体\\* 与 1\\. 不是列表")
+        self.assertNotIn("<em>", html)
+        self.assertIn("不是斜体", html)
+
+    def test_entity_passthrough(self):
+        html = self._render("版权 &copy; 与 &amp; 和 &#123;")
+        self.assertIn("&copy;", html)
+        self.assertNotIn("&amp;copy;", html)
+        self.assertNotIn("&amp;amp;", html)
+
+    def test_html_whitelist(self):
+        html = self._render("<b>粗</b> <u>下划</u> <mark>标</mark> <script>evil</script> <kbd>键</kbd>")
+        self.assertIn("<b>粗</b>", html)
+        self.assertIn("<u>下划</u>", html)
+        self.assertIn("<mark>标</mark>", html)
+        self.assertNotIn("<script>", html)
+        self.assertNotIn("<kbd>", html)
+
+    def test_mark_highlight(self):
+        html = self._render("重点==高亮内容==结束")
+        self.assertIn("<mark", html)
+        self.assertIn("高亮内容", html)
+
+    def test_double_backtick_code(self):
+        html = self._render("``内含 ` 井号`` 结束")
+        self.assertIn("<code", html)
+        self.assertIn("内含", html)
+
+    def test_inline_image(self):
+        html = self._render("段落中 ![小图](https://cdn.example.com/x.png) 内嵌")
+        self.assertIn("<img", html)
+        self.assertIn("内嵌", html)
+
+    def test_angle_autolink(self):
+        html = self._render("访问 <https://auto.io/x> 与 <mail@test.io>")
+        self.assertIn("auto.io/x", html)
+        self.assertIn("mail@test.io", html)
+        self.assertNotIn("&lt;https", html)
+
+    def test_intraword_underscore_not_emphasized(self):
+        html = self._render("变量 foo_bar_baz 保持原样")
+        self.assertNotIn("<em>", html)
+
+    def test_link_to_footnote_false_still_footnote_refs(self):
+        md = "脚注[^1]引用。\n\n[^1]: 说明文字"
+        html = markdown_to_wechat_html(md, "tech-blue", insert_cover=False, link_to_footnote=False)
+        self.assertIn("说明文字", html)
+        self.assertNotIn("[^1]:", html)
+
+    def test_rich_token_not_joined_into_paragraph(self):
+        md = "段落文字\n@@MDMERMAID_0@@\n继续段落"
+        html = markdown_to_wechat_html(md, "tech-blue", insert_cover=False, rich_blocks=[{"token": "@@MDMERMAID_0@@", "display": True, "html": "<div>RICH</div>"}])
+        self.assertIn("<div>RICH</div>", html)
+        self.assertIn("段落文字", html)
+        self.assertIn("继续段落", html)
+        self.assertNotIn("段落文字继续段落", html)
+
+
 if __name__ == "__main__":
     unittest.main()
 

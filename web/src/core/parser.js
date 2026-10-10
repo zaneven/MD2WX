@@ -126,31 +126,137 @@ export function collectExternalImageUrls(mdText) {
 }
 
 /**
- * 统一解析行内 Markdown 语法：
- * 1. 严格转义并保护行内代码，防止 <style> 破坏微信排版
- * 2. 保护超链接
- * 3. 粗体与斜体
- * 4. 还原 Tokens
+ * 6/3 位十六进制颜色转 rgba() 字符串；非法输入原样返回
  */
-export function formatInline(text, accent, codeFontSize = '13.5px', footnotes = null) {
+function hexToRgba(hexColor, alpha) {
+  let h = String(hexColor || '').replace(/^#/, '');
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  if (h.length !== 6) return hexColor;
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  if ([r, g, b].some((n) => Number.isNaN(n))) return hexColor;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/**
+ * 转义普通文本中的 HTML 敏感字符，但放过已是 HTML 实体的 &name; / &#123; / &#xAB;，
+ * 避免用户手写的实体被二次转义后按字面显示
+ */
+function entitySafeEscape(seg) {
+  return String(seg)
+    .replace(/&(?!(?:[a-zA-Z][a-zA-Z0-9]*|#[0-9]+|#x[0-9a-fA-F]+);)/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// 允许放行的微信安全行内 HTML 标签（仅无属性形态；其余标签一律转义显示）
+const HTML_WHITELIST_RE = /&lt;(\/?)\s*(br|b|strong|em|u|s|sub|sup|mark)\s*(\/?)\s*&gt;/gi;
+
+function unescapeWhitelistHtml(text) {
+  return text.replace(HTML_WHITELIST_RE, (_, c1, tag, c2) => `<${c1}${tag.toLowerCase()}${c2}>`);
+}
+
+/**
+ * 统一解析行内 Markdown 语法 (CommonMark + GFM + 常用扩展)：
+ * 1. 保护行内代码（含双反引号）与反斜杠转义字符；
+ * 2. 行内/参考式图片、尖括号自动链接、超链接、参考式链接、脚注引用、裸 URL；
+ * 3. 实体安全转义 + 微信安全 HTML 白名单放行；
+ * 4. 加粗（** 与 __）、斜体（* 与 _）、删除线、==高亮==；
+ * 5. 彻底递归还原所有 Tokens，杜绝控制字符 \x00 导致的截断。
+ *
+ * footnotes: 文末脚注收集器 (null = URL 渲染为锚点而非脚注)；
+ * urlFootnotes: false 时 URL 一律渲染锚点 (link_to_footnote=false 场景)；
+ * refDefs: 参考式链接定义表 (预扫描产出，label 小写为键)；
+ * footnoteDefs: [^id] 脚注定义表 (预扫描产出)；
+ * accentBg: ==高亮== 背景色 (缺省时由 accent 派生半透明色)。
+ */
+export function formatInline(
+  text,
+  accent,
+  codeFontSize = '13.5px',
+  footnotes = null,
+  urlFootnotes = true,
+  refDefs = null,
+  footnoteDefs = null,
+  accentBg = null
+) {
   const tokens = {};
   let tokenIdx = 0;
 
-  // 1. 保护并转义行内代码 `...`
-  text = text.replace(/`([^`]+?)`/g, (_, raw) => {
-    const k = `@@MDCODE_${tokenIdx++}@@`;
-    const esc = raw
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-    tokens[k] = `<code style="background: rgba(0,0,0,0.06); padding: 2px 6px; border-radius: 4px; font-size: ${codeFontSize}; color: ${accent}; font-family: monospace;">${esc}</code>`;
+  // 脚注编号统一分配 (URL 脚注与 [^id] 文本脚注共用一个有序列表)
+  const footnoteStore = footnotes || [];
+
+  const saveToken = (prefix, value) => {
+    const k = `@@${prefix}_${tokenIdx++}@@`;
+    tokens[k] = value;
     return k;
+  };
+
+  const footnoteSup = (fNum, labelHtml = '') => {
+    const labelPart = labelHtml
+      ? `<span style="color: ${accent}; font-weight: 500;">${labelHtml}</span>`
+      : '';
+    return `${labelPart}<sup style="font-size: 11px; color: ${accent}; margin-left: 2px; font-weight: bold; vertical-align: super;">[${fNum}]</sup>`;
+  };
+
+  const registerUrlFootnote = (url, label) => {
+    const fIndex = footnoteStore.findIndex((f) => f.url === url);
+    if (fIndex === -1) {
+      footnoteStore.push({ label, url, kind: 'url' });
+      return footnoteStore.length;
+    }
+    return fIndex + 1;
+  };
+
+  // 1. 保护并转义行内代码 `...` 与 ``...``（双反引号可内含单反引号，内容首尾各剥离一个空格）
+  text = text.replace(/(`+)((?:(?!\1)[\s\S])+?)\1/g, (_, __, raw) => {
+    let content = raw;
+    if (content.length >= 2 && content.startsWith(' ') && content.endsWith(' ')) {
+      content = content.slice(1, -1);
+    }
+    return saveToken(
+      'MDCODE',
+      `<code style="background: rgba(0,0,0,0.06); padding: 2px 6px; border-radius: 4px; font-size: ${codeFontSize}; color: ${accent}; font-family: monospace;">${escapeHtml(content)}</code>`
+    );
   });
 
-  // 2. 保护超链接 [...](...)，若开启脚注且非锚点链接则生成微信文末参考脚注
-  text = text.replace(/\[(.*?)\]\((.*?)\)/g, (_, label, url) => {
-    const k = `@@MDLINK_${tokenIdx++}@@`;
+  // 1.5 反斜杠转义：\x 的下一字符按字面输出，且不参与后续任何格式化
+  text = text.replace(/\\([!"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~])/g, (_, ch) =>
+    saveToken('MDESC', escapeHtml(ch))
+  );
+
+  // 2. 图片：参考式 ![alt][ref] 与行内 ![alt](src "title")
+  //    必须先于链接解析，否则 [alt](src) 部分会先被链接正则吞掉
+  const inlineImgHtml = (alt, src) =>
+    `<img src="${String(src).replace(/"/g, '&quot;')}" alt="${escapeHtml(alt)}" style="max-width: 96%; height: auto; border-radius: 8px; display: inline-block;" />`;
+
+  text = text.replace(/!\[([^\]]*)\]\[([^\]]*)\]/g, (match, alt, ref) => {
+    if (!refDefs) return match;
+    const d = refDefs[ref.trim().toLowerCase()] || refDefs[alt.trim().toLowerCase()];
+    if (!d) return match;
+    return saveToken('MDIMG', inlineImgHtml(alt, d.url));
+  });
+
+  text = text.replace(/!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g, (_, alt, src) =>
+    saveToken('MDIMG', inlineImgHtml(alt, src))
+  );
+
+  // 2.2 尖括号自动链接：<https://...> 剥尖括号交给裸 URL 步骤；<mail@...> 转脚注/锚点
+  text = text.replace(/<(https?:\/\/[^\s<>]+)>/g, '$1');
+
+  text = text.replace(/<([\w.+-]+@[\w-]+\.[\w.-]+)>/g, (_, addr) => {
+    const url = `mailto:${addr}`;
+    if (footnotes && urlFootnotes) {
+      const fNum = registerUrlFootnote(url, addr);
+      return saveToken('MDMAIL', footnoteSup(fNum, addr));
+    }
+    return saveToken('MDMAIL', `<a href="${url}" style="color: ${accent}; text-decoration: none; border-bottom: 1px dashed ${accent};">${addr}</a>`);
+  });
+
+  // 3. 保护超链接 [...](...)，若开启脚注且非锚点链接则生成微信文末参考脚注
+  const saveLink = (label, url) => {
     let escLabel = escapeHtml(label);
 
     // 展开嵌套的 code token
@@ -161,7 +267,7 @@ export function formatInline(text, accent, codeFontSize = '13.5px', footnotes = 
     }
 
     // URL 转义后输出，防止属性破坏
-    let escUrl = url.replace(/"/g, '&quot;');
+    let escUrl = String(url).replace(/"/g, '&quot;');
 
     // 本地 file 协议转换为安全链接
     if (escUrl.startsWith('file:///')) {
@@ -172,60 +278,84 @@ export function formatInline(text, accent, codeFontSize = '13.5px', footnotes = 
       }
     }
 
-    if (footnotes && !escUrl.startsWith('#')) {
-      let fIndex = footnotes.findIndex((f) => f.url === escUrl);
-      if (fIndex === -1) {
-        footnotes.push({ label: escLabel, url: escUrl });
-        fIndex = footnotes.length;
-      } else {
-        fIndex = fIndex + 1;
-      }
-      tokens[k] = `<span style="color: ${accent}; font-weight: 500;">${escLabel}</span><sup style="font-size: 11px; color: ${accent}; margin-left: 2px; font-weight: bold; vertical-align: super;">[${fIndex}]</sup>`;
-    } else {
-      tokens[k] = `<a href="${escUrl}" style="color: ${accent}; text-decoration: none; border-bottom: 1px dashed ${accent};">${escLabel}</a>`;
+    if (footnotes && urlFootnotes && !escUrl.startsWith('#')) {
+      const fNum = registerUrlFootnote(escUrl, escLabel);
+      return saveToken('MDLINK', footnoteSup(fNum, escLabel));
     }
-    return k;
+    return saveToken('MDLINK', `<a href="${escUrl}" style="color: ${accent}; text-decoration: none; border-bottom: 1px dashed ${accent};">${escLabel}</a>`);
+  };
+
+  text = text.replace(/\[(.*?)\]\((.*?)\)/g, (_, label, url) => saveLink(label, url));
+
+  // 3.2 参考式链接 [text][ref] / 折叠式 [ref]（定义由预扫描收集，未解析时保持字面）
+  const saveRefLink = (match, label, ref) => {
+    if (!refDefs) return match;
+    const refId = (ref || label).trim().toLowerCase();
+    const d = refDefs[refId];
+    if (!d) return match;
+    return saveLink(label, d.url);
+  };
+
+  text = text.replace(/\[([^\]]+)\]\[([^\]]*)\]/g, saveRefLink);
+  text = text.replace(/\[([^\][\s]+)\](?![\(\[])/g, (match, label) => saveRefLink(match, label, label));
+
+  // 3.3 脚注引用 [^id]：编号按首次引用顺序并入文末脚注区 (定义由预扫描收集)
+  text = text.replace(/\[\^([^\]]+)\]/g, (match, fid) => {
+    if (!footnoteDefs) return match;
+    const id = fid.trim().toLowerCase();
+    if (!(id in footnoteDefs)) return match;
+    const key = `@@FN:${id}@@`;
+    const fIndex = footnoteStore.findIndex((f) => f.url === key);
+    let fNum;
+    if (fIndex === -1) {
+      footnoteStore.push({ label: id, url: key, kind: 'text', text: footnoteDefs[id] });
+      fNum = footnoteStore.length;
+    } else {
+      fNum = fIndex + 1;
+    }
+    return saveToken('MDFN', footnoteSup(fNum));
   });
 
-  // 2.2 自动链接：裸 http(s) URL 与 Markdown 链接同等待遇，自动转文末脚注
+  // 3.5 自动链接：裸 http(s) URL 与 Markdown 链接同等待遇，自动转文末脚注
   //     (微信不支持外链跳转，遗漏的裸 URL 在正文点击同样会被阻断)
   const autolinkUrlRe = /https?:\/\/[^\s<>()\[\]"']+[^\s<>()\[\]"'.,;:!?]/g;
   text = text.replace(autolinkUrlRe, (url) => {
-    const k = `@@MDURL_${tokenIdx++}@@`;
-    const label = url.length <= 60 ? url : url.slice(0, 57) + '...';
-    if (footnotes) {
-      let fIndex = footnotes.findIndex((f) => f.url === url);
-      if (fIndex === -1) {
-        footnotes.push({ label, url });
-        fIndex = footnotes.length;
-      } else {
-        fIndex = fIndex + 1;
-      }
-      tokens[k] = `<span style="color: ${accent}; font-weight: 500;">${label}</span><sup style="font-size: 11px; color: ${accent}; margin-left: 2px; font-weight: bold; vertical-align: super;">[${fIndex}]</sup>`;
-    } else {
-      tokens[k] = `<a href="${url}" style="color: ${accent}; text-decoration: none; border-bottom: 1px dashed ${accent};">${label}</a>`;
+    if (footnotes && urlFootnotes) {
+      const label = url.length <= 60 ? url : url.slice(0, 57) + '...';
+      const fNum = registerUrlFootnote(url, label);
+      return saveToken('MDURL', footnoteSup(fNum, label));
     }
-    return k;
+    const label = url.length <= 60 ? url : url.slice(0, 57) + '...';
+    return saveToken('MDURL', `<a href="${url}" style="color: ${accent}; text-decoration: none; border-bottom: 1px dashed ${accent};">${label}</a>`);
   });
 
-  // 2.5 对未受 token 保护的普通文本统一转义 HTML，
-  //     防止正文中的 <tag> 破坏预览与微信粘贴输出
+  // 4. 对未受 token 保护的普通文本统一转义 HTML (实体安全，防双重转义)，
+  //    并放行微信安全白名单行内标签，其余 <tag> 显示为字面文本
   text = text
     .split(/(@@MD[A-Z]+_\d+@@)/)
-    .map((seg) => (seg.startsWith('@@MD') ? seg : escapeHtml(seg)))
+    .map((seg) => (seg.startsWith('@@MD') ? seg : unescapeWhitelistHtml(entitySafeEscape(seg))))
     .join('');
 
-  // 3. 粗体与斜体 (严格界定符，避免内部跨越 ** 或穿透普通文本导致反转误加粗)
+  // 5. 粗体与斜体 (** 与 __ / * 与 _，下划线形态词边界感知：词内 _ 不触发)
   text = text.replace(/\*\*(?![\*\s])((?:[^*]|\*(?!\*))+?)(?<![\*\s])\*\*/g, '<strong>$1</strong>');
+  text = text.replace(/(?<![\w\\])__(?!\s)((?:[^_]|_(?!_))+?)(?<!\s)__(?!\w)/g, '<strong>$1</strong>');
   text = text.replace(/(^|[^*])\*(?![\*\s])([^*\n]+?)(?<![\*\s])\*(?!\*)/g, '$1<em>$2</em>');
+  text = text.replace(/(?<![`\w])_(?!\s)([^_\n]+?)(?<!\s)_(?!\w)/g, '<em>$1</em>');
 
-  // 3.5 GFM 删除线 ~~text~~ (del 标签在微信白名单内，内联样式保证不褪色)
+  // 5.5 GFM 删除线 ~~text~~ (del 标签在微信白名单内，内联样式保证不褪色)
   text = text.replace(
     /~~(?![\s~])((?:[^~]|~(?!~))+?)(?<![\s~])~~/g,
     `<del style="color: ${accent}; opacity: 0.72;">$1</del>`
   );
 
-  // 4. 彻底还原保护的 tokens (支持嵌套多轮展开)
+  // 5.6 扩展高亮 ==text== (主题色荧光笔效果)
+  const markBg = accentBg || hexToRgba(accent, 0.15);
+  text = text.replace(
+    /==(?!\s)([\s\S]+?)(?<!\s)==/g,
+    `<mark style="background: ${markBg}; padding: 1px 3px; border-radius: 3px;">$1</mark>`
+  );
+
+  // 6. 彻底还原保护的 tokens (支持嵌套多轮展开)
   let loops = 5;
   while (Object.keys(tokens).some((k) => text.includes(k)) && loops-- > 0) {
     for (const [k, v] of Object.entries(tokens)) {
@@ -235,10 +365,120 @@ export function formatInline(text, accent, codeFontSize = '13.5px', footnotes = 
     }
   }
 
-  // 5. 防御性清除任何控制字符
+  // 7. 防御性清除任何控制字符
   text = text.replace(/\x00/g, '');
 
   return text;
+}
+
+const CJK_CHAR_RE = /[一-鿿　-〿＀-￯]/;
+
+function isCjkChar(ch) {
+  return !!ch && CJK_CHAR_RE.test(ch);
+}
+
+// 列表项标记：- * + 无序，N. / N) 有序
+const LIST_ITEM_RE = /^(\s*)([-*+]|\d{1,9}[.)])(\s+(.*))?$/;
+
+/**
+ * 段落行合并 (CommonMark 软换行语义)：
+ * - 行尾 2+ 空格或单个反斜杠 = 硬换行，插入 @@MDBR_0@@ 占位 (行内解析后还原为 <br />)；
+ * - 普通软换行：相邻字符任一侧为 CJK/全角字符时直接拼接，否则以空格拼接。
+ */
+function joinParagraphLines(buf) {
+  const parts = buf.map((raw) => {
+    let hard = false;
+    let ln = raw;
+    if (ln.endsWith('  ')) {
+      hard = true;
+      ln = ln.replace(/\s+$/, '');
+    } else if (ln.endsWith('\\') && !ln.endsWith('\\\\')) {
+      hard = true;
+      ln = ln.slice(0, -1).replace(/\s+$/, '');
+    } else {
+      ln = ln.replace(/\s+$/, '');
+    }
+    return [hard, ln];
+  });
+  let result = '';
+  for (let i = 0; i < parts.length; i++) {
+    const [hard, ln] = parts[i];
+    if (i === 0) {
+      result = ln;
+      continue;
+    }
+    const prevLn = parts[i - 1][1];
+    if (parts[i - 1][0]) {
+      result += '@@MDBR_0@@' + ln;
+      continue;
+    }
+    const prevCh = prevLn ? prevLn.slice(-1) : '';
+    const nextCh = ln.slice(0, 1);
+    if (prevCh && nextCh && (isCjkChar(prevCh) || isCjkChar(nextCh))) {
+      result += ln;
+    } else {
+      result += ' ' + ln;
+    }
+  }
+  return result;
+}
+
+/**
+ * 渲染有序列表项 (保留源文档编号，与无序列表同一 flex 视觉骨架)
+ */
+function renderOrderedListItem(itemText, number, theme) {
+  const accent = theme.accent;
+  const textColor = theme.text_color;
+  return (
+    `<section style="display: flex; align-items: flex-start; margin-bottom: 8px; line-height: 1.75; font-size: 15.5px; color: ${textColor};">` +
+    `<span style="color: ${accent}; margin-right: 8px; font-size: 15px; line-height: 1.75; font-weight: 700; min-width: 20px;">${number}.</span>` +
+    `<span style="flex: 1;">${itemText}</span>` +
+    `</section>`
+  );
+}
+
+/**
+ * 渲染四级小标题 (默认：左侧短竖条 + 缩小字号；主题可用 styles.h4 覆盖)
+ */
+function renderH4(h4Text, theme) {
+  const accent = theme.accent;
+  const pageBg = theme.page_bg || '#ffffff';
+  const isDark = ['#0b0f19', '#0f172a', '#18181b', '#09090b'].includes(pageBg);
+  const headingColor = isDark ? '#f8fafc' : '#18181b';
+  return (
+    `<section style="margin: 20px 0 10px 0; line-height: 1.4; display: flex; align-items: center;">` +
+    `<span style="display: inline-block; width: 3px; height: 14px; background: ${accent}; border-radius: 2px; margin-right: 8px; flex-shrink: 0;"></span>` +
+    `<span style="font-size: 15.5px; font-weight: 700; color: ${accent};">${h4Text}</span>` +
+    `</section>`
+  );
+}
+
+/**
+ * 渲染五级小标题 (默认：accent 短划前缀)
+ */
+function renderH5(h5Text, theme) {
+  const accent = theme.accent;
+  const pageBg = theme.page_bg || '#ffffff';
+  const isDark = ['#0b0f19', '#0f172a', '#18181b', '#09090b'].includes(pageBg);
+  const headingColor = isDark ? '#f8fafc' : '#18181b';
+  return (
+    `<section style="margin: 18px 0 8px 0; line-height: 1.4;">` +
+    `<span style="color: ${accent}; margin-right: 6px; font-weight: 700;">—</span>` +
+    `<span style="font-size: 15px; font-weight: 600; color: ${headingColor};">${h5Text}</span>` +
+    `</section>`
+  );
+}
+
+/**
+ * 渲染六级小标题 (默认：弱化的副色小字)
+ */
+function renderH6(h6Text, theme) {
+  const subColor = theme.sub_color;
+  return (
+    `<section style="margin: 16px 0 8px 0; line-height: 1.4;">` +
+    `<span style="font-size: 14px; font-weight: 600; color: ${subColor}; letter-spacing: 0.5px;">${h6Text}</span>` +
+    `</section>`
+  );
 }
 
 // ==============================================================================
@@ -479,7 +719,9 @@ ${macDots}
   }
 }
 
-export function renderTable(header, rows, theme) {
+export function renderTable(header, rows, theme, aligns = null) {
+  const alignList = aligns || [];
+  const colAlign = (colIdx) => (colIdx < alignList.length ? alignList[colIdx] : 'left');
   const style = theme.table_style || theme.styles?.table || 'zebra';
   const accent = theme.accent;
   const accentBg = theme.accent_bg;
@@ -496,18 +738,18 @@ export function renderTable(header, rows, theme) {
 <table style="width: 100%; border-collapse: collapse; font-size: 14px; text-align: left; border-top: 2px solid ${accent}; border-bottom: 2px solid ${accent}; background: transparent;">`;
     if (header && header.length > 0) {
       tableHtml += `<thead><tr>`;
-      for (const h of header) {
-        tableHtml += `<th style="padding: 10px 14px; font-weight: 700; color: ${accent}; border-bottom: 1px solid ${borderColor};">${h}</th>`;
-      }
+      header.forEach((h, hIdx) => {
+        tableHtml += `<th style="padding: 10px 14px; font-weight: 700; color: ${accent}; border-bottom: 1px solid ${borderColor}; text-align: ${colAlign(hIdx)};">${h}</th>`;
+      });
       tableHtml += `</tr></thead>`;
     }
     tableHtml += `<tbody>`;
     for (const row of rows) {
       tableHtml += `<tr style="border-bottom: 1px dashed ${borderColor};">`;
-      for (const c of row) {
+      row.forEach((c, cIdx) => {
         const cFmt = formatInline(c, accent, '12.5px');
-        tableHtml += `<td style="padding: 10px 14px; color: ${textColor}; line-height: 1.5;">${cFmt}</td>`;
-      }
+        tableHtml += `<td style="padding: 10px 14px; color: ${textColor}; line-height: 1.5; text-align: ${colAlign(cIdx)};">${cFmt}</td>`;
+      });
       tableHtml += `</tr>`;
     }
     tableHtml += `</tbody></table></div>`;
@@ -518,18 +760,18 @@ export function renderTable(header, rows, theme) {
 <table style="width: 100%; border-collapse: collapse; font-size: 14px; text-align: left; border: 2px solid ${borderColor}; background: ${tdBg};">`;
     if (header && header.length > 0) {
       tableHtml += `<thead><tr style="background: ${accentBg};">`;
-      for (const h of header) {
-        tableHtml += `<th style="padding: 10px 14px; font-weight: 700; color: ${accent}; border: 1px solid ${borderColor};">${h}</th>`;
-      }
+      header.forEach((h, hIdx) => {
+        tableHtml += `<th style="padding: 10px 14px; font-weight: 700; color: ${accent}; border: 1px solid ${borderColor}; text-align: ${colAlign(hIdx)};">${h}</th>`;
+      });
       tableHtml += `</tr></thead>`;
     }
     tableHtml += `<tbody>`;
     for (const row of rows) {
       tableHtml += `<tr>`;
-      for (const c of row) {
+      row.forEach((c, cIdx) => {
         const cFmt = formatInline(c, accent, '12.5px');
-        tableHtml += `<td style="padding: 10px 14px; color: ${textColor}; line-height: 1.5; border: 1px solid ${borderColor};">${cFmt}</td>`;
-      }
+        tableHtml += `<td style="padding: 10px 14px; color: ${textColor}; line-height: 1.5; border: 1px solid ${borderColor}; text-align: ${colAlign(cIdx)};">${cFmt}</td>`;
+      });
       tableHtml += `</tr>`;
     }
     tableHtml += `</tbody></table></div>`;
@@ -541,9 +783,9 @@ export function renderTable(header, rows, theme) {
 <table style="width: 100%; border-collapse: collapse; font-size: 14px; text-align: left; background: ${tdBg}; border-radius: 8px; overflow: hidden; border: 1px solid ${borderColor};">`;
     if (header && header.length > 0) {
       tableHtml += `<thead><tr style="background: ${accentBg};">`;
-      for (const h of header) {
-        tableHtml += `<th style="padding: 11px 14px; font-weight: 600; color: ${accent}; border-bottom: 2px solid ${borderColor};">${h}</th>`;
-      }
+      header.forEach((h, hIdx) => {
+        tableHtml += `<th style="padding: 11px 14px; font-weight: 600; color: ${accent}; border-bottom: 2px solid ${borderColor}; text-align: ${colAlign(hIdx)};">${h}</th>`;
+      });
       tableHtml += `</tr></thead>`;
     }
     tableHtml += `<tbody>`;
@@ -551,10 +793,10 @@ export function renderTable(header, rows, theme) {
       const row = rows[rIdx];
       const bg = rIdx % 2 === 1 ? tdBgAlt : tdBg;
       tableHtml += `<tr style="background: ${bg}; border-bottom: 1px solid ${borderColor};">`;
-      for (const c of row) {
+      row.forEach((c, cIdx) => {
         const cFmt = formatInline(c, accent, '12.5px');
-        tableHtml += `<td style="padding: 10px 14px; color: ${textColor}; line-height: 1.5;">${cFmt}</td>`;
-      }
+        tableHtml += `<td style="padding: 10px 14px; color: ${textColor}; line-height: 1.5; text-align: ${colAlign(cIdx)};">${cFmt}</td>`;
+      });
       tableHtml += `</tr>`;
     }
     tableHtml += `</tbody></table></div>`;
@@ -651,6 +893,58 @@ export function renderContainer(bodyHtml, theme) {
 // Markdown 解析主管道 (Parser Pipeline)
 // ==============================================================================
 
+// Stage A 预扫描正则：参考式链接定义与 [^id] 脚注定义
+const REF_DEF_RE = /^ {0,3}\[([^^\]]+)\]:\s*<?([^\s>]+)>?(?:\s+["'(](.+?)["')])?\s*$/;
+const FOOTNOTE_DEF_RE = /^ {0,3}\[\^([^\]]+)\]:\s?(.*)$/;
+
+/**
+ * Stage A 预扫描：收集参考式链接定义 [ref]: url 与脚注定义 [^id]: text，
+ * 定义行从正文行流中移除（不渲染）。围栏代码块内的同名行不视为定义。
+ * ref label 大小写不敏感；重复定义首个生效 (CommonMark 规则)。
+ * 脚注定义 V1 仅支持单行正文（多行延续按普通段落处理）。
+ */
+export function preprocessLines(lines) {
+  const refDefs = {};
+  const footnoteDefs = {};
+  const keep = [];
+  let fenceCh = '';
+  let fenceLen = 0;
+  for (const line of lines) {
+    const stripped = line.trim();
+    const fenceMatch = stripped.match(/^(`{3,}|~{3,})/);
+    if (fenceMatch) {
+      if (!fenceCh) {
+        fenceCh = fenceMatch[1][0];
+        fenceLen = fenceMatch[1].length;
+      } else if (fenceMatch[1][0] === fenceCh && fenceMatch[1].length >= fenceLen) {
+        fenceCh = '';
+      }
+      keep.push(line);
+      continue;
+    }
+    if (!fenceCh) {
+      const fnMatch = line.match(FOOTNOTE_DEF_RE);
+      if (fnMatch) {
+        const fid = fnMatch[1].trim().toLowerCase();
+        if (fid && !(fid in footnoteDefs)) {
+          footnoteDefs[fid] = fnMatch[2].trim();
+        }
+        continue;
+      }
+      const refMatch = line.match(REF_DEF_RE);
+      if (refMatch) {
+        const label = refMatch[1].trim().toLowerCase();
+        if (label && !(label in refDefs)) {
+          refDefs[label] = { url: refMatch[2], title: refMatch[3] || '' };
+        }
+        continue;
+      }
+    }
+    keep.push(line);
+  }
+  return { lines: keep, refDefs, footnoteDefs };
+}
+
 export function markdownToWechatHtml(mdText, themeName = DEFAULT_THEME_ID, customOverride = null, renderOptions = {}) {
   const theme = getTheme(themeName, customOverride);
   const accent = theme.accent;
@@ -665,11 +959,14 @@ export function markdownToWechatHtml(mdText, themeName = DEFAULT_THEME_ID, custo
   const paragraphIndent = typography.paragraph_indent || false;
   const indentCss = paragraphIndent ? 'text-indent: 2em; ' : '';
 
-  // 微信公众号超链接自动转文末脚注机制
+  // 微信公众号超链接自动转文末脚注机制 (URL 脚注开关；[^id] 文本脚注始终收集)
   const linkToFootnote = renderOptions.linkToFootnote !== false; // 默认开启
-  const footnotes = linkToFootnote ? [] : null;
+  const footnotes = [];
 
-  const lines = mdText.split('\n');
+  const pre = preprocessLines(mdText.split('\n'));
+  const lines = pre.lines;
+  const refDefs = pre.refDefs;
+  const footnoteDefs = pre.footnoteDefs;
   const htmlParts = [];
 
   // 微信公众号文章顶部自动嵌入当前主题封面卡片 (默认开启)
@@ -682,215 +979,389 @@ export function markdownToWechatHtml(mdText, themeName = DEFAULT_THEME_ID, custo
     }
   }
 
-  let inCodeBlock = false;
-  let codeLang = '';
-  let codeLines = [];
+  // 块级渲染主循环 (嵌套引用会对内层行递归调用 renderBlockLines)
+  function renderBlockLines(blockLines) {
+    // 每层递归独立的块状态
+    let inCodeBlock = false;
+    let codeLang = '';
+    let codeLines = [];
+    let codeFenceCh = '';
+    let codeFenceLen = 0;
+    let inTable = false;
+    let tableLines = [];
+    let paraBuf = [];
 
-  let inTable = false;
-  let tableLines = [];
-
-  function flushTable() {
-    if (!tableLines.length) return '';
-    let header = [];
-    const rows = [];
-    for (let i = 0; i < tableLines.length; i++) {
-      const line = tableLines[i];
-      const trimmed = line.trim().replace(/^\||\|$/g, '');
-      const cells = trimmed.split('|').map((c) => c.trim());
-      if (i === 0) {
-        header = cells;
-      } else if (i === 1 && cells.every((c) => /^[-:\s]+$/.test(c))) {
-        continue;
-      } else {
-        rows.push(cells);
-      }
-    }
-    const rendered = renderTable(header, rows, theme);
-    tableLines = [];
-    inTable = false;
-    return rendered;
-  }
-
-  function flushCode() {
-    // highlightCode 内部统一做 HTML 转义，此处禁止预先转义 (会造成双重转义)
-    let rawCode = codeLines.join('\n');
-    const rendered = renderCode(rawCode, codeLang, theme);
-    codeLines = [];
-    inCodeBlock = false;
-    return rendered;
-  }
-
-  let idx = 0;
-  while (idx < lines.length) {
-    const line = lines[idx];
-    const stripped = line.trim();
-
-    // 1. 代码块
-    if (stripped.startsWith('```')) {
-      if (inCodeBlock) {
-        htmlParts.push(flushCode());
-      } else {
-        if (inTable) htmlParts.push(flushTable());
-        inCodeBlock = true;
-        codeLang = stripped.slice(3).trim();
-        codeLines = [];
-      }
-      idx++;
-      continue;
-    }
-
-    if (inCodeBlock) {
-      codeLines.push(line);
-      idx++;
-      continue;
-    }
-
-    // 2. 表格
-    if (stripped.startsWith('|') && stripped.endsWith('|')) {
-      inTable = true;
-      tableLines.push(stripped);
-      idx++;
-      continue;
-    } else if (inTable) {
-      htmlParts.push(flushTable());
-    }
-
-    // 3. 空行
-    if (!stripped) {
-      idx++;
-      continue;
-    }
-
-    // 3.5 块级富文本占位 (Mermaid/块级公式，预览由 richrender.js 水合渲染，
-    //     复制/导出前由 rasterizeRichBlocks 光栅化为内联 PNG)
-    if (/^@@MD(?:MERMAID|MATH)_\d+@@$/.test(stripped)) {
-      htmlParts.push(`<div style="margin: 22px 0; text-align: center;" data-md-rich-token="${stripped}"></div>`);
-      idx++;
-      continue;
-    }
-
-    // 4. 分割线
-    if (['---', '***', '___'].includes(stripped)) {
-      htmlParts.push(renderHr(theme));
-      idx++;
-      continue;
-    }
-
-    // 5. 一级标题
-    if (stripped.startsWith('# ')) {
-      const titleText = escapeHtml(stripped.slice(2).trim());
-      htmlParts.push(renderH1(titleText, theme));
-      idx++;
-      continue;
-    }
-
-    // 6. 二级标题
-    if (stripped.startsWith('## ')) {
-      const h2Text = escapeHtml(stripped.slice(3).trim());
-      htmlParts.push(renderH2(h2Text, theme));
-      idx++;
-      continue;
-    }
-
-    // 7. 三级标题（含 #### 及更深级别，按三级样式渲染，避免字面输出 # 号）
-    if (/^#{3,} /.test(stripped)) {
-      const h3Text = escapeHtml(stripped.replace(/^#+ +/, '').trim());
-      htmlParts.push(renderH3(h3Text, theme));
-      idx++;
-      continue;
-    }
-
-    // 8. 连续引用块聚合处理 (消除微信公众号碎片化孤立小框)
-    if (stripped.startsWith('>')) {
-      const quoteLines = [];
-      while (idx < lines.length && lines[idx].trim().startsWith('>')) {
-        let qLine = lines[idx].trim();
-        if (qLine.startsWith('> ')) {
-          qLine = qLine.slice(2).trim();
-        } else if (qLine.startsWith('>')) {
-          qLine = qLine.slice(1).trim();
+    function flushTable() {
+      if (!tableLines.length) return '';
+      let header = [];
+      let aligns = [];
+      const rows = [];
+      for (let i = 0; i < tableLines.length; i++) {
+        const cells = tableLines[i]
+          .trim()
+          .replace(/^\||\|$/g, '')
+          .replace(/\\\|/g, '\x00P\x00')
+          .split('|')
+          .map((c) => c.trim().replace(/\x00P\x00/g, '|'));
+        if (i === 0) {
+          header = cells;
+        } else if (i === 1 && cells.every((c) => /^[-: ]*$/.test(c) && c.includes('-'))) {
+          // GFM 对齐标记：:--- 左(默认)、---: 右、:---: 居中
+          aligns = cells.map((c) => {
+            const t = c.trim();
+            if (!t.endsWith(':')) return 'left';
+            return t.startsWith(':') ? 'center' : 'right';
+          });
+          continue;
+        } else {
+          rows.push(cells);
         }
-        quoteLines.push(qLine);
-        idx++;
       }
+      const rendered = renderTable(header, rows, theme, aligns);
+      tableLines = [];
+      inTable = false;
+      return rendered;
+    }
 
-      const formattedItems = [];
-      for (const qLine of quoteLines) {
-        if (!qLine) {
-          formattedItems.push('<div style="height: 6px;"></div>');
+    function flushCode() {
+      // highlightCode 内部统一做 HTML 转义，此处禁止预先转义 (会造成双重转义)
+      let rawCode = codeLines.join('\n');
+      const rendered = renderCode(rawCode, codeLang, theme);
+      codeLines = [];
+      inCodeBlock = false;
+      codeFenceCh = '';
+      codeFenceLen = 0;
+      return rendered;
+    }
+
+    const inlineFmt = (text, size = '13.5px') =>
+      formatInline(text, accent, size, footnotes, linkToFootnote, refDefs, footnoteDefs, theme.accent_bg)
+        .replace(/@@MDBR_0@@/g, '<br />');
+
+    function flushPara() {
+      if (!paraBuf.length) return '';
+      const joined = joinParagraphLines(paraBuf);
+      paraBuf = [];
+      const pText = inlineFmt(joined);
+      return `
+<p style="font-size: ${fontSizeBase}; line-height: ${lineHeightBase}; color: ${textColor}; margin: 18px 0; letter-spacing: ${letterSpacing}; ${indentCss}text-align: justify;">
+${pText}
+</p>`;
+    }
+
+    // 解析列表块 (含多层嵌套)；空行结束列表，缩进 2+ 空格的 marker 归入子列表
+    function parseList(i, minIndent) {
+      const items = [];
+      let firstIndent = null;
+      while (i < blockLines.length) {
+        const ln = blockLines[i];
+        if (!ln.trim()) break;
+        const exp = ln.replace(/\t/g, '    ');
+        const lm = exp.match(LIST_ITEM_RE);
+        if (!lm) break;
+        const ind = lm[1].length;
+        if (ind < minIndent) break;
+        if (firstIndent === null) firstIndent = ind;
+        if (ind < firstIndent) break;
+        if (ind >= firstIndent + 2) {
+          if (!items.length) break;
+          const [subItems, nextI] = parseList(i, ind);
+          items[items.length - 1].children.push(...subItems);
+          i = nextI;
           continue;
         }
-        const qFmt = formatInline(qLine, accent, '13px', footnotes);
-        formattedItems.push(`<div style="margin: 4px 0; line-height: 1.75;">${qFmt}</div>`);
+        const marker = lm[2];
+        let content = (lm[3] || '').trim();
+        const ordered = /^\d/.test(marker);
+        const number = ordered ? parseInt(marker.match(/(\d+)/)[1], 10) : 0;
+        let task = null;
+        const tm = content.match(/^\[( |x|X)\]\s+(.*)$/);
+        if (tm) {
+          task = tm[1].toLowerCase() === 'x';
+          content = tm[2];
+        }
+        const item = { ordered, number, task, lines: content ? [content] : [], children: [] };
+        items.push(item);
+        i++;
+        // 同项延续行：缩进 >= 内容列的非 marker 行并入当前项
+        const contentCol = firstIndent + marker.length + 1;
+        while (i < blockLines.length) {
+          const nxt = blockLines[i];
+          if (!nxt.trim()) break;
+          const nxtExp = nxt.replace(/\t/g, '    ');
+          const nlm = nxtExp.match(LIST_ITEM_RE);
+          if (nlm) break;
+          const nInd = nxtExp.length - nxtExp.replace(/^ +/, '').length;
+          if (nInd >= contentCol) {
+            item.lines.push(nxtExp.trim());
+            i++;
+          } else {
+            break;
+          }
+        }
       }
-
-      const innerContent = formattedItems.join('\n');
-      htmlParts.push(renderQuote(innerContent, theme));
-      continue;
+      return [items, i];
     }
 
-    // 9. 列表项 (含 GFM 任务列表 - [ ] / - [x])
-    if (stripped.startsWith('- ') || stripped.startsWith('* ')) {
-      const itemText = stripped.slice(2).trim();
-      const taskMatch = itemText.match(/^\[( |x|X)\]\s+(.*)$/);
-      if (taskMatch) {
-        const itemFmt = formatInline(taskMatch[2], accent, '13.5px', footnotes);
-        htmlParts.push(renderTaskItem(itemFmt, taskMatch[1].toLowerCase() === 'x', theme));
+    function renderListHtml(items) {
+      return items
+        .map((it) => {
+          let contentHtml = '';
+          if (it.lines.length) {
+            contentHtml = inlineFmt(joinParagraphLines(it.lines));
+          }
+          if (it.children.length) {
+            contentHtml += `<div style="padding-left: 16px; margin-top: 2px;">${renderListHtml(it.children)}</div>`;
+          }
+          if (it.task !== null) {
+            return renderTaskItem(contentHtml, it.task, theme);
+          }
+          if (it.ordered) {
+            return renderOrderedListItem(contentHtml, it.number, theme);
+          }
+          return renderListItem(contentHtml, theme);
+        })
+        .join('');
+    }
+
+    const parts = [];
+    let idx = 0;
+    const n = blockLines.length;
+    while (idx < n) {
+      const rawLine = blockLines[idx];
+      const stripped = rawLine.trim();
+
+      // 1. 围栏代码块 (``` 与 ~~~ 等价，3+ 字符；闭栏需同字符且长度不小于开栏)
+      const fenceMatch = stripped.match(/^(`{3,}|~{3,})(.*)$/);
+      if (fenceMatch) {
+        const fCh = fenceMatch[1][0];
+        if (inCodeBlock) {
+          if (fCh === codeFenceCh && fenceMatch[1].length >= codeFenceLen) {
+            parts.push(flushCode());
+          } else {
+            codeLines.push(rawLine);
+          }
+        } else {
+          if (inTable) parts.push(flushTable());
+          const fp = flushPara();
+          if (fp) parts.push(fp);
+          inCodeBlock = true;
+          codeFenceCh = fCh;
+          codeFenceLen = fenceMatch[1].length;
+          codeLang = fenceMatch[2].trim();
+          codeLines = [];
+        }
         idx++;
         continue;
       }
-      const itemFmt = formatInline(itemText, accent, '13.5px', footnotes);
-      htmlParts.push(renderListItem(itemFmt, theme));
-      idx++;
-      continue;
-    }
 
-    // 10. 图片格式 ![alt](url) / ![alt](url "title")，alt 与 src 转义防止属性破坏
-    const imgMatch = stripped.match(/^!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)$/);
-    if (imgMatch) {
-      const alt = escapeHtml(imgMatch[1]);
-      const src = imgMatch[2].replace(/"/g, '&quot;');
-      const caption = alt
-        ? `<div style="text-align: center; color: ${subColor}; font-size: 13px; margin-top: 6px; font-style: italic;">${alt}</div>`
-        : '';
-      htmlParts.push(`
+      if (inCodeBlock) {
+        codeLines.push(rawLine);
+        idx++;
+        continue;
+      }
+
+      // 2. 表格
+      if (stripped.startsWith('|') && stripped.endsWith('|')) {
+        inTable = true;
+        tableLines.push(stripped);
+        idx++;
+        continue;
+      } else if (inTable) {
+        parts.push(flushTable());
+      }
+
+      // 3. 空行：结束当前段落
+      if (!stripped) {
+        const fp = flushPara();
+        if (fp) parts.push(fp);
+        idx++;
+        continue;
+      }
+
+      // 3.2 块级富文本占位 (Mermaid/块级公式，预览由 richrender.js 水合渲染，
+      //     复制/导出前由 rasterizeRichBlocks 光栅化为内联 PNG)
+      if (/^@@MD(?:MERMAID|MATH)_\d+@@$/.test(stripped)) {
+        const fp = flushPara();
+        if (fp) parts.push(fp);
+        parts.push(`<div style="margin: 22px 0; text-align: center;" data-md-rich-token="${stripped}"></div>`);
+        idx++;
+        continue;
+      }
+
+      // 3.4 缩进代码块：4+ 空格缩进且无未决段落 (列表项内部由列表解析器自行消费)
+      if (!paraBuf.length && (rawLine.startsWith('    ') || rawLine.startsWith('\t'))) {
+        const fp = flushPara();
+        if (fp) parts.push(fp);
+        codeLines = [];
+        while (
+          idx < n &&
+          (blockLines[idx].startsWith('    ') || blockLines[idx].startsWith('\t') || !blockLines[idx].trim())
+        ) {
+          const exp = blockLines[idx].replace(/\t/g, '    ');
+          codeLines.push(exp.startsWith('    ') ? exp.slice(4) : exp);
+          idx++;
+        }
+        while (codeLines.length && !codeLines[codeLines.length - 1].trim()) {
+          codeLines.pop();
+        }
+        if (codeLines.length) {
+          parts.push(renderCode(codeLines.join('\n'), 'code', theme));
+        }
+        continue;
+      }
+
+      // 3.4 Setext 标题：段落缓冲非空时的 === / --- 下划线 (先于分割线判定)
+      const setextMatch = rawLine.match(/^ {0,3}(=+|-+)\s*$/);
+      if (setextMatch && paraBuf.length) {
+        const joined = joinParagraphLines(paraBuf);
+        paraBuf = [];
+        const level = setextMatch[1][0] === '=' ? 1 : 2;
+        parts.push(level === 1 ? renderH1(inlineFmt(joined), theme) : renderH2(inlineFmt(joined), theme));
+        idx++;
+        continue;
+      }
+
+      // 3.6 分割线 (3+ 个 -/*/ _，允许空格分隔，如 - - - / ****)
+      if (/^ {0,3}([-*_])(?:[ \t]*\1){2,}\s*$/.test(rawLine)) {
+        const fp = flushPara();
+        if (fp) parts.push(fp);
+        parts.push(renderHr(theme));
+        idx++;
+        continue;
+      }
+
+      // 4. ATX 标题 # ~ ###### (去除尾部 # 修饰；文本运行行内格式化)
+      const atxMatch = stripped.match(/^(#{1,6})(?:\s+(.*?))?\s*#*\s*$/);
+      if (atxMatch) {
+        const fp = flushPara();
+        if (fp) parts.push(fp);
+        const level = atxMatch[1].length;
+        const hText = inlineFmt((atxMatch[2] || '').trim());
+        if (level === 1) {
+          parts.push(renderH1(hText, theme));
+        } else if (level === 2) {
+          parts.push(renderH2(hText, theme));
+        } else if (level === 3) {
+          parts.push(renderH3(hText, theme));
+        } else if (level === 4) {
+          parts.push(renderH4(hText, theme));
+        } else if (level === 5) {
+          parts.push(renderH5(hText, theme));
+        } else {
+          parts.push(renderH6(hText, theme));
+        }
+        idx++;
+        continue;
+      }
+
+      // 5. 引用块 (剥一层 > 后递归渲染内层，支持 >> 多级嵌套；引用内空行为间隔)
+      if (stripped.startsWith('>')) {
+        const fp = flushPara();
+        if (fp) parts.push(fp);
+        if (inTable) parts.push(flushTable());
+        const innerLines = [];
+        while (idx < n && blockLines[idx].trim().startsWith('>')) {
+          const qLine = blockLines[idx].trim();
+          innerLines.push(qLine.startsWith('> ') ? qLine.slice(2).trim() : qLine.slice(1).trim());
+          idx++;
+        }
+        const segParts = [];
+        let run = [];
+        const flushQuoteRun = () => {
+          if (run.length) {
+            segParts.push(...renderBlockLines(run.slice()));
+            run = [];
+          }
+        };
+        for (const q of innerLines) {
+          if (q.trim()) {
+            run.push(q);
+          } else {
+            flushQuoteRun();
+            segParts.push('<div style="height: 6px;"></div>');
+          }
+        }
+        flushQuoteRun();
+        parts.push(renderQuote(segParts.join('\n'), theme));
+        continue;
+      }
+
+      // 6. 列表 (有序/无序/任务，含多层嵌套)
+      const listExp = rawLine.replace(/\t/g, '    ');
+      const listMatch = listExp.match(LIST_ITEM_RE);
+      if (listMatch && listMatch[1].length < 4) {
+        const fp = flushPara();
+        if (fp) parts.push(fp);
+        if (inTable) parts.push(flushTable());
+        const [items, endIdx] = parseList(idx, listMatch[1].length);
+        parts.push(renderListHtml(items));
+        idx = endIdx;
+        continue;
+      }
+
+      // 7. 独立行图片 (命中才冲刷段落缓冲，普通段落行继续走缓冲合并)
+      const imgMatch = stripped.match(/^!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)$/);
+      if (imgMatch) {
+        const fp = flushPara();
+        if (fp) parts.push(fp);
+        const alt = escapeHtml(imgMatch[1]);
+        const src = imgMatch[2].replace(/"/g, '&quot;');
+        const caption = alt
+          ? `<div style="text-align: center; color: ${subColor}; font-size: 13px; margin-top: 6px; font-style: italic;">${alt}</div>`
+          : '';
+        parts.push(`
 <div style="margin: 24px 0; text-align: center;">
 <img src="${src}" alt="${alt}" style="max-width: 96%; height: auto; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); display: inline-block;" />
 ${caption}
 </div>`);
-      idx++;
-      continue;
-    }
+        idx++;
+        continue;
+      }
 
-    // 11. 显式图注 (*▲ 图：...*)
-    const captionMatch = stripped.match(/^\*▲ 图：(.+?)\*$/);
-    if (captionMatch) {
-      const capText = captionMatch[1];
-      htmlParts.push(`
+      // 8. 显式图注 (*▲ 图：...*)
+      const captionMatch = stripped.match(/^\*▲ 图：(.+?)\*$/);
+      if (captionMatch) {
+        const fp = flushPara();
+        if (fp) parts.push(fp);
+        const capText = captionMatch[1];
+        parts.push(`
 <div style="text-align: center; color: ${subColor}; font-size: 13px; margin: -16px 0 20px 0; font-style: italic;">
 ▲ 图：${capText}
 </div>`);
+        idx++;
+        continue;
+      }
+
+      // 9. 段落缓冲 (连续非空行合并为同一段；保留行尾空格供硬换行判定)
+      paraBuf.push(rawLine.replace(/[\r\n]+$/, '').replace(/^\s+/, ''));
       idx++;
-      continue;
     }
 
-    // 12. 正文段落
-    const pText = formatInline(stripped, accent, '13.5px', footnotes);
-    htmlParts.push(`
-<p style="font-size: ${fontSizeBase}; line-height: ${lineHeightBase}; color: ${textColor}; margin: 18px 0; letter-spacing: ${letterSpacing}; ${indentCss}text-align: justify;">
-${pText}
-</p>`);
-    idx++;
+    const fp = flushPara();
+    if (fp) parts.push(fp);
+    if (inTable) parts.push(flushTable());
+    if (inCodeBlock) parts.push(flushCode());
+    return parts;
   }
 
-  if (inTable) htmlParts.push(flushTable());
-  if (inCodeBlock) htmlParts.push(flushCode());
+  htmlParts.push(...renderBlockLines(lines));
+
+
 
   // 注入文末参考资料与引用外链
-  if (footnotes && footnotes.length > 0) {
-    const listItems = footnotes.map((fn, fIndex) => {
-      return `<li style="margin: 5px 0; word-break: break-all; list-style-type: none;"><span style="color: ${accent}; font-weight: 700; margin-right: 6px;">[${fIndex + 1}]</span><span style="color: ${textColor}; font-weight: 500;">${fn.label}</span>: <span style="color: ${subColor}; font-family: monospace; font-size: 11.5px;">${fn.url}</span></li>`;
-    }).join('\n');
+  if (footnotes.length > 0) {
+    const listItems = footnotes
+      .map((fn, fIndex) => {
+        const numHtml = `<span style="color: ${accent}; font-weight: 700; margin-right: 6px;">[${fIndex + 1}]</span>`;
+        if (fn.kind === 'text') {
+          // [^id] 脚注：渲染定义正文 (定义内的链接渲染为锚点，不再产生新脚注)
+          const bodyHtml = formatInline(fn.text || '', accent, '12px', null, true, refDefs, footnoteDefs, theme.accent_bg);
+          return `<li style="margin: 5px 0; word-break: break-all; list-style-type: none;">${numHtml}<span style="color: ${textColor}; font-weight: 500;">${bodyHtml}</span></li>`;
+        }
+        return `<li style="margin: 5px 0; word-break: break-all; list-style-type: none;">${numHtml}<span style="color: ${textColor}; font-weight: 500;">${fn.label}</span>: <span style="color: ${subColor}; font-family: monospace; font-size: 11.5px;">${fn.url}</span></li>`;
+      })
+      .join('\n');
 
     htmlParts.push(`
 <section style="margin-top: 36px; padding: 16px 18px; border-radius: 8px; background: rgba(0,0,0,0.02); border-left: 3px solid ${accent}; border-top: 1px solid ${borderColor};">

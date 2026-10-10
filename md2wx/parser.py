@@ -80,51 +80,198 @@ def collect_external_image_urls(md_text: str) -> List[str]:
                 urls.append(src)
     return urls
 
-def format_inline(text: str, accent: str, code_font_size: str = "13.5px", footnotes: Optional[List[Dict[str, str]]] = None) -> str:
+def _hex_to_rgba(hex_color: str, alpha: float) -> str:
+    """6/3 位十六进制颜色转 rgba() 字符串；非法输入原样返回"""
+    h = hex_color.lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    if len(h) != 6:
+        return hex_color
+    try:
+        r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    except ValueError:
+        return hex_color
+    return f"rgba({r}, {g}, {b}, {alpha})"
+
+def _entity_safe_escape(seg: str) -> str:
     """
-    统一解析行内 Markdown 语法：
-    1. 保护并严格对行内代码进行 HTML 实体转义 (& -> &amp;, < -> &lt;, > -> &gt;)；
-    2. 保护超链接并支持安全协议处理与文末学术文献脚注；
-    3. 解析加粗 **...** 和斜体 *...*；
-    4. 彻底递归还原所有 Tokens，杜绝控制字符 \\x00 导致的截断。
+    转义普通文本中的 HTML 敏感字符，但放过已是 HTML 实体的 &name; / &#123; / &#xAB;，
+    避免用户手写的实体被二次转义后按字面显示
+    """
+    seg = re.sub(r"&(?!(?:[a-zA-Z][a-zA-Z0-9]*|#[0-9]+|#x[0-9a-fA-F]+);)", "&amp;", seg)
+    return seg.replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+# 允许放行的微信安全行内 HTML 标签（仅无属性形态；其余标签一律转义显示）
+_HTML_WHITELIST_RE = re.compile(r"&lt;(/?)\s*(br|b|strong|em|u|s|sub|sup|mark)\s*(/?)\s*&gt;", re.IGNORECASE)
+
+def _unescape_whitelist_html(text: str) -> str:
+    return _HTML_WHITELIST_RE.sub(lambda m: f"<{m.group(1)}{m.group(2).lower()}{m.group(3)}>", text)
+
+def preprocess_lines(lines: List[str]) -> Tuple[List[str], Dict[str, Dict[str, str]], Dict[str, str]]:
+    """
+    Stage A 预扫描：收集参考式链接定义 [ref]: url 与脚注定义 [^id]: text，
+    定义行从正文行流中移除（不渲染）。围栏代码块内的同名行不视为定义。
+    ref label 大小写不敏感；重复定义首个生效 (CommonMark 规则)。
+    脚注定义 V1 仅支持单行正文（多行延续按普通段落处理）。
+    """
+    ref_defs: Dict[str, Dict[str, str]] = {}
+    footnote_defs: Dict[str, str] = {}
+    keep: List[str] = []
+    fence_ch = ""
+    fence_len = 0
+    for line in lines:
+        stripped = line.strip()
+        fence_m = re.match(r"^(`{3,}|~{3,})", stripped)
+        if fence_m:
+            if not fence_ch:
+                fence_ch, fence_len = fence_m.group(1)[0], len(fence_m.group(1))
+            elif fence_m.group(1)[0] == fence_ch and len(fence_m.group(1)) >= fence_len:
+                fence_ch = ""
+            keep.append(line)
+            continue
+        if not fence_ch:
+            fn_m = _FOOTNOTE_DEF_RE.match(line)
+            if fn_m:
+                fid = fn_m.group(1).strip().lower()
+                if fid and fid not in footnote_defs:
+                    footnote_defs[fid] = fn_m.group(2).strip()
+                continue
+            ref_m = _REF_DEF_RE.match(line)
+            if ref_m:
+                label = ref_m.group(1).strip().lower()
+                if label and label not in ref_defs:
+                    ref_defs[label] = {"url": ref_m.group(2), "title": ref_m.group(3) or ""}
+                continue
+        keep.append(line)
+    return keep, ref_defs, footnote_defs
+
+_REF_DEF_RE = re.compile(r"^ {0,3}\[([^^\]]+)\]:\s*<?([^\s>]+)>?(?:\s+[\"\'(](.+?)[\"\')])?\s*$")
+_FOOTNOTE_DEF_RE = re.compile(r"^ {0,3}\[\^([^\]]+)\]:\s?(.*)$")
+
+def format_inline(
+    text: str,
+    accent: str,
+    code_font_size: str = "13.5px",
+    footnotes: Optional[List[Dict[str, str]]] = None,
+    url_footnotes: bool = True,
+    ref_defs: Optional[Dict[str, Dict[str, str]]] = None,
+    footnote_defs: Optional[Dict[str, str]] = None,
+    accent_bg: Optional[str] = None,
+) -> str:
+    """
+    统一解析行内 Markdown 语法 (CommonMark + GFM + 常用扩展)：
+    1. 保护行内代码（含双反引号）与反斜杠转义字符；
+    2. 行内/参考式图片、尖括号自动链接、超链接、参考式链接、脚注引用、裸 URL；
+    3. 实体安全转义 + 微信安全 HTML 白名单放行；
+    4. 加粗（**/__）、斜体（*/_）、删除线、==高亮==；
+    5. 彻底递归还原所有 Tokens，杜绝控制字符 \x00 导致的截断。
+
+    footnotes: 文末脚注收集器 (None = URL 渲染为锚点而非脚注)；
+    url_footnotes: False 时 URL 一律渲染锚点 (link_to_footnote=False 场景)；
+    ref_defs: 参考式链接定义表 (预扫描产出，label 小写为键)；
+    footnote_defs: [^id] 脚注定义表 (预扫描产出)；
+    accent_bg: ==高亮== 背景色 (缺省时由 accent 派生半透明色)。
     """
     tokens: Dict[str, str] = {}
     token_idx = 0
 
-    # 1. 保护并转义行内代码 `...`
-    def save_code(m: re.Match) -> str:
+    # 脚注编号统一分配 (URL 脚注与 [^id] 文本脚注共用一个有序列表)
+    footnote_num = footnotes if footnotes is not None else []
+
+    def save_token(prefix: str, value: str) -> str:
         nonlocal token_idx
-        k = f"@@MDCODE_{token_idx}@@"
+        k = f"@@{prefix}_{token_idx}@@"
         token_idx += 1
-        raw = m.group(1)
-        esc = (
-            raw.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace('"', "&quot;")
-        )
-        tokens[k] = (
-            f'<code style="background: rgba(0,0,0,0.06); padding: 2px 6px; border-radius: 4px; '
-            f'font-size: {code_font_size}; color: {accent}; font-family: monospace;">{esc}</code>'
-        )
+        tokens[k] = value
         return k
 
-    text = re.sub(r"`([^`]+?)`", save_code, text)
+    def esc_basic(s: str) -> str:
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
-    # 2. 保护超链接 [...](...)
-    def save_link(m: re.Match) -> str:
-        nonlocal token_idx
-        k = f"@@MDLINK_{token_idx}@@"
-        token_idx += 1
+    def footnote_sup(f_num: int, label_html: str = "") -> str:
+        label_part = f'<span style="color: {accent}; font-weight: 500;">{label_html}</span>' if label_html else ""
+        return (
+            f'{label_part}<sup style="font-size: 11px; color: {accent}; margin-left: 2px; '
+            f'font-weight: bold; vertical-align: super;">[{f_num}]</sup>'
+        )
+
+    def register_url_footnote(url: str, label: str) -> int:
+        match_idx = -1
+        for idx, item in enumerate(footnote_num):
+            if item.get("url") == url:
+                match_idx = idx
+                break
+        if match_idx == -1:
+            footnote_num.append({"label": label, "url": url, "kind": "url"})
+            return len(footnote_num)
+        return match_idx + 1
+
+    # 1. 保护并转义行内代码 `...` 与 ``...``（双反引号可内含单反引号，内容首尾各剥离一个空格）
+    def save_code(m: "re.Match") -> str:
+        raw = m.group(2)
+        if len(raw) >= 2 and raw.startswith(" ") and raw.endswith(" "):
+            raw = raw[1:-1]
+        return save_token(
+            "MDCODE",
+            f'<code style="background: rgba(0,0,0,0.06); padding: 2px 6px; border-radius: 4px; '
+            f'font-size: {code_font_size}; color: {accent}; font-family: monospace;">{esc_basic(raw)}</code>',
+        )
+
+    text = re.sub(r"(`+)((?:(?!\1)[\s\S])+?)\1", save_code, text)
+
+    # 1.5 反斜杠转义：\x 的下一字符按字面输出，且不参与后续任何格式化
+    def save_escape(m: "re.Match") -> str:
+        return save_token("MDESC", esc_basic(m.group(1)))
+
+    text = re.sub(r"\\([!\"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~])", save_escape, text)
+
+    # 2. 图片：参考式 ![alt][ref] 与行内 ![alt](src "title")
+    #    必须先于链接解析，否则 [alt](src) 部分会先被链接正则吞掉
+    def _inline_img_html(alt: str, src: str) -> str:
+        return (
+            f'<img src="{src.replace(chr(34), "&quot;")}" alt="{esc_basic(alt)}" '
+            f'style="max-width: 96%; height: auto; border-radius: 8px; display: inline-block;" />'
+        )
+
+    def save_ref_image(m: "re.Match") -> str:
+        if not ref_defs:
+            return m.group(0)
+        d = ref_defs.get(m.group(2).strip().lower()) or ref_defs.get(m.group(1).strip().lower())
+        if not d:
+            return m.group(0)
+        return save_token("MDIMG", _inline_img_html(m.group(1), d["url"]))
+
+    text = re.sub(r"!\[([^\]]*)\]\[([^\]]*)\]", save_ref_image, text)
+
+    def save_image(m: "re.Match") -> str:
+        return save_token("MDIMG", _inline_img_html(m.group(1), m.group(2)))
+
+    text = re.sub(r"!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+\"[^\"]*\")?\s*\)", save_image, text)
+
+    # 2.2 尖括号自动链接：<https://...> 剥尖括号交给裸 URL 步骤；<mail@...> 转脚注/锚点
+    text = re.sub(r"<(https?://[^\s<>]+)>", r"\1", text)
+
+    def save_mail(m: "re.Match") -> str:
+        addr = m.group(1)
+        url = f"mailto:{addr}"
+        if footnotes is not None and url_footnotes:
+            f_num = register_url_footnote(url, addr)
+            return save_token("MDMAIL", footnote_sup(f_num, addr))
+        return save_token("MDMAIL", f'<a href="{url}" style="color: {accent}; text-decoration: none; border-bottom: 1px dashed {accent};">{addr}</a>')
+
+    text = re.sub(r"<([\w.+-]+@[\w-]+\.[\w.-]+)>", save_mail, text)
+
+    # 3. 保护超链接 [...](...)
+    def save_link(m: "re.Match") -> str:
         raw_label = m.group(1)
-        esc_label = raw_label.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        esc_label = esc_basic(raw_label)
 
         # 立即展开 label 中嵌套的已有 code token
         for tk, tv in tokens.items():
             if tk in esc_label:
                 esc_label = esc_label.replace(tk, tv)
 
-        url = m.group(2)
+        url = m.group(2).replace('"', "&quot;")
 
         # 处理本地 file:/// 协议，重定向至 GitHub 仓库对应源码或安全 URL，防止微信安全拦截
         if url.startswith("file:///"):
@@ -134,74 +281,94 @@ def format_inline(text: str, accent: str, code_font_size: str = "13.5px", footno
             else:
                 url = "https://github.com/zaneven/MD2WX"
 
-        if footnotes is not None and not url.startswith("#"):
-            match_idx = -1
-            for idx, item in enumerate(footnotes):
-                if item["url"] == url:
-                    match_idx = idx
-                    break
-            if match_idx == -1:
-                footnotes.append({"label": esc_label, "url": url})
-                f_num = len(footnotes)
-            else:
-                f_num = match_idx + 1
-            tokens[k] = f'<span style="color: {accent}; font-weight: 500;">{esc_label}</span><sup style="font-size: 11px; color: {accent}; margin-left: 2px; font-weight: bold; vertical-align: super;">[{f_num}]</sup>'
-        else:
-            tokens[k] = f'<a href="{url}" style="color: {accent}; text-decoration: none; border-bottom: 1px dashed {accent};">{esc_label}</a>'
-        return k
+        if footnotes is not None and url_footnotes and not url.startswith("#"):
+            f_num = register_url_footnote(url, esc_label)
+            return save_token("MDLINK", footnote_sup(f_num, esc_label))
+        return save_token("MDLINK", f'<a href="{url}" style="color: {accent}; text-decoration: none; border-bottom: 1px dashed {accent};">{esc_label}</a>')
 
     text = re.sub(r"\[(.*?)\]\((.*?)\)", save_link, text)
 
-    # 2.2 自动链接：裸 http(s) URL 与 Markdown 链接同等待遇，自动转文末脚注
+    # 3.2 参考式链接 [text][ref] / 折叠式 [ref]（定义由预扫描收集，未解析时保持字面）
+    def save_ref_link(m: "re.Match") -> str:
+        if not ref_defs:
+            return m.group(0)
+        label = m.group(1)
+        ref = (m.group(2) if m.lastindex and m.lastindex >= 2 and m.group(2) else label).strip().lower()
+        d = ref_defs.get(ref)
+        if not d:
+            return m.group(0)
+        return save_link(re.match(r"\[(.*?)\]\((.*)\)", f"[{label}]({d['url']})"))
+
+    text = re.sub(r"\[([^\]]+)\]\[([^\]]*)\]", save_ref_link, text)
+    text = re.sub(r"\[([^\]\[\s]+)\](?![\(\[])", save_ref_link, text)
+
+    # 3.3 脚注引用 [^id]：编号按首次引用顺序并入文末脚注区 (定义由预扫描收集)
+    def save_footnote_ref(m: "re.Match") -> str:
+        if not footnote_defs:
+            return m.group(0)
+        fid = m.group(1).strip().lower()
+        if fid not in footnote_defs:
+            return m.group(0)
+        key = f"@@FN:{fid}@@"
+        match_idx = -1
+        for idx_, item in enumerate(footnote_num):
+            if item.get("url") == key:
+                match_idx = idx_
+                break
+        if match_idx == -1:
+            footnote_num.append({"label": fid, "url": key, "kind": "text", "text": footnote_defs[fid]})
+            f_num = len(footnote_num)
+        else:
+            f_num = match_idx + 1
+        return save_token("MDFN", footnote_sup(f_num))
+
+    text = re.sub(r"\[\^([^\]]+)\]", save_footnote_ref, text)
+
+    # 3.5 自动链接：裸 http(s) URL 与 Markdown 链接同等待遇，自动转文末脚注
     #     (微信不支持外链跳转，遗漏的裸 URL 在正文点击同样会被阻断)
     _AUTOLINK_URL_RE = re.compile(r"https?://[^\s<>()\[\]\"']+[^\s<>()\[\]\"'.,;:!?]")
 
     def save_autolink(m: "re.Match") -> str:
-        nonlocal token_idx
-        k = f"@@MDURL_{token_idx}@@"
-        token_idx += 1
         url = m.group(0)
-        if footnotes is not None:
-            match_idx = -1
-            for idx_, item in enumerate(footnotes):
-                if item["url"] == url:
-                    match_idx = idx_
-                    break
-            if match_idx == -1:
-                # 超长 URL 作为脚注标签截断显示，保持文献列表可读
-                label = url if len(url) <= 60 else url[:57] + "..."
-                footnotes.append({"label": label, "url": url})
-                f_num = len(footnotes)
-            else:
-                f_num = match_idx + 1
-            show_label = url if len(url) <= 60 else url[:57] + "..."
-            tokens[k] = f'<span style="color: {accent}; font-weight: 500;">{show_label}</span><sup style="font-size: 11px; color: {accent}; margin-left: 2px; font-weight: bold; vertical-align: super;">[{f_num}]</sup>'
-        else:
-            tokens[k] = f'<a href="{url}" style="color: {accent}; text-decoration: none; border-bottom: 1px dashed {accent};">{url}</a>'
-        return k
+        if footnotes is not None and url_footnotes:
+            label = url if len(url) <= 60 else url[:57] + "..."
+            f_num = register_url_footnote(url, label)
+            return save_token("MDURL", footnote_sup(f_num, label))
+        show_label = url if len(url) <= 60 else url[:57] + "..."
+        return save_token("MDURL", f'<a href="{url}" style="color: {accent}; text-decoration: none; border-bottom: 1px dashed {accent};">{show_label}</a>')
 
     text = _AUTOLINK_URL_RE.sub(save_autolink, text)
 
-    # 2.5 对未受 token 保护的普通文本统一转义 HTML (与 Web 端 parser.js 对齐)，
-    #     防止正文中的 <tag> 破坏预览与微信粘贴输出
+    # 4. 对未受 token 保护的普通文本统一转义 HTML (实体安全，防双重转义)，
+    #    并放行微信安全白名单行内标签，其余 <tag> 显示为字面文本
     text = "".join(
         seg if seg.startswith("@@MD")
-        else seg.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+        else _unescape_whitelist_html(_entity_safe_escape(seg))
         for seg in re.split(r"(@@MD[A-Z]+_\d+@@)", text)
     )
 
-    # 3. 粗体与斜体 (严格界定符，避免内部跨越 ** 或穿透普通文本导致反转误加粗)
+    # 5. 粗体与斜体 (** 与 __ / * 与 _，下划线形态词边界感知：词内 _ 不触发)
     text = re.sub(r"\*\*(?![\*\s])((?:[^*]|\*(?!\*))+?)(?<![\*\s])\*\*", r"<strong>\1</strong>", text)
+    text = re.sub(r"(?<![\w\\])__(?!\s)((?:[^_]|_(?!_))+?)(?<!\s)__(?!\w)", r"<strong>\1</strong>", text)
     text = re.sub(r"(^|[^*])\*(?![\*\s])([^*\n]+?)(?<![\*\s])\*(?!\*)", r"\1<em>\2</em>", text)
+    text = re.sub(r"(?<![`\w])_(?!\s)([^_\n]+?)(?<!\s)_(?!\w)", r"<em>\1</em>", text)
 
-    # 3.5 GFM 删除线 ~~text~~ (del 标签在微信白名单内，内联样式保证不褪色)
+    # 5.5 GFM 删除线 ~~text~~ (del 标签在微信白名单内，内联样式保证不褪色)
     text = re.sub(
         r"~~(?![\s~])((?:[^~]|~(?!~))+?)(?<![\s~])~~",
         rf'<del style="color: {accent}; opacity: 0.72;">\1</del>',
         text,
     )
 
-    # 4. 彻底还原保护的 tokens (支持多层嵌套展开)
+    # 5.6 扩展高亮 ==text== (主题色荧光笔效果)
+    mark_bg = accent_bg if accent_bg else _hex_to_rgba(accent, 0.15)
+    text = re.sub(
+        r"==(?!\s)([\s\S]+?)(?<!\s)==",
+        rf'<mark style="background: {mark_bg}; padding: 1px 3px; border-radius: 3px;">\1</mark>',
+        text,
+    )
+
+    # 6. 彻底还原保护的 tokens (支持多层嵌套展开)
     max_loops = 5
     while any(k in text for k in tokens) and max_loops > 0:
         for k, v in list(tokens.items()):
@@ -209,11 +376,100 @@ def format_inline(text: str, accent: str, code_font_size: str = "13.5px", footno
                 text = text.replace(k, v)
         max_loops -= 1
 
-    # 5. 防御性消除任何残留的控制字符
+    # 7. 防御性消除任何残留的控制字符
     text = text.replace("\x00", "")
 
     return text
 
+_CJK_CHAR_RE = re.compile(r"[一-鿿　-〿＀-￯]")
+
+def _is_cjk_char(ch: str) -> bool:
+    return bool(ch) and bool(_CJK_CHAR_RE.match(ch))
+
+# 列表项标记：- * + 无序，N. / N) 有序
+_LIST_ITEM_RE = re.compile(r"^(\s*)([-*+]|\d{1,9}[.)])(\s+(.*))?$")
+
+def join_paragraph_lines(buf: List[str]) -> str:
+    """
+    段落行合并 (CommonMark 软换行语义)：
+    - 行尾 2+ 空格或单个反斜杠 = 硬换行，插入 @@MDBR_0@@ 占位 (行内解析后还原为 <br />)；
+    - 普通软换行：相邻字符任一侧为 CJK/全角字符时直接拼接，否则以空格拼接。
+    """
+    parts: List[Tuple[bool, str]] = []
+    for raw in buf:
+        hard = False
+        ln = raw
+        if ln.endswith("  "):
+            hard = True
+            ln = ln.rstrip()
+        elif ln.endswith("\\") and not ln.endswith("\\\\"):
+            hard = True
+            ln = ln[:-1].rstrip()
+        else:
+            ln = ln.rstrip()
+        parts.append((hard, ln))
+    result = ""
+    for i, (hard, ln) in enumerate(parts):
+        if i == 0:
+            result = ln
+            continue
+        prev_ln = parts[i - 1][1]
+        if parts[i - 1][0]:
+            result += "@@MDBR_0@@" + ln
+            continue
+        prev_ch = prev_ln[-1:] if prev_ln else ""
+        next_ch = ln[:1]
+        if prev_ch and next_ch and (_is_cjk_char(prev_ch) or _is_cjk_char(next_ch)):
+            result += ln
+        else:
+            result += " " + ln
+    return result
+
+def render_ordered_list_item(item_text: str, number: int, theme: dict) -> str:
+    """渲染有序列表项 (保留源文档编号，与无序列表同一 flex 视觉骨架)"""
+    accent = theme["accent"]
+    text_color = theme["text_color"]
+    return (
+        f'<section style="display: flex; align-items: flex-start; margin-bottom: 8px; line-height: 1.75; font-size: 15.5px; color: {text_color};">'
+        f'<span style="color: {accent}; margin-right: 8px; font-size: 15px; line-height: 1.75; font-weight: 700; min-width: 20px;">{number}.</span>'
+        f'<span style="flex: 1;">{item_text}</span>'
+        f'</section>'
+    )
+
+def render_h4(h4_text: str, theme: dict) -> str:
+    """渲染四级小标题 (默认：左侧短竖条 + 缩小字号；主题可用 styles.h4 覆盖)"""
+    accent = theme["accent"]
+    page_bg = theme.get("page_bg", "#ffffff")
+    is_dark = page_bg in ["#0b0f19", "#0f172a", "#18181b", "#09090b"]
+    heading_color = "#f8fafc" if is_dark else "#18181b"
+    return (
+        f'<section style="margin: 20px 0 10px 0; line-height: 1.4; display: flex; align-items: center;">'
+        f'<span style="display: inline-block; width: 3px; height: 14px; background: {accent}; border-radius: 2px; margin-right: 8px; flex-shrink: 0;"></span>'
+        f'<span style="font-size: 15.5px; font-weight: 700; color: {accent};">{h4_text}</span>'
+        f'</section>'
+    )
+
+def render_h5(h5_text: str, theme: dict) -> str:
+    """渲染五级小标题 (默认：accent 短划前缀)"""
+    accent = theme["accent"]
+    page_bg = theme.get("page_bg", "#ffffff")
+    is_dark = page_bg in ["#0b0f19", "#0f172a", "#18181b", "#09090b"]
+    heading_color = "#f8fafc" if is_dark else "#18181b"
+    return (
+        f'<section style="margin: 18px 0 8px 0; line-height: 1.4;">'
+        f'<span style="color: {accent}; margin-right: 6px; font-weight: 700;">—</span>'
+        f'<span style="font-size: 15px; font-weight: 600; color: {heading_color};">{h5_text}</span>'
+        f'</section>'
+    )
+
+def render_h6(h6_text: str, theme: dict) -> str:
+    """渲染六级小标题 (默认：弱化的副色小字)"""
+    sub_color = theme["sub_color"]
+    return (
+        f'<section style="margin: 16px 0 8px 0; line-height: 1.4;">'
+        f'<span style="font-size: 14px; font-weight: 600; color: {sub_color}; letter-spacing: 0.5px;">{h6_text}</span>'
+        f'</section>'
+    )
 
 # ==============================================================================
 # 视觉组件渲染策略 (Component Renderers)
@@ -513,8 +769,12 @@ def render_code(raw_code: str, code_lang: str, theme: dict) -> str:
             f'</div>'
         )
 
-def render_table(header: List[str], rows: List[List[str]], theme: dict) -> str:
-    """渲染表格"""
+def render_table(header: List[str], rows: List[List[str]], theme: dict, aligns: Optional[List[str]] = None) -> str:
+    """渲染表格 (aligns: 分隔行冒号解析出的逐列对齐 left/center/right，缺省 left)"""
+    aligns = aligns or []
+
+    def col_align(col_idx: int) -> str:
+        return aligns[col_idx] if col_idx < len(aligns) else "left"
     style = theme.get("table_style", theme.get("styles", {}).get("table", "zebra"))
     accent = theme["accent"]
     accent_bg = theme["accent_bg"]
@@ -534,15 +794,15 @@ def render_table(header: List[str], rows: List[List[str]], theme: dict) -> str:
         )
         if header:
             table_html += f'<thead><tr>'
-            for h in header:
-                table_html += f'<th style="padding: 10px 14px; font-weight: 700; color: {accent}; border-bottom: 1px solid {border_color};">{h}</th>'
+            for h_idx, h in enumerate(header):
+                table_html += f'<th style="padding: 10px 14px; font-weight: 700; color: {accent}; border-bottom: 1px solid {border_color}; text-align: {col_align(h_idx)};">{h}</th>'
             table_html += '</tr></thead>'
         table_html += '<tbody>'
         for row in rows:
             table_html += f'<tr style="border-bottom: 1px dashed {border_color};">'
-            for c in row:
+            for c_idx, c in enumerate(row):
                 c_fmt = format_inline(c, accent, "12.5px")
-                table_html += f'<td style="padding: 10px 14px; color: {text_color}; line-height: 1.5;">{c_fmt}</td>'
+                table_html += f'<td style="padding: 10px 14px; color: {text_color}; line-height: 1.5; text-align: {col_align(c_idx)};">{c_fmt}</td>'
             table_html += '</tr>'
         table_html += '</tbody></table></div>'
         return table_html
@@ -555,15 +815,15 @@ def render_table(header: List[str], rows: List[List[str]], theme: dict) -> str:
         )
         if header:
             table_html += f'<thead><tr style="background: {accent_bg};">'
-            for h in header:
-                table_html += f'<th style="padding: 10px 14px; font-weight: 700; color: {accent}; border: 1px solid {border_color};">{h}</th>'
+            for h_idx, h in enumerate(header):
+                table_html += f'<th style="padding: 10px 14px; font-weight: 700; color: {accent}; border: 1px solid {border_color}; text-align: {col_align(h_idx)};">{h}</th>'
             table_html += '</tr></thead>'
         table_html += '<tbody>'
         for row in rows:
             table_html += f'<tr>'
-            for c in row:
+            for c_idx, c in enumerate(row):
                 c_fmt = format_inline(c, accent, "12.5px")
-                table_html += f'<td style="padding: 10px 14px; color: {text_color}; line-height: 1.5; border: 1px solid {border_color};">{c_fmt}</td>'
+                table_html += f'<td style="padding: 10px 14px; color: {text_color}; line-height: 1.5; border: 1px solid {border_color}; text-align: {col_align(c_idx)};">{c_fmt}</td>'
             table_html += '</tr>'
         table_html += '</tbody></table></div>'
         return table_html
@@ -576,16 +836,16 @@ def render_table(header: List[str], rows: List[List[str]], theme: dict) -> str:
         )
         if header:
             table_html += f'<thead><tr style="background: {accent_bg};">'
-            for h in header:
-                table_html += f'<th style="padding: 11px 14px; font-weight: 600; color: {accent}; border-bottom: 2px solid {border_color};">{h}</th>'
+            for h_idx, h in enumerate(header):
+                table_html += f'<th style="padding: 11px 14px; font-weight: 600; color: {accent}; border-bottom: 2px solid {border_color}; text-align: {col_align(h_idx)};">{h}</th>'
             table_html += '</tr></thead>'
         table_html += '<tbody>'
         for r_idx, row in enumerate(rows):
             bg = td_bg_alt if r_idx % 2 == 1 else td_bg
             table_html += f'<tr style="background: {bg}; border-bottom: 1px solid {border_color};">'
-            for c in row:
+            for c_idx, c in enumerate(row):
                 c_fmt = format_inline(c, accent, "12.5px")
-                table_html += f'<td style="padding: 10px 14px; color: {text_color}; line-height: 1.5;">{c_fmt}</td>'
+                table_html += f'<td style="padding: 10px 14px; color: {text_color}; line-height: 1.5; text-align: {col_align(c_idx)};">{c_fmt}</td>'
             table_html += '</tr>'
         table_html += '</tbody></table></div>'
         return table_html
@@ -809,8 +1069,8 @@ def markdown_to_wechat_html(
     paragraph_indent = typography.get("paragraph_indent", False)
     indent_css = "text-indent: 2em; " if paragraph_indent else ""
 
-    # 外部链接学术脚注收集器
-    footnotes: Optional[List[Dict[str, str]]] = [] if link_to_footnote else None
+    # 文末脚注收集器 (URL 脚注与 [^id] 文本脚注共用；URL 脚注开关由 url_footnotes 控制)
+    footnotes: List[Dict[str, str]] = []
 
     # 1. 替换已上传到微信 CDN 的图片链接：
     #    仅精确替换 Markdown 图片语法中的 src，且跳过代码围栏段，
@@ -831,7 +1091,7 @@ def markdown_to_wechat_html(
             for seg in segments
         )
 
-    lines = md_text.split("\n")
+    lines, ref_defs, footnote_defs = preprocess_lines(md_text.split("\n"))
     html_parts = []
 
     # 微信公众号文章顶部自动嵌入当前主题专属封面卡片 (默认开启)
@@ -840,204 +1100,385 @@ def markdown_to_wechat_html(
         if header_cover:
             html_parts.append(header_cover)
 
-    in_code_block = False
-    code_lang = ""
-    code_lines = []
+    # 块级渲染主循环 (嵌套引用会对内层行递归调用 render_block_lines)
 
-    in_table = False
-    table_lines = []
-
-    def flush_table() -> str:
-        nonlocal in_table, table_lines
-        if not table_lines:
-            return ""
-        header = []
-        rows = []
-        for i, line in enumerate(table_lines):
-            cells = [c.strip() for c in line.strip().strip("|").split("|")]
-            if i == 0:
-                header = cells
-            elif i == 1 and all(set(c).issubset({'-', ':', ' '}) for c in cells):
-                continue
-            else:
-                rows.append(cells)
-
-        rendered = render_table(header, rows, theme)
-        table_lines = []
-        in_table = False
-        return rendered
-
-    def flush_code() -> str:
-        nonlocal in_code_block, code_lang, code_lines
-        raw_code = "\n".join(code_lines)
-        rendered = render_code(raw_code, code_lang, theme)
-        code_lines = []
+    def render_block_lines(block_lines: List[str]) -> List[str]:
+        # 每层递归独立的块状态
         in_code_block = False
-        return rendered
+        code_lang = ""
+        code_lines = []
+        code_fence_ch = ""
+        code_fence_len = 0
+        in_table = False
+        table_lines = []
+        para_buf: List[str] = []
 
-    idx = 0
-    while idx < len(lines):
-        line = lines[idx]
-        stripped = line.strip()
-
-        # 1. 代码块
-        if stripped.startswith("```"):
-            if in_code_block:
-                html_parts.append(flush_code())
-            else:
-                if in_table:
-                    html_parts.append(flush_table())
-                in_code_block = True
-                code_lang = stripped[3:].strip()
-                code_lines = []
-            idx += 1
-            continue
-
-        if in_code_block:
-            code_lines.append(line)
-            idx += 1
-            continue
-
-        # 2. 表格
-        if stripped.startswith("|") and stripped.endswith("|"):
-            in_table = True
-            table_lines.append(stripped)
-            idx += 1
-            continue
-        elif in_table:
-            html_parts.append(flush_table())
-
-        # 3. 空行
-        if not stripped:
-            idx += 1
-            continue
-
-        # 3.5 块级富文本占位 token (Mermaid/块级公式，已由 richrender 预渲染为图片)
-        if stripped in rich_block_map:
-            html_parts.append(rich_block_map[stripped])
-            idx += 1
-            continue
-
-        # 4. 分割线
-        if stripped in ["---", "***", "___"]:
-            html_parts.append(render_hr(theme))
-            idx += 1
-            continue
-
-        # 5. 一级标题
-        if stripped.startswith("# "):
-            title_text = stripped[2:].strip().replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
-            html_parts.append(render_h1(title_text, theme))
-            idx += 1
-            continue
-
-        # 6. 二级标题
-        if stripped.startswith("## "):
-            h2_text = stripped[3:].strip().replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
-            html_parts.append(render_h2(h2_text, theme))
-            idx += 1
-            continue
-
-        # 7. 三级标题（含 #### 及更深级别，按三级样式渲染，避免字面输出 # 号）
-        if re.match(r"^#{3,} ", stripped):
-            h3_text = re.sub(r"^#+ +", "", stripped).strip().replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
-            html_parts.append(render_h3(h3_text, theme))
-            idx += 1
-            continue
-
-        # 8. 引用块聚合处理（聚合连续的 > 行，合成单个连贯的 blockquote 容器）
-        if stripped.startswith(">"):
-            quote_lines = []
-            while idx < len(lines) and lines[idx].strip().startswith(">"):
-                q_line = lines[idx].strip()
-                if q_line.startswith("> "):
-                    q_line = q_line[2:].strip()
-                elif q_line.startswith(">"):
-                    q_line = q_line[1:].strip()
-                quote_lines.append(q_line)
-                idx += 1
-
-            formatted_items = []
-            for q_line in quote_lines:
-                if not q_line:
-                    formatted_items.append('<div style="height: 6px;"></div>')
+        def flush_table() -> str:
+            nonlocal in_table, table_lines
+            if not table_lines:
+                return ""
+            header = []
+            rows = []
+            aligns: List[str] = []
+            for i, line in enumerate(table_lines):
+                cells = [c.strip() for c in line.strip().strip("|").replace("\\|", "\x00P\x00").split("|")]
+                cells = [c.replace("\x00P\x00", "|") for c in cells]
+                if i == 0:
+                    header = cells
+                elif i == 1 and all(re.match(r"^[-: ]*$", c) and "-" in c for c in cells):
+                    # GFM 对齐标记：:--- 左(默认)、---: 右、:---: 居中
+                    aligns = [
+                        "left" if not c.strip().endswith(":")
+                        else ("center" if c.strip().startswith(":") else "right")
+                        for c in cells
+                    ]
                     continue
-                q_fmt = format_inline(q_line, accent, "13px", footnotes=footnotes)
-                formatted_items.append(f'<div style="margin: 4px 0; line-height: 1.75;">{q_fmt}</div>')
+                else:
+                    rows.append(cells)
+            rendered = render_table(header, rows, theme, aligns)
+            table_lines = []
+            in_table = False
+            return rendered
 
-            inner_content = "\n".join(formatted_items)
-            html_parts.append(render_quote(inner_content, theme))
-            continue
+        def flush_code() -> str:
+            nonlocal in_code_block, code_lang, code_lines, code_fence_ch, code_fence_len
+            raw_code = "\n".join(code_lines)
+            rendered = render_code(raw_code, code_lang, theme)
+            code_lines = []
+            in_code_block = False
+            code_fence_ch = ""
+            code_fence_len = 0
+            return rendered
 
-        # 9. 列表项 (含 GFM 任务列表 - [ ] / - [x])
-        if stripped.startswith("- ") or stripped.startswith("* "):
-            item_text = stripped[2:].strip()
-            task_match = re.match(r"^\[( |x|X)\]\s+(.*)$", item_text)
-            if task_match:
-                item_fmt = format_inline(task_match.group(2), accent, "13.5px", footnotes=footnotes)
-                html_parts.append(render_task_item(item_fmt, task_match.group(1).lower() == "x", theme))
+        def inline_fmt(text: str, size: str = "13.5px") -> str:
+            return format_inline(
+                text, accent, size,
+                footnotes=footnotes, url_footnotes=link_to_footnote,
+                ref_defs=ref_defs, footnote_defs=footnote_defs,
+                accent_bg=theme.get("accent_bg"),
+            ).replace("@@MDBR_0@@", "<br />")
+
+        def flush_para() -> str:
+            nonlocal para_buf
+            if not para_buf:
+                return ""
+            joined = join_paragraph_lines(para_buf)
+            para_buf = []
+            p_text = inline_fmt(joined)
+            return (
+                f'<p style="font-size: {font_size_base}; line-height: {line_height_base}; color: {text_color}; '
+                f'margin: 18px 0; letter-spacing: {letter_spacing}; {indent_css}text-align: justify;">'
+                f'{p_text}'
+                f'</p>'
+            )
+
+        def parse_list(i: int, min_indent: int) -> Tuple[List[Dict[str, Any]], int]:
+            """解析列表块 (含多层嵌套)；空行结束列表，缩进 2+ 空格的 marker 归入子列表"""
+            items: List[Dict[str, Any]] = []
+            first_indent = None
+            while i < len(block_lines):
+                ln = block_lines[i]
+                if not ln.strip():
+                    break
+                lm = _LIST_ITEM_RE.match(ln.expandtabs(4))
+                if not lm:
+                    break
+                ind = len(lm.group(1))
+                if ind < min_indent:
+                    break
+                if first_indent is None:
+                    first_indent = ind
+                if ind < first_indent:
+                    break
+                if ind >= first_indent + 2:
+                    if not items:
+                        break
+                    sub_items, i = parse_list(i, ind)
+                    items[-1]["children"].extend(sub_items)
+                    continue
+                marker = lm.group(2)
+                content = (lm.group(3) or "").strip()
+                ordered = bool(re.match(r"\d", marker))
+                number = int(re.match(r"(\d+)", marker).group(1)) if ordered else 0
+                task = None
+                tm = re.match(r"^\[( |x|X)\]\s+(.*)$", content)
+                if tm:
+                    task = tm.group(1).lower() == "x"
+                    content = tm.group(2)
+                item: Dict[str, Any] = {
+                    "ordered": ordered, "number": number, "task": task,
+                    "lines": [content] if content else [], "children": [],
+                }
+                items.append(item)
+                i += 1
+                # 同项延续行：缩进 >= 内容列的非 marker 行并入当前项
+                content_col = first_indent + len(marker) + 1
+                while i < len(block_lines):
+                    nxt = block_lines[i]
+                    if not nxt.strip():
+                        break
+                    nxt_exp = nxt.expandtabs(4)
+                    nlm = _LIST_ITEM_RE.match(nxt_exp)
+                    if nlm:
+                        break
+                    n_ind = len(nxt_exp) - len(nxt_exp.lstrip(" "))
+                    if n_ind >= content_col:
+                        item["lines"].append(nxt_exp.strip())
+                        i += 1
+                    else:
+                        break
+            return items, i
+
+        def render_list_html(items: List[Dict[str, Any]]) -> str:
+            out = []
+            for it in items:
+                content_html = ""
+                if it["lines"]:
+                    content_html = inline_fmt(join_paragraph_lines(it["lines"]))
+                if it["children"]:
+                    content_html += f'<div style="padding-left: 16px; margin-top: 2px;">{render_list_html(it["children"])}</div>'
+                if it["task"] is not None:
+                    out.append(render_task_item(content_html, it["task"], theme))
+                elif it["ordered"]:
+                    out.append(render_ordered_list_item(content_html, it["number"], theme))
+                else:
+                    out.append(render_list_item(content_html, theme))
+            return "".join(out)
+
+        parts: List[str] = []
+        idx = 0
+        n = len(block_lines)
+        while idx < n:
+            raw_line = block_lines[idx]
+            stripped = raw_line.strip()
+
+            # 1. 围栏代码块 (``` 与 ~~~ 等价，3+ 字符；闭栏需同字符且长度不小于开栏)
+            fence_m = re.match(r"^(`{3,}|~{3,})(.*)$", stripped)
+            if fence_m:
+                f_ch = fence_m.group(1)[0]
+                if in_code_block:
+                    if f_ch == code_fence_ch and len(fence_m.group(1)) >= code_fence_len:
+                        parts.append(flush_code())
+                    else:
+                        code_lines.append(raw_line)
+                else:
+                    if in_table:
+                        parts.append(flush_table())
+                    fp = flush_para()
+                    if fp:
+                        parts.append(fp)
+                    in_code_block = True
+                    code_fence_ch = f_ch
+                    code_fence_len = len(fence_m.group(1))
+                    code_lang = fence_m.group(2).strip()
+                    code_lines = []
                 idx += 1
                 continue
-            item_fmt = format_inline(item_text, accent, "13.5px", footnotes=footnotes)
-            html_parts.append(render_list_item(item_fmt, theme))
+
+            if in_code_block:
+                code_lines.append(raw_line)
+                idx += 1
+                continue
+
+            # 2. 表格
+            if stripped.startswith("|") and stripped.endswith("|"):
+                in_table = True
+                table_lines.append(stripped)
+                idx += 1
+                continue
+            elif in_table:
+                parts.append(flush_table())
+
+            # 3. 空行：结束当前段落
+            if not stripped:
+                fp = flush_para()
+                if fp:
+                    parts.append(fp)
+                idx += 1
+                continue
+
+            # 3.5 块级富文本占位 token (Mermaid/块级公式，已由 richrender 预渲染为图片)
+            if stripped in rich_block_map:
+                fp = flush_para()
+                if fp:
+                    parts.append(fp)
+                parts.append(rich_block_map[stripped])
+                idx += 1
+                continue
+
+            # 3.2 缩进代码块：4+ 空格缩进且无未决段落 (列表项内部由列表解析器自行消费)
+            if not para_buf and (raw_line.startswith("    ") or raw_line.startswith("\t")):
+                fp = flush_para()
+                if fp:
+                    parts.append(fp)
+                code_lines = []
+                while idx < n and (block_lines[idx].startswith("    ") or block_lines[idx].startswith("\t") or not block_lines[idx].strip()):
+                    exp = block_lines[idx].expandtabs(4)
+                    code_lines.append(exp[4:] if exp.startswith("    ") else exp)
+                    idx += 1
+                while code_lines and not code_lines[-1].strip():
+                    code_lines.pop()
+                if code_lines:
+                    parts.append(render_code("\n".join(code_lines), "code", theme))
+                continue
+
+            # 3.4 Setext 标题：段落缓冲非空时的 === / --- 下划线 (先于分割线判定)
+            setext_m = re.match(r"^ {0,3}(=+|-+)\s*$", raw_line)
+            if setext_m and para_buf:
+                joined = join_paragraph_lines(para_buf)
+                para_buf = []
+                level = 1 if setext_m.group(1)[0] == "=" else 2
+                parts.append(render_h1(inline_fmt(joined), theme) if level == 1 else render_h2(inline_fmt(joined), theme))
+                idx += 1
+                continue
+
+            # 3.6 分割线 (3+ 个 -/*/ _，允许空格分隔，如 - - - / ****)
+            if re.match(r"^ {0,3}([-*_])(?:[ \t]*\1){2,}\s*$", raw_line):
+                fp = flush_para()
+                if fp:
+                    parts.append(fp)
+                parts.append(render_hr(theme))
+                idx += 1
+                continue
+
+            # 4. ATX 标题 # ~ ###### (去除尾部 # 修饰；文本运行行内格式化)
+            atx_m = re.match(r"^(#{1,6})(?:\s+(.*?))?\s*#*\s*$", stripped)
+            if atx_m:
+                fp = flush_para()
+                if fp:
+                    parts.append(fp)
+                level = len(atx_m.group(1))
+                h_text = inline_fmt((atx_m.group(2) or "").strip())
+                if level == 1:
+                    parts.append(render_h1(h_text, theme))
+                elif level == 2:
+                    parts.append(render_h2(h_text, theme))
+                elif level == 3:
+                    parts.append(render_h3(h_text, theme))
+                elif level == 4:
+                    parts.append(render_h4(h_text, theme))
+                elif level == 5:
+                    parts.append(render_h5(h_text, theme))
+                else:
+                    parts.append(render_h6(h_text, theme))
+                idx += 1
+                continue
+
+            # 5. 引用块 (剥一层 > 后递归渲染内层，支持 >> 多级嵌套；引用内空行为间隔)
+            if stripped.startswith(">"):
+                fp = flush_para()
+                if fp:
+                    parts.append(fp)
+                if in_table:
+                    parts.append(flush_table())
+                inner_lines = []
+                while idx < n and block_lines[idx].strip().startswith(">"):
+                    q_line = block_lines[idx].strip()
+                    inner_lines.append(q_line[2:].strip() if q_line.startswith("> ") else q_line[1:].strip())
+                    idx += 1
+                seg_parts: List[str] = []
+                run: List[str] = []
+
+                def flush_quote_run() -> None:
+                    if run:
+                        seg_parts.extend(render_block_lines(list(run)))
+                        run.clear()
+
+                for q in inner_lines:
+                    if q.strip():
+                        run.append(q)
+                    else:
+                        flush_quote_run()
+                        seg_parts.append('<div style="height: 6px;"></div>')
+                flush_quote_run()
+                parts.append(render_quote("\n".join(seg_parts), theme))
+                continue
+
+            # 6. 列表 (有序/无序/任务，含多层嵌套)
+            list_m = _LIST_ITEM_RE.match(raw_line.expandtabs(4))
+            if list_m and len(list_m.group(1)) < 4:
+                fp = flush_para()
+                if fp:
+                    parts.append(fp)
+                if in_table:
+                    parts.append(flush_table())
+                items, end_idx = parse_list(idx, len(list_m.group(1)))
+                parts.append(render_list_html(items))
+                idx = end_idx
+                continue
+
+            # 7. 独立行图片 (命中才冲刷段落缓冲，普通段落行继续走缓冲合并)
+            img_match = re.match(r'^!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)$', stripped)
+            if img_match:
+                fp = flush_para()
+                if fp:
+                    parts.append(fp)
+                alt = img_match.group(1).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+                src = img_match.group(2).replace('"', "&quot;")
+                caption = f'<div style="text-align: center; color: {sub_color}; font-size: 13px; margin-top: 6px; font-style: italic;">{alt}</div>' if alt else ""
+                parts.append(
+                    f'<div style="margin: 24px 0; text-align: center;">'
+                    f'<img src="{src}" alt="{alt}" style="max-width: 96%; height: auto; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); display: inline-block;" />'
+                    f'{caption}'
+                    f'</div>'
+                )
+                idx += 1
+                continue
+
+            # 8. 显式图注 (*▲ 图：...*)
+            caption_match = re.match(r'^\*▲ 图：(.+?)\*$', stripped)
+            if caption_match:
+                fp = flush_para()
+                if fp:
+                    parts.append(fp)
+                cap_text = caption_match.group(1)
+                parts.append(
+                    f'<div style="text-align: center; color: {sub_color}; font-size: 13px; margin: -16px 0 20px 0; font-style: italic;">'
+                    f'▲ 图：{cap_text}'
+                    f'</div>'
+                )
+                idx += 1
+                continue
+
+            # 9. 段落缓冲 (连续非空行合并为同一段；保留行尾空格供硬换行判定)
+            para_buf.append(raw_line.rstrip("\r\n").lstrip())
             idx += 1
-            continue
 
-        # 10. 图片格式 ![alt](url) / ![alt](url "title")，alt 与 src 转义防止属性破坏
-        img_match = re.match(r'^!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)$', stripped)
-        if img_match:
-            alt = img_match.group(1).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
-            src = img_match.group(2).replace('"', "&quot;")
-            caption = f'<div style="text-align: center; color: {sub_color}; font-size: 13px; margin-top: 6px; font-style: italic;">{alt}</div>' if alt else ""
-            html_parts.append(
-                f'<div style="margin: 24px 0; text-align: center;">'
-                f'<img src="{src}" alt="{alt}" style="max-width: 96%; height: auto; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); display: inline-block;" />'
-                f'{caption}'
-                f'</div>'
-            )
-            idx += 1
-            continue
+        fp = flush_para()
+        if fp:
+            parts.append(fp)
+        if in_table:
+            parts.append(flush_table())
+        if in_code_block:
+            parts.append(flush_code())
+        return parts
 
-        # 11. 显式图注 (*▲ 图：...*)
-        caption_match = re.match(r'^\*▲ 图：(.+?)\*$', stripped)
-        if caption_match:
-            cap_text = caption_match.group(1)
-            html_parts.append(
-                f'<div style="text-align: center; color: {sub_color}; font-size: 13px; margin: -16px 0 20px 0; font-style: italic;">'
-                f'▲ 图：{cap_text}'
-                f'</div>'
-            )
-            idx += 1
-            continue
+    html_parts.extend(render_block_lines(lines))
 
-        # 12. 正文段落
-        p_text = format_inline(stripped, accent, "13.5px", footnotes=footnotes)
 
-        html_parts.append(
-            f'<p style="font-size: {font_size_base}; line-height: {line_height_base}; color: {text_color}; '
-            f'margin: 18px 0; letter-spacing: {letter_spacing}; {indent_css}text-align: justify;">'
-            f'{p_text}'
-            f'</p>'
-        )
-        idx += 1
-
-    if in_table:
-        html_parts.append(flush_table())
-    if in_code_block:
-        html_parts.append(flush_code())
-
-    # 13. 注入文末参考链接与学术资料引用卡片
+        # 13. 注入文末参考链接与学术资料引用卡片
     if footnotes:
         list_items = []
         for f_idx, fn in enumerate(footnotes):
-            clean_label = fn["label"]
-            list_items.append(
-                f'<li style="margin: 5px 0; word-break: break-all; list-style-type: none;">'
-                f'<span style="color: {accent}; font-weight: 700; margin-right: 6px;">[{f_idx + 1}]</span>'
-                f'<span style="color: {text_color}; font-weight: 500;">{clean_label}</span>: '
-                f'<span style="color: {sub_color}; font-family: monospace; font-size: 11.5px;">{fn["url"]}</span>'
-                f'</li>'
-            )
+            num_html = f'<span style="color: {accent}; font-weight: 700; margin-right: 6px;">[{f_idx + 1}]</span>'
+            if fn.get("kind") == "text":
+                # [^id] 脚注：渲染定义正文 (定义内的链接渲染为锚点，不再产生新脚注)
+                body_html = format_inline(fn.get("text", ""), accent, "12px", accent_bg=theme.get("accent_bg"))
+                list_items.append(
+                    f'<li style="margin: 5px 0; word-break: break-all; list-style-type: none;">'
+                    f'{num_html}'
+                    f'<span style="color: {text_color}; font-weight: 500;">{body_html}</span>'
+                    f'</li>'
+                )
+            else:
+                clean_label = fn["label"]
+                list_items.append(
+                    f'<li style="margin: 5px 0; word-break: break-all; list-style-type: none;">'
+                    f'{num_html}'
+                    f'<span style="color: {text_color}; font-weight: 500;">{clean_label}</span>: '
+                    f'<span style="color: {sub_color}; font-family: monospace; font-size: 11.5px;">{fn["url"]}</span>'
+                    f'</li>'
+                )
         items_html = "\n".join(list_items)
         html_parts.append(
             f'<section style="margin-top: 36px; padding: 16px 18px; border-radius: 8px; background: rgba(0,0,0,0.02); border-left: 3px solid {accent}; border-top: 1px solid {border_color};">\n'

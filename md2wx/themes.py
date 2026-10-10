@@ -37,6 +37,10 @@ FALLBACK_BASE_THEME: Dict[str, Any] = {
         "h1": "underline",
         "h2": "left_bar",
         "h3": "diamond",
+        # h4/h5/h6 为可选键：缺省时使用内置派生样式，主题可自定义变体覆盖
+        "h4": "default",
+        "h5": "default",
+        "h6": "default",
         "quote": "left_stripe",
         "code": "mac_dark",
         "table": "zebra",
