@@ -30,6 +30,9 @@ MD2WX/
 ├── sample_article.md           # 标准 Markdown 排版评测样例文章
 ├── render_cover.html           # 主题封面无头/本地渲染与导出画板
 │
+├── release_notes/              # 各版本 GitHub Release 更新要点 (v<版本>.md)
+│   └── v1.6.0.md               # 首个一级标题自动用作 Release 标题，全文即 Release 正文
+│
 ├── devlogs/                    # 完整研发演进日志合集 (Part 1 - Part 5)
 │   ├── README.md               # 开发日志导航索引
 │   ├── devlog_part1_cli_engine.md
@@ -176,18 +179,21 @@ npm run preview
    ```bash
    python3 -m pytest && cd web && npm run build && cd ..
    ```
-3. **提交代码并打 Tag**：
+3. **撰写发布要点（必须在打 Tag 之前）**：
+   新建 `release_notes/v<版本>.md`，这是 Release 正文的**唯一数据源**——要点随代码一起提交、评审与留档，**不要再手工 `gh release create` / `gh release edit`**。
+   - **首个一级标题即 Release 标题**，格式 `# v<版本>: <标题>`（版本号前缀不计入 20 字限制），标题措辞遵循第 6 条规范：精简平实、讲人话、禁用公关修辞与空洞排比。
+   - 正文覆盖技术亮点与更新要点，按模块分节；本次修复/新增的行为变更、破坏性提示要显式写出。
+   - **顺序红线**：必须先在打 Tag 之前提交该文件。`release.yml` 按 Tag 检出的代码树读取要点文件，打完 Tag 再补文件会导致校验失败。
+4. **提交代码并打 Tag**：
    ```bash
    git add .
    git commit -m "chore(release): bump version to v1.0.3"
    git tag -a v1.0.3 -m "Release v1.0.3"
    git push origin main --tags
    ```
-4. **发布 GitHub Release**：
-   使用 GitHub CLI 创建 Release 并附带更新要点：
-   ```bash
-   gh release create v1.0.3 \
-     --title "v1.0.3: [特性标题]" \
-     --notes-file release_notes.md
-   ```
-   *（或由 `.github/workflows/release.yml` 监听 Tag 推送后自动运行）*
+5. **由 workflow 自动发布 GitHub Release**：
+   `.github/workflows/release.yml` 监听 Tag 推送后自动完成，无需人工介入：
+   - 校验 `release_notes/v<版本>.md` 存在且含一级标题，并校验 `pyproject.toml` 的 `version` 与 Tag 一致（不一致直接失败，避免发布出 Web 版本号错乱的产物）；
+   - 跑全量 Python 测试与 `npm run build`；
+   - 以要点文件首个一级标题为 Release 标题、全文为正文创建 Release。
+   需要重发或补发时：`gh workflow run release.yml -f tag_name=v1.0.3`（按默认分支代码树执行），或直接 `gh release edit v1.0.3 --notes-file release_notes/v1.0.3.md`。

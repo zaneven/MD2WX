@@ -17,11 +17,56 @@ permissions:
 jobs:
   validate-and-release:
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event.inputs.tag_name || github.ref_name }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      # release_notes/v<版本>.md 是发布要点的唯一数据源：文件首个一级标题即 Release 标题，
+      # 全文即 Release 正文。要点因此随代码一起评审与留档，无需发布后再手工 gh release edit。
+      - name: Resolve release notes
+        id: notes
+        run: |
+          set -euo pipefail
+
+          notes_file="release_notes/${RELEASE_TAG}.md"
+          if [ ! -f "$notes_file" ]; then
+            echo "::error::发布要点文件 ${notes_file} 缺失。请先按 AGENTS.md「版本发布流程」撰写要点文件，再打 Tag 发布。"
+            exit 1
+          fi
+
+          # 末尾的 || true 不可省略：set -euo pipefail 下 grep 未命中会直接终止脚本，
+          # 导致下面的 ::error:: 提示来不及输出，只剩一个没有原因的失败
+          py_version=$(grep -m1 '^version' pyproject.toml | sed -E 's/.*"([^"]+)".*/\1/' || true)
+          if [ -z "$py_version" ]; then
+            echo "::error::未能从 pyproject.toml 解析出 version 字段，无法校验版本号。"
+            exit 1
+          fi
+
+          # Web 端版本号由 pyproject.toml 在构建期注入，Tag 与它不一致会发布出版本号错乱的产物
+          if [ "v${py_version}" != "${RELEASE_TAG}" ]; then
+            echo "::error::pyproject.toml 版本 (v${py_version}) 与发布 Tag (${RELEASE_TAG}) 不一致，请先对齐版本号。"
+            exit 1
+          fi
+
+          release_title=$(grep -m1 '^# ' "$notes_file" | sed -E 's/^# +//' || true)
+          if [ -z "$release_title" ]; then
+            echo "::error::${notes_file} 缺少首个一级标题 (# ...)，无法生成 Release 标题。"
+            exit 1
+          fi
+
+          echo "notes_file=${notes_file}" >> "$GITHUB_OUTPUT"
+          {
+            echo "release_title<<RELEASE_TITLE_EOF"
+            echo "${release_title}"
+            echo "RELEASE_TITLE_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          echo ">>> 发布要点: ${notes_file}"
+          echo ">>> Release 标题: ${release_title}"
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -55,7 +100,8 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
-          generate_release_notes: true
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: ${{ steps.notes.outputs.release_title }}
+          body_path: ${{ steps.notes.outputs.notes_file }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
