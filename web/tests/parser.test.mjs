@@ -23,6 +23,12 @@ test('formatInline 加粗斜体删除线', () => {
   assert.ok(out.includes('<del'));
 });
 
+test('formatInline 单波浪删除线', () => {
+  const out = formatInline('~单波浪~ 与 a ~ b ~ c', '#2563eb');
+  assert.ok(out.includes('<del'));
+  assert.ok(out.includes('a ~ b ~ c'));
+});
+
 test('formatInline 裸 URL 自动转脚注', () => {
   const footnotes = [];
   const out = formatInline('看 https://example.com/docs 很好', '#2563eb', '13.5px', footnotes);

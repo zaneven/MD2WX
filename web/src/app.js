@@ -8,6 +8,7 @@ import { state } from './app/state.js';
 import { initIcons, updateClock } from './app/ui.js';
 import { renderPreview, setViewMode, bindViewModeTabs } from './app/preview.js';
 import { bindEditorEvents, DEFAULT_SAMPLE_ARTICLE } from './app/editor.js';
+import { initDrafts } from './app/drafts.js';
 import { renderThemeDropdown, selectTheme, bindThemeControls } from './app/theme.js';
 import { initSettings } from './app/settings.js';
 import { bindShortcuts } from './app/shortcuts.js';
@@ -29,10 +30,12 @@ function init() {
   updateClock();
   setInterval(updateClock, 30000);
 
-  // 载入草稿或默认示例
-  const savedDraft = localStorage.getItem('md2wx_draft');
+  // 载入草稿箱活动草稿 (旧版单草稿键自动迁移)；无任何草稿时回退官方示例
   const textarea = document.getElementById('markdown-input');
-  textarea.value = savedDraft || DEFAULT_SAMPLE_ARTICLE;
+  const restoredDraft = initDrafts();
+  textarea.value = restoredDraft !== null && restoredDraft !== undefined && restoredDraft !== ''
+    ? restoredDraft
+    : DEFAULT_SAMPLE_ARTICLE;
 
   selectTheme(state.currentThemeId);
   setViewMode(state.currentViewMode);

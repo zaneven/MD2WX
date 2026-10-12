@@ -84,3 +84,54 @@ def test_format_report_and_has_errors():
     report = format_lint_report(issues)
     assert "cover" in report
     assert format_lint_report([]).count("全部通过") == 1
+
+
+def test_heading_level_skip_warns():
+    md = (
+        "---\ntitle: 短标题\ndigest: 摘要\n---\n\n"
+        "# 一级\n\n### 直接跳三级\n\n正文\n"
+    )
+    assert "heading-skip" in _codes(lint_markdown(md))
+
+
+def test_heading_sequential_no_warn():
+    md = (
+        "---\ntitle: 短标题\ndigest: 摘要\n---\n\n"
+        "# 一级\n\n## 二级\n\n### 三级\n\n#### 四级\n\n正文\n"
+    )
+    assert "heading-skip" not in _codes(lint_markdown(md))
+
+
+def test_heading_inside_code_fence_ignored():
+    md = (
+        "---\ntitle: 短标题\ndigest: 摘要\n---\n\n"
+        "# 一级\n\n```python\n### 这是注释不是标题\n```\n\n正文\n"
+    )
+    assert "heading-skip" not in _codes(lint_markdown(md))
+
+
+def test_code_fence_without_lang_warns():
+    md = (
+        "---\ntitle: 短标题\ndigest: 摘要\n---\n\n"
+        "```python\nprint(1)\n```\n\n```\nplain text\n```\n\n正文\n"
+    )
+    assert "code-lang-missing" in _codes(lint_markdown(md))
+
+
+def test_image_without_alt_warns():
+    md = (
+        "---\ntitle: 短标题\ndigest: 摘要\n---\n\n"
+        "![](https://cdn.example.com/a.png)\n\n"
+        "![有描述](https://cdn.example.com/b.png)\n\n正文\n"
+    )
+    issues = lint_markdown(md)
+    assert "image-alt-missing" in _codes(issues)
+
+
+def test_duplicate_image_warns():
+    md = (
+        "---\ntitle: 短标题\ndigest: 摘要\n---\n\n"
+        "![首图](https://cdn.example.com/hero.png)\n\n"
+        "![复用](https://cdn.example.com/hero.png)\n\n正文\n"
+    )
+    assert "duplicate-image" in _codes(lint_markdown(md))

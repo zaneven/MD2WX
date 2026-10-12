@@ -342,10 +342,10 @@ export function formatInline(
   text = text.replace(/(^|[^*])\*(?![\*\s])([^*\n]+?)(?<![\*\s])\*(?!\*)/g, '$1<em>$2</em>');
   text = text.replace(/(?<![`\w])_(?!\s)([^_\n]+?)(?<!\s)_(?!\w)/g, '<em>$1</em>');
 
-  // 5.5 GFM 删除线 ~~text~~ (del 标签在微信白名单内，内联样式保证不褪色)
+  // 5.5 GFM 删除线 ~text~ / ~~text~~ (del 标签在微信白名单内，内联样式保证不褪色)
   text = text.replace(
-    /~~(?![\s~])((?:[^~]|~(?!~))+?)(?<![\s~])~~/g,
-    `<del style="color: ${accent}; opacity: 0.72;">$1</del>`
+    /(~{1,2})(?![\s~])((?:[^~]|~(?!~))+?)(?<![\s~])\1/g,
+    `<del style="color: ${accent}; opacity: 0.72;">$2</del>`
   );
 
   // 5.6 扩展高亮 ==text== (主题色荧光笔效果)

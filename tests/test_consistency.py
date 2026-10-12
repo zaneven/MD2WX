@@ -86,19 +86,22 @@ def test_builtin_theme_single_source_sync():
 
 
 def test_golden_render_consistency_all_themes():
-    """固定样例在全部内置主题下双端渲染产物一致"""
-    web = _render_web(GOLDEN_ARTICLE)
-    py_renders = _render_python(GOLDEN_ARTICLE.read_text(encoding="utf-8"))
+    """全部语料 (fixtures/golden_*.md) 在全部内置主题下双端渲染产物一致"""
+    fixtures = sorted((Path(__file__).resolve().parent / "fixtures").glob("golden_*.md"))
+    assert fixtures, "至少需要一个 golden_*.md 语料文件"
+    web_all = {md: _render_web(md) for md in fixtures}
+    py_all = {
+        md: _render_python(md.read_text(encoding="utf-8")) for md in fixtures
+    }
 
     mismatched = []
-    for theme_id in sorted(web["themes"]):
-        web_html = _normalize(web["renders"][theme_id])
-        py_html = py_renders[theme_id]
-        if web_html != py_html:
-            mismatched.append(theme_id)
+    for md in fixtures:
+        for theme_id in sorted(web_all[md]["themes"]):
+            if _normalize(web_all[md]["renders"][theme_id]) != py_all[md][theme_id]:
+                mismatched.append(f"{md.name} [{theme_id}]")
 
     assert not mismatched, (
-        f"以下主题双端渲染产物不一致: {mismatched}。"
+        f"以下语料/主题双端渲染产物不一致: {mismatched}。"
         "parser.py 与 parser.js 为镜像实现，改动必须双端同步。"
     )
 

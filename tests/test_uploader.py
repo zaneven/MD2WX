@@ -68,7 +68,10 @@ def test_upload_image_bytes_proxy_payload():
         assert "TOKEN" in body
 
 
-def test_get_access_token_success_and_failure():
+def test_get_access_token_success_and_failure(tmp_path, monkeypatch):
+    """token 接口成功取凭据与失败抛错 (WeChatApiError)，缓存路径隔离到临时目录"""
+    monkeypatch.setattr(uploader, "TOKEN_CACHE_PATH", tmp_path / "token_cache.json")
+
     with patch("md2wx.uploader.urllib.request.urlopen") as mock_open, patch(
         "md2wx.uploader._get_proxy_url", return_value=None
     ):
@@ -80,7 +83,7 @@ def test_get_access_token_success_and_failure():
     ):
         mock_open.return_value = _mock_urlopen_response({"errcode": 40013, "errmsg": "invalid appid"})
         with pytest.raises(RuntimeError, match="invalid appid"):
-            uploader.get_access_token("id", "secret")
+            uploader.get_access_token("other_id", "secret")
 
 
 def test_upload_cover_material_md5_cache(tmp_path, monkeypatch):

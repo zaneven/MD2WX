@@ -5,6 +5,7 @@ MD2WX 命令行工具 (CLI Entrypoint)
 import os
 import re
 import sys
+import json
 import argparse
 import subprocess
 import tempfile
@@ -136,6 +137,7 @@ def main():
     parser.add_argument("--list-themes", action="store_true", help="列出所有可用的内置与用户自定义设计主题")
     parser.add_argument("--web", action="store_true", help="启动 MD2WX Web Studio 可视化排版工作台并在浏览器中打开")
     parser.add_argument("-p", "--publish", action="store_true", help="一键推送到微信公众号草稿箱")
+    parser.add_argument("--dry-run", action="store_true", help="发布演练: 完成渲染与封面解析后打印将上报微信的草稿 payload 摘要，不请求任何微信接口 (需搭配 -p)")
     parser.add_argument("--cover", help="指定头条封面图片路径 (默认优先级: 此参数 > frontmatter cover: > 动态渲染主题双封面 > 正文首图)")
     parser.add_argument("--cover-square", help="指定次条/会话 1:1 方形封面图片路径 (与 --cover 搭配时将自动拼接为双比例合图)")
     parser.add_argument("--no-dual-cover", action="store_true", help="禁用双比例拼接封面，仅生成单张 2.35:1 头条封面")
@@ -258,7 +260,14 @@ def main():
         if rich_blocks:
             print(f">>> 检测到 {len(rich_blocks)} 个 Mermaid 图表 / 数学公式，正在无头渲染...")
             resolve_rich_blocks(rich_blocks)
-            print("    [+] 富文本块渲染完成。")
+            rich_failed = sum(1 for b in rich_blocks if not b.get("rendered"))
+            if rich_failed:
+                print(
+                    f"    [!] {rich_failed} 处富文本块未能截图渲染 (无头浏览器不可用)，已降级为文本形态，发布前请真机确认。",
+                    file=sys.stderr,
+                )
+            else:
+                print("    [+] 富文本块渲染完成。")
     except Exception as e:
         print(f"[-] 富文本块处理异常，相关位置将降级为文本形态: {e}", file=sys.stderr)
         rich_blocks = []
@@ -313,7 +322,9 @@ def main():
             print("    发布模式 (-p) 会自动转存微信官方 CDN；剪贴板模式可使用 --rehost-images 换链到图床。", file=sys.stderr)
 
     token = None
-    if args.publish:
+    if args.publish and args.dry_run:
+        print(">>> [DRY RUN] 发布演练模式：跳过凭据获取、图片上传与草稿推送，仅完成渲染与 payload 预览。")
+    if args.publish and not args.dry_run:
         # AppSecret 属敏感信息，仅从环境变量/.env 读取；缺失时交互式输入，避免进入 shell history
         if not app_secret and sys.stdin.isatty():
             import getpass
@@ -324,7 +335,7 @@ def main():
         print(">>> 1. 获取微信 Access Token...")
         try:
             token = get_access_token(app_id, app_secret)
-            print("    [+] Access Token 获取成功！")
+            print("    [+] Access Token 获取成功！(本地缓存命中则直接复用)")
         except Exception as e:
             print(f"[-] 获取 Token 失败: {e}", file=sys.stderr)
             sys.exit(1)
@@ -444,7 +455,7 @@ def main():
                 print(f"      {line}")
 
         # 富文本渲染产物 (base64 内联图) 统一转存微信官方 CDN，草稿箱正文不支持 data URI
-        if rich_blocks:
+        if rich_blocks and not args.dry_run:
             html_output, rich_ok, rich_fail = rehost_data_uri_images(token, html_output)
             if rich_ok or rich_fail:
                 print(f"    富文本图片已转存微信 CDN: 成功 {rich_ok} 处 / 失败 {rich_fail} 处")
@@ -516,8 +527,30 @@ def main():
             sys.exit(1)
 
         print(f"    使用封面图片: {cover_path}")
+        source_url = meta.get("content_source_url") or meta.get("source_url") or "https://md2wx.zaneven.com"
+
+        # 发布演练：完整走完渲染与封面解析，仅打印将上报的 payload 摘要，不发起任何微信请求
+        if args.dry_run:
+            article_preview = {
+                "title": title,
+                "author": author,
+                "digest": digest,
+                "content_source_url": source_url,
+                "thumb_media_id": f"<待上传: {cover_path}>",
+                "need_open_comment": 1,
+                "only_fans_can_comment": 0,
+            }
+            if pic_crop_235_1:
+                article_preview["pic_crop_235_1"] = pic_crop_235_1
+            if pic_crop_1_1:
+                article_preview["pic_crop_1_1"] = pic_crop_1_1
+            print(">>> [DRY RUN] 将上报微信 draft/add 的 payload 摘要:")
+            print(json.dumps({"articles": [article_preview]}, ensure_ascii=False, indent=2))
+            print(f"    content: 微信内联 HTML 共 {len(html_output)} 字符 (可用 -o/--clip 配合查验全文)")
+            print("[DRY RUN] 已停止：未上传素材、未推送草稿。去除 --dry-run 参数后将执行真实发布。")
+            return
+
         try:
-            source_url = meta.get("content_source_url") or meta.get("source_url") or "https://md2wx.zaneven.com"
             res = publish_draft_to_wechat(
                 token=token,
                 title=title,
@@ -527,7 +560,8 @@ def main():
                 cover_image_path=cover_path,
                 pic_crop_235_1=pic_crop_235_1,
                 pic_crop_1_1=pic_crop_1_1,
-                content_source_url=source_url
+                content_source_url=source_url,
+                token_refresher=lambda: get_access_token(app_id, app_secret, force_refresh=True),
             )
             print("[+] 恭喜！文章已成功推送到微信公众号草稿箱！")
             print(f"    草稿标题: {res['title']}")

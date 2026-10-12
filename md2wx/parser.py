@@ -353,10 +353,10 @@ def format_inline(
     text = re.sub(r"(^|[^*])\*(?![\*\s])([^*\n]+?)(?<![\*\s])\*(?!\*)", r"\1<em>\2</em>", text)
     text = re.sub(r"(?<![`\w])_(?!\s)([^_\n]+?)(?<!\s)_(?!\w)", r"<em>\1</em>", text)
 
-    # 5.5 GFM 删除线 ~~text~~ (del 标签在微信白名单内，内联样式保证不褪色)
+    # 5.5 GFM 删除线 ~text~ / ~~text~~ (del 标签在微信白名单内，内联样式保证不褪色)
     text = re.sub(
-        r"~~(?![\s~])((?:[^~]|~(?!~))+?)(?<![\s~])~~",
-        rf'<del style="color: {accent}; opacity: 0.72;">\1</del>',
+        r"(~{1,2})(?![\s~])((?:[^~]|~(?!~))+?)(?<![\s~])\1",
+        rf'<del style="color: {accent}; opacity: 0.72;">\2</del>',
         text,
     )
 

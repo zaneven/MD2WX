@@ -413,10 +413,11 @@ def resolve_rich_blocks(blocks: List[Dict[str, str]]) -> None:
     """
     就地解析所有富文本块，为每个块生成 block['html']：
     优先无头浏览器渲染为内联 data URI 图片 (记录逻辑宽度用于精确回显)，
-    失败时降级为文本形态
+    失败时降级为文本形态，并置 block['rendered'] = False 供调用方明示降级
     """
     for block in blocks:
         block["width"] = 0
+        block["rendered"] = False
         png = None
         try:
             png, block["width"] = _render_cached_pair(block["kind"], block["content"])
@@ -425,6 +426,7 @@ def resolve_rich_blocks(blocks: List[Dict[str, str]]) -> None:
         if png:
             b64 = base64.b64encode(png).decode("ascii")
             block["data_uri"] = f"data:image/png;base64,{b64}"
+            block["rendered"] = True
         block["html"] = _build_block_html(block)
 
 

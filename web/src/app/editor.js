@@ -12,6 +12,15 @@ import {
 import { showToast } from './ui.js';
 import { handleSyncScroll } from './scroll-sync.js';
 import { scheduleRender } from './preview.js';
+import {
+  getDrafts,
+  loadDraft,
+  createDraft,
+  deleteDraft,
+  getActiveDraftId,
+  formatRelativeTime,
+} from './drafts.js';
+import { ICONS } from '../assets/icons.js';
 
 const textarea = document.getElementById('markdown-input');
 
@@ -74,6 +83,98 @@ export function insertFormatting(prefix, suffix = '', defaultText = '') {
   textarea.focus();
 
   scheduleRender();
+}
+
+/**
+ * 草稿箱浮层：草稿列表渲染、切换载入、新建与删除
+ * 数据层见 drafts.js，此处仅负责 DOM 交互
+ */
+function bindDraftsMenu(textarea) {
+  const trigger = document.getElementById('btn-drafts');
+  const menu = document.getElementById('drafts-dropdown-menu');
+  const listEl = document.getElementById('drafts-list');
+  const newBtn = document.getElementById('btn-draft-new');
+  if (!trigger || !menu || !listEl) return;
+
+  function closeMenu() {
+    menu.classList.remove('show');
+  }
+
+  function renderDraftList() {
+    const drafts = getDrafts();
+    const activeId = getActiveDraftId();
+    listEl.innerHTML = '';
+
+    if (!drafts.length) {
+      const empty = document.createElement('div');
+      empty.className = 'drafts-empty';
+      empty.textContent = '暂无草稿';
+      listEl.appendChild(empty);
+      return;
+    }
+
+    drafts.forEach((d) => {
+      const item = document.createElement('div');
+      item.className = 'draft-item' + (d.id === activeId ? ' active' : '');
+
+      const main = document.createElement('div');
+      main.className = 'draft-item-main';
+      const title = document.createElement('div');
+      title.className = 'draft-item-title';
+      title.textContent = d.title || '未命名草稿';
+      const time = document.createElement('div');
+      time.className = 'draft-item-time';
+      time.textContent = formatRelativeTime(d.updatedAt);
+      main.appendChild(title);
+      main.appendChild(time);
+
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'draft-item-delete';
+      del.title = '删除此草稿';
+      del.innerHTML = ICONS.trash;
+
+      item.appendChild(main);
+      item.appendChild(del);
+      listEl.appendChild(item);
+
+      main.addEventListener('click', () => {
+        const content = loadDraft(d.id);
+        if (content === null) return;
+        textarea.value = content;
+        scheduleRender();
+        closeMenu();
+        showToast(`已载入草稿「${title.textContent}」`);
+      });
+      del.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!confirm(`确定删除草稿「${d.title || '未命名草稿'}」吗？`)) return;
+        const res = deleteDraft(d.id);
+        if (res) {
+          textarea.value = res.content;
+          scheduleRender();
+        }
+        renderDraftList();
+        showToast('草稿已删除');
+      });
+    });
+  }
+
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    renderDraftList();
+    menu.classList.toggle('show');
+  });
+  newBtn?.addEventListener('click', () => {
+    createDraft();
+    textarea.value = '';
+    scheduleRender();
+    renderDraftList();
+    showToast('已新建空白草稿');
+  });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.drafts-wrapper')) closeMenu();
+  });
 }
 
 /**
@@ -193,6 +294,9 @@ export function bindEditorEvents() {
       showToast('编辑器已清空');
     }
   });
+
+  // 草稿箱浮层 (列表/切换/新建/删除)
+  bindDraftsMenu(textarea);
 
   // 支持 Tab 缩进输入
   textarea.addEventListener('keydown', (e) => {

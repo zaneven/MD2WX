@@ -66,6 +66,7 @@ def test_resolve_fallback_without_browser():
     with patch("md2wx.richrender.find_headless_browser", return_value=None):
         resolve_rich_blocks(blocks)
     assert "data_uri" not in blocks[0]
+    assert blocks[0]["rendered"] is False  # 降级块带明确标记，CLI 据此明示
     assert "<pre" in blocks[0]["html"]
     assert "--&gt;" in blocks[0]["html"]  # 降级为代码块且已转义
 

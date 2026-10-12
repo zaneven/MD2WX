@@ -8,6 +8,7 @@ import { prepareRichBlocks, hydrateRichBlocks } from '../core/richrender.js';
 import { extractCoverMeta } from '../core/cover.js';
 import { state } from './state.js';
 import { showToast } from './ui.js';
+import { saveActiveDraft } from './drafts.js';
 import { updateExternalImageGuard } from './imageguard.js';
 
 const textarea = document.getElementById('markdown-input');
@@ -45,28 +46,20 @@ function updateWordCount(text) {
 }
 
 /**
- * 自动保存本地草稿。
- * 粘贴的 base64 图片体积巨大，直接写入会超出 localStorage 5MB 配额并抛
- * QuotaExceededError 中断渲染：超限时降级为剔除图片数据后保存，并提示一次。
+ * 自动保存本地草稿 (委托草稿箱模块写入活动草稿条目)。
+ * 粘贴的 base64 图片体积巨大，直接写入会超出 localStorage 5MB 配额：
+ * 草稿箱内部会降级为剔除图片数据后保存；存储彻底不可用时在此提示一次。
  */
 let draftQuotaWarned = false;
 export function saveDraft(rawText) {
-  try {
-    localStorage.setItem('md2wx_draft', rawText);
+  const ok = saveActiveDraft(rawText);
+  if (ok) {
     draftQuotaWarned = false;
-  } catch (e) {
-    try {
-      localStorage.setItem(
-        'md2wx_draft',
-        rawText.replace(/!\[[^\]]*\]\(data:image\/[^)]+\)/g, '![粘贴图片]()')
-      );
-      if (!draftQuotaWarned) {
-        draftQuotaWarned = true;
-        showToast('草稿超过本地存储上限，已省略内嵌图片数据 (编辑器内容不受影响)', 'error');
-      }
-    } catch (e2) {
-      // 存储完全不可用时静默跳过，不阻断渲染
-    }
+    return;
+  }
+  if (!draftQuotaWarned) {
+    draftQuotaWarned = true;
+    showToast('草稿超过本地存储上限，本次变更未持久化 (编辑器内容不受影响)', 'error');
   }
 }
 

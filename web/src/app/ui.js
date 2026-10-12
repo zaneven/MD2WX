@@ -15,6 +15,8 @@ export function initIcons() {
   setIcon('#logo-icon', 'logo');
   setIcon('#theme-chevron-icon', 'chevronDown');
   setIcon('#icon-sample', 'fileText');
+  setIcon('#icon-drafts', 'folder');
+  setIcon('#icon-draft-new', 'plus');
   setIcon('#icon-download', 'download');
   setIcon('#icon-copy-header', 'copy');
   setIcon('#icon-copy-floating', 'copy');

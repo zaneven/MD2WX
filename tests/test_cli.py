@@ -56,3 +56,25 @@ def test_wechat_length_constants():
 def test_copy_html_to_clipboard_non_macos_returns_false():
     with patch.object(cli.sys, "platform", "linux"):
         assert cli.copy_html_to_clipboard("<p>x</p>") is False
+
+
+def test_cli_dry_run_prints_payload_without_network(tmp_path, monkeypatch, capsys):
+    """--dry-run 完成渲染与封面解析，打印 payload 摘要且不触发任何微信网络请求"""
+    md = tmp_path / "post.md"
+    md.write_text(
+        "---\ntitle: 演练标题\ndigest: 演练摘要\n---\n\n# 演练标题\n\n正文段落。\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(sys, "argv", ["md2wx", str(md), "-p", "--dry-run", "--no-cover"])
+
+    def _forbidden_urlopen(*a, **kw):
+        raise AssertionError("dry-run 模式不应发起任何网络请求")
+
+    with patch("urllib.request.urlopen", side_effect=_forbidden_urlopen):
+        cli.main()
+
+    out = capsys.readouterr().out
+    assert "[DRY RUN]" in out
+    assert "演练标题" in out
+    assert "digest" in out
+    assert "未上传素材、未推送草稿" in out

@@ -3,6 +3,7 @@ MD2WX 微信公众平台素材与图片管理
 """
 import os
 import json
+import time
 import hashlib
 import mimetypes
 import urllib.request
@@ -13,6 +14,20 @@ from .envutil import load_env
 
 # 永久素材本地缓存：按文件内容 md5 记录 media_id，避免重复上传消耗配额
 MATERIAL_CACHE_PATH = Path.home() / ".config" / "md2wx" / "material_cache.json"
+# access_token 本地缓存：按 app_id 记录凭据与过期时间，避免频繁调用 token 接口撞微信频控
+TOKEN_CACHE_PATH = Path.home() / ".config" / "md2wx" / "token_cache.json"
+# 判定 token 过期时预留的安全余量 (秒)：微信 token 有效期 7200s，提前 5 分钟视为失效
+TOKEN_EXPIRY_MARGIN = 300
+# token 失效类错误码：凭据非法 (40001)、过期 (42001)、非法 (40014)
+TOKEN_EXPIRED_ERRCODES = (40001, 42001, 40014)
+
+
+class WeChatApiError(RuntimeError):
+    """微信 API 业务错误：携带官方 errcode，供调用方按错误码分流 (如 token 失效重试)"""
+
+    def __init__(self, message: str, errcode: Optional[int] = None):
+        super().__init__(message)
+        self.errcode = errcode
 
 def _get_proxy_url() -> Optional[str]:
     proxy = load_env().get("WECHAT_PROXY_URL")
@@ -40,22 +55,68 @@ def _save_material_cache(cache: Dict[str, str]) -> None:
     except Exception:
         pass  # 缓存写失败不影响主流程
 
-def get_access_token(app_id: str, app_secret: str) -> str:
-    """获取微信公众平台全局唯一后台接口调用凭据 (access_token)"""
+def _load_token_cache() -> Dict[str, dict]:
+    try:
+        with open(TOKEN_CACHE_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+def _save_token_cache(cache: Dict[str, dict]) -> None:
+    try:
+        TOKEN_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with open(TOKEN_CACHE_PATH, "w", encoding="utf-8") as f:
+            json.dump(cache, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass  # 缓存写失败不影响主流程
+
+def _fetch_access_token(app_id: str, app_secret: str) -> dict:
+    """调用微信 token 接口取新凭据，返回含 access_token 与 expires_in 的原始响应"""
     proxy_url = _get_proxy_url()
     if proxy_url:
         payload = json.dumps({"action": "token", "appId": app_id, "appSecret": app_secret}).encode("utf-8")
         req = urllib.request.Request(proxy_url, data=payload, headers=_proxy_headers("application/json"))
         res = json.loads(urllib.request.urlopen(req, timeout=15).read().decode("utf-8"))
         if "access_token" not in res:
-            raise RuntimeError(f"获取微信 Access Token 失败 (via proxy): {res.get('errmsg', res)}")
-        return res["access_token"]
+            raise WeChatApiError(
+                f"获取微信 Access Token 失败 (via proxy): {res.get('errmsg', res)}",
+                errcode=res.get("errcode"),
+            )
+        return res
 
     url = f"https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid={app_id}&secret={app_secret}"
     req = urllib.request.urlopen(url, timeout=15)
     res = json.loads(req.read().decode("utf-8"))
     if "access_token" not in res:
-        raise RuntimeError(f"获取微信 Access Token 失败: {res.get('errmsg', res)}")
+        raise WeChatApiError(
+            f"获取微信 Access Token 失败: {res.get('errmsg', res)}",
+            errcode=res.get("errcode"),
+        )
+    return res
+
+def get_access_token(app_id: str, app_secret: str, force_refresh: bool = False) -> str:
+    """
+    获取微信公众平台全局唯一后台接口调用凭据 (access_token)
+    默认读取本地缓存 (按 app_id 隔离)，未过期则直接复用，避免频繁请求撞微信频控；
+    force_refresh=True 时无视缓存强制取新 (用于 40001/42001 失效重试)
+    """
+    if not force_refresh:
+        cache = _load_token_cache()
+        entry = cache.get(app_id)
+        if isinstance(entry, dict) and entry.get("token"):
+            # 预留安全余量：距过期不足 5 分钟即视为失效
+            if time.time() < float(entry.get("expires_at", 0)) - TOKEN_EXPIRY_MARGIN:
+                return entry["token"]
+
+    res = _fetch_access_token(app_id, app_secret)
+    expires_in = int(res.get("expires_in", 7200) or 7200)
+    cache = _load_token_cache()
+    cache[app_id] = {
+        "token": res["access_token"],
+        "expires_at": time.time() + expires_in,
+    }
+    _save_token_cache(cache)
     return res["access_token"]
 
 _UPLOAD_BOUNDARY = "----WebKitFormBoundaryMD2WXUpload"
@@ -165,7 +226,10 @@ def upload_cover_material(token: str, filepath: str) -> str:
         )
         res = json.loads(urllib.request.urlopen(req, timeout=30).read().decode("utf-8"))
         if "media_id" not in res:
-            raise RuntimeError(f"封面素材上传微信失败 ({filename}): {res.get('errmsg', res)}")
+            raise WeChatApiError(
+                f"封面素材上传微信失败 ({filename}): {res.get('errmsg', res)}",
+                errcode=res.get("errcode"),
+            )
         cache[content_md5] = res["media_id"]
         _save_material_cache(cache)
         return res["media_id"]
@@ -177,7 +241,10 @@ def upload_cover_material(token: str, filepath: str) -> str:
     )
     res = json.loads(urllib.request.urlopen(req, timeout=30).read().decode("utf-8"))
     if "media_id" not in res:
-        raise RuntimeError(f"封面素材上传微信失败 ({os.path.basename(filepath)}): {res.get('errmsg', res)}")
+        raise WeChatApiError(
+            f"封面素材上传微信失败 ({os.path.basename(filepath)}): {res.get('errmsg', res)}",
+            errcode=res.get("errcode"),
+        )
 
     cache[content_md5] = res["media_id"]
     _save_material_cache(cache)

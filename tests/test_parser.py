@@ -337,6 +337,15 @@ class TestMarkdownFullSyntax(unittest.TestCase):
         html2 = self._render("````\ncode with ``` inside\n````")
         self.assertIn("code&nbsp;with", html2)
 
+    def test_single_tilde_strikethrough(self):
+        """GFM 单波浪删除线 ~text~ 与双波浪 ~~text~~ 均转为 del"""
+        html = self._render("~单波浪删除~ 与 ~~双波浪删除~~")
+        self.assertIn("<del", html)
+        self.assertEqual(html.count("<del"), 2)
+        # 空白相邻不成删除线
+        html2 = self._render("a ~ b ~ c")
+        self.assertNotIn("<del", html2)
+
     def test_heading_levels_and_inline_format(self):
         html = self._render("# 一级\n## 二级\n### 三级\n#### 四级\n##### 五级\n###### 六级")
         self.assertIn("一级", html)

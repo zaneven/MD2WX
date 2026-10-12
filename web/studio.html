@@ -110,6 +110,24 @@
           </div>
         </div>
 
+        <!-- Drafts Popover -->
+        <div class="drafts-wrapper">
+          <button class="btn btn-secondary" id="btn-drafts" type="button" title="本地草稿箱 (多篇草稿自动保存与历史切换)">
+            <span id="icon-drafts"></span>
+            <span>草稿箱</span>
+          </button>
+          <div class="drafts-dropdown" id="drafts-dropdown-menu" role="menu">
+            <div class="drafts-header">
+              <span>本地草稿箱</span>
+              <button class="drafts-new-btn" id="btn-draft-new" type="button" title="新建空白草稿 (当前内容已自动保存)">
+                <span id="icon-draft-new"></span>
+                <span>新建</span>
+              </button>
+            </div>
+            <div class="drafts-list" id="drafts-list"></div>
+          </div>
+        </div>
+
         <button class="btn btn-secondary" id="btn-load-sample" type="button" title="载入官方排版示范长文">
           <span id="icon-sample"></span>
           <span>载入示例</span>
