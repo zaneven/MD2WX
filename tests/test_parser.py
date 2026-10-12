@@ -40,6 +40,33 @@ tags: [python, wechat]
         self.assertIn("<strong>作者</strong>：野生宝藏箱", html)
         self.assertIn("<strong>核心标签</strong>", html)
 
+    def test_blockquote_preserves_authored_line_breaks(self):
+        """引用块内作者手写的分行必须逐行保留 (作者/标签/摘要塌成一段是回归)"""
+        md = """> **作者**：野生宝藏箱
+> **核心标签**：AI 自动化 · WePost
+> **一句话简介**：从热点抓取到静默同步。
+"""
+        html = markdown_to_wechat_html(md)
+        self.assertIn(
+            "<strong>作者</strong>：野生宝藏箱<br /><strong>核心标签</strong>：AI 自动化 · WePost<br />"
+            "<strong>一句话简介</strong>：从热点抓取到静默同步。",
+            html,
+        )
+
+    def test_blockquote_hard_break_not_doubled(self):
+        """引用块行尾已有的硬换行标记不重复插入 <br />"""
+        md = "> 第一行  \n> 第二行\n"
+        html = markdown_to_wechat_html(md)
+        self.assertIn("第一行<br />第二行", html)
+        self.assertNotIn("<br /><br />", html)
+
+    def test_paragraph_soft_wrap_still_joined(self):
+        """引用块之外仍保持 CommonMark 软换行语义：中文段落折行不得插入换行"""
+        md = "这是一段被作者在源码里\n折成两行的中文正文。\n"
+        html = markdown_to_wechat_html(md)
+        self.assertIn("这是一段被作者在源码里折成两行的中文正文。", html)
+        self.assertNotIn("<br />", html)
+
     def test_mac_code_block_rendering(self):
         """测试默认科技主题下代码块是否生成 Mac 红黄绿圆点指示灯，以及换行/缩进的自包含结构"""
         md = """```python

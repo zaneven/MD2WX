@@ -147,6 +147,22 @@ test('嵌套引用块', () => {
   assert.ok(html.includes('内层'));
 });
 
+test('引用块内作者手写的分行逐行保留', () => {
+  const html = render('> **作者**：野生宝藏箱\n> **核心标签**：AI 自动化 · WePost\n> **一句话简介**：从热点抓取到静默同步。');
+  assert.ok(
+    html.includes(
+      '<strong>作者</strong>：野生宝藏箱<br /><strong>核心标签</strong>：AI 自动化 · WePost<br /><strong>一句话简介</strong>：从热点抓取到静默同步。'
+    )
+  );
+  assert.ok(!html.includes('<br /><br />'));
+});
+
+test('引用块之外的段落仍走软换行拼接', () => {
+  const html = render('这是一段被作者在源码里\n折成两行的中文正文。');
+  assert.ok(html.includes('这是一段被作者在源码里折成两行的中文正文。'));
+  assert.ok(!html.includes('<br />'));
+});
+
 test('表格对齐与转义管道', () => {
   const html = render('| A | B | C |\n| :--- | :---: | ---: |\n| 左 | 中 | 右 |');
   assert.ok(html.includes('text-align: center;'));

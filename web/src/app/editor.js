@@ -86,23 +86,30 @@ export function insertFormatting(prefix, suffix = '', defaultText = '') {
 }
 
 /**
- * 草稿箱浮层：草稿列表渲染、切换载入、新建与删除
+ * 常驻草稿箱侧栏 (编辑器左侧)：草稿列表渲染、切换载入、新建与删除
  * 数据层见 drafts.js，此处仅负责 DOM 交互
  */
-function bindDraftsMenu(textarea) {
-  const trigger = document.getElementById('btn-drafts');
-  const menu = document.getElementById('drafts-dropdown-menu');
+function bindDraftsSidebar(textarea) {
   const listEl = document.getElementById('drafts-list');
+  const countEl = document.getElementById('drafts-count');
   const newBtn = document.getElementById('btn-draft-new');
-  if (!trigger || !menu || !listEl) return;
+  if (!listEl) return;
 
-  function closeMenu() {
-    menu.classList.remove('show');
-  }
+  // 列表指纹 (含活动草稿)：仅当标题/时间/活动态变化时才重建 DOM，
+  // 避免编辑输入触发的高频自动保存反复重绘侧栏
+  let lastSignature = null;
 
   function renderDraftList() {
     const drafts = getDrafts();
     const activeId = getActiveDraftId();
+    const signature = [
+      activeId,
+      ...drafts.map((d) => `${d.id}|${d.title}|${formatRelativeTime(d.updatedAt)}`),
+    ].join('§');
+    if (signature === lastSignature) return;
+    lastSignature = signature;
+
+    if (countEl) countEl.textContent = `${drafts.length} 篇`;
     listEl.innerHTML = '';
 
     if (!drafts.length) {
@@ -143,7 +150,7 @@ function bindDraftsMenu(textarea) {
         if (content === null) return;
         textarea.value = content;
         scheduleRender();
-        closeMenu();
+        renderDraftList();
         showToast(`已载入草稿「${title.textContent}」`);
       });
       del.addEventListener('click', (e) => {
@@ -160,11 +167,6 @@ function bindDraftsMenu(textarea) {
     });
   }
 
-  trigger.addEventListener('click', (e) => {
-    e.stopPropagation();
-    renderDraftList();
-    menu.classList.toggle('show');
-  });
   newBtn?.addEventListener('click', () => {
     createDraft();
     textarea.value = '';
@@ -172,9 +174,18 @@ function bindDraftsMenu(textarea) {
     renderDraftList();
     showToast('已新建空白草稿');
   });
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('.drafts-wrapper')) closeMenu();
+
+  // 自动保存 (每次输入) 会改变草稿标题与更新时间，节流刷新侧栏
+  let refreshTimer = null;
+  window.addEventListener('md2wx:drafts-changed', () => {
+    if (refreshTimer) return;
+    refreshTimer = setTimeout(() => {
+      refreshTimer = null;
+      renderDraftList();
+    }, 500);
   });
+
+  renderDraftList();
 }
 
 /**
@@ -295,8 +306,8 @@ export function bindEditorEvents() {
     }
   });
 
-  // 草稿箱浮层 (列表/切换/新建/删除)
-  bindDraftsMenu(textarea);
+  // 常驻草稿箱侧栏 (列表/切换/新建/删除)
+  bindDraftsSidebar(textarea);
 
   // 支持 Tab 缩进输入
   textarea.addEventListener('keydown', (e) => {

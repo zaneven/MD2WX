@@ -14,7 +14,15 @@ const LEGACY_DRAFT_KEY = 'md2wx_draft';
 // 草稿列表容量上限：超出后按 updatedAt 淘汰最旧条目 (活动草稿不淘汰)
 const MAX_DRAFTS = 20;
 
+// 草稿集合变更广播 (新建/切换/删除/自动保存)，常驻侧栏据此刷新列表
+const CHANGED_EVENT = 'md2wx:drafts-changed';
+
 let activeId = null;
+
+function emitChanged() {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(CHANGED_EVENT));
+}
 
 function readDrafts() {
   try {
@@ -98,6 +106,7 @@ function upsertDraft(content, id = activeId) {
   }
 
   writeDrafts(list);
+  emitChanged();
   return draft;
 }
 
@@ -175,6 +184,7 @@ export function loadDraft(id) {
   } catch (e) {
     // 忽略
   }
+  emitChanged();
   return draft.content;
 }
 
@@ -193,6 +203,7 @@ export function createDraft() {
 export function deleteDraft(id) {
   let list = readDrafts().filter((d) => d.id !== id);
   writeDrafts(list);
+  emitChanged();
 
   if (id === activeId) {
     const next = getDrafts()[0];

@@ -389,11 +389,13 @@ def _is_cjk_char(ch: str) -> bool:
 # 列表项标记：- * + 无序，N. / N) 有序
 _LIST_ITEM_RE = re.compile(r"^(\s*)([-*+]|\d{1,9}[.)])(\s+(.*))?$")
 
-def join_paragraph_lines(buf: List[str]) -> str:
+def join_paragraph_lines(buf: List[str], force_breaks: bool = False) -> str:
     """
     段落行合并 (CommonMark 软换行语义)：
     - 行尾 2+ 空格或单个反斜杠 = 硬换行，插入 @@MDBR_0@@ 占位 (行内解析后还原为 <br />)；
     - 普通软换行：相邻字符任一侧为 CJK/全角字符时直接拼接，否则以空格拼接。
+    force_breaks=True 关掉软换行语义，行与行之间一律硬换行：引用块内作者手写的分行
+    (开头的作者/标签/摘要等信息) 必须逐行保留，否则推送微信后会塌成一段。
     """
     parts: List[Tuple[bool, str]] = []
     for raw in buf:
@@ -414,7 +416,7 @@ def join_paragraph_lines(buf: List[str]) -> str:
             result = ln
             continue
         prev_ln = parts[i - 1][1]
-        if parts[i - 1][0]:
+        if parts[i - 1][0] or force_breaks:
             result += "@@MDBR_0@@" + ln
             continue
         prev_ch = prev_ln[-1:] if prev_ln else ""
@@ -1102,7 +1104,8 @@ def markdown_to_wechat_html(
 
     # 块级渲染主循环 (嵌套引用会对内层行递归调用 render_block_lines)
 
-    def render_block_lines(block_lines: List[str]) -> List[str]:
+    def render_block_lines(block_lines: List[str], force_breaks: bool = False) -> List[str]:
+        # force_breaks: 引用块内层渲染，段内每行独立成行 (见 join_paragraph_lines)
         # 每层递归独立的块状态
         in_code_block = False
         code_lang = ""
@@ -1162,7 +1165,7 @@ def markdown_to_wechat_html(
             nonlocal para_buf
             if not para_buf:
                 return ""
-            joined = join_paragraph_lines(para_buf)
+            joined = join_paragraph_lines(para_buf, force_breaks)
             para_buf = []
             p_text = inline_fmt(joined)
             return (
@@ -1381,7 +1384,7 @@ def markdown_to_wechat_html(
 
                 def flush_quote_run() -> None:
                     if run:
-                        seg_parts.extend(render_block_lines(list(run)))
+                        seg_parts.extend(render_block_lines(list(run), force_breaks=True))
                         run.clear()
 
                 for q in inner_lines:

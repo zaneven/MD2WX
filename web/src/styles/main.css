@@ -347,43 +347,57 @@ html, body {
 }
 
 /* ==============================================================================
-   Drafts Popover (本地草稿箱)
+   Drafts Sidebar (常驻本地草稿箱，位于文字编辑器左侧)
    ============================================================================== */
-.drafts-wrapper {
-  position: relative;
-}
-
-.drafts-dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  width: 300px;
-  background: #171717;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
-  padding: 12px;
-  display: none;
-  flex-direction: column;
-  gap: 10px;
-  z-index: 1000;
-  backdrop-filter: blur(16px);
-  animation: dropdownIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.drafts-dropdown.show {
+.drafts-sidebar {
+  flex: 0 0 232px;
+  width: 232px;
+  height: 100%;
   display: flex;
+  flex-direction: column;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-subtle);
 }
 
-.drafts-header {
+/* 头部高度对齐编辑区/预览区工具栏，三栏分隔线连通 */
+.drafts-sidebar-header {
+  flex-shrink: 0;
+  height: var(--toolbar-height);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  padding: 0 10px 0 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  user-select: none;
+}
+
+.drafts-sidebar-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
   font-weight: 700;
   color: var(--text-primary);
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+}
+
+.drafts-sidebar-title span:first-child {
+  display: inline-flex;
+  color: var(--text-secondary);
+}
+
+.drafts-sidebar-footer {
+  flex-shrink: 0;
+  height: var(--status-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 11px;
+  color: var(--text-muted);
+  user-select: none;
 }
 
 .drafts-new-btn {
@@ -408,10 +422,11 @@ html, body {
 }
 
 .drafts-list {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 320px;
+  padding: 8px;
   overflow-y: auto;
 }
 
@@ -660,4 +675,14 @@ input:checked + .slider:before {
 
 .slider.round:before {
   border-radius: 50%;
+}
+
+/* ==============================================================================
+   Responsive: 窄屏下压缩常驻草稿箱宽度 (保证编辑区与仿真实机预览可用)
+   ============================================================================== */
+@media (max-width: 1180px) {
+  .drafts-sidebar {
+    flex-basis: 188px;
+    width: 188px;
+  }
 }

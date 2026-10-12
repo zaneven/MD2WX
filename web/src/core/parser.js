@@ -384,8 +384,10 @@ const LIST_ITEM_RE = /^(\s*)([-*+]|\d{1,9}[.)])(\s+(.*))?$/;
  * 段落行合并 (CommonMark 软换行语义)：
  * - 行尾 2+ 空格或单个反斜杠 = 硬换行，插入 @@MDBR_0@@ 占位 (行内解析后还原为 <br />)；
  * - 普通软换行：相邻字符任一侧为 CJK/全角字符时直接拼接，否则以空格拼接。
+ * forceBreaks=true 关掉软换行语义，行与行之间一律硬换行：引用块内作者手写的分行
+ * (开头的作者/标签/摘要等信息) 必须逐行保留，否则推送微信后会塌成一段。
  */
-function joinParagraphLines(buf) {
+function joinParagraphLines(buf, forceBreaks = false) {
   const parts = buf.map((raw) => {
     let hard = false;
     let ln = raw;
@@ -408,7 +410,7 @@ function joinParagraphLines(buf) {
       continue;
     }
     const prevLn = parts[i - 1][1];
-    if (parts[i - 1][0]) {
+    if (parts[i - 1][0] || forceBreaks) {
       result += '@@MDBR_0@@' + ln;
       continue;
     }
@@ -980,7 +982,8 @@ export function markdownToWechatHtml(mdText, themeName = DEFAULT_THEME_ID, custo
   }
 
   // 块级渲染主循环 (嵌套引用会对内层行递归调用 renderBlockLines)
-  function renderBlockLines(blockLines) {
+  function renderBlockLines(blockLines, forceBreaks = false) {
+    // forceBreaks: 引用块内层渲染，段内每行独立成行 (见 joinParagraphLines)
     // 每层递归独立的块状态
     let inCodeBlock = false;
     let codeLang = '';
@@ -1040,7 +1043,7 @@ export function markdownToWechatHtml(mdText, themeName = DEFAULT_THEME_ID, custo
 
     function flushPara() {
       if (!paraBuf.length) return '';
-      const joined = joinParagraphLines(paraBuf);
+      const joined = joinParagraphLines(paraBuf, forceBreaks);
       paraBuf = [];
       const pText = inlineFmt(joined);
       return `
@@ -1270,7 +1273,7 @@ ${pText}
         let run = [];
         const flushQuoteRun = () => {
           if (run.length) {
-            segParts.push(...renderBlockLines(run.slice()));
+            segParts.push(...renderBlockLines(run.slice(), true));
             run = [];
           }
         };
