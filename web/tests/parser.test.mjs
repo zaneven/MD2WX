@@ -7,6 +7,7 @@ import {
   parseFrontmatter,
   formatInline,
   collectExternalImageUrls,
+  expandObsidianImages,
 } from '../src/core/parser.js';
 
 test('parseFrontmatter 基本解析与剥离', () => {
@@ -71,6 +72,41 @@ test('collectExternalImageUrls 检测外链图并跳过微信 CDN 与代码围�
   ].join('\n');
   const urls = collectExternalImageUrls(md);
   assert.deepEqual(urls, ['https://cdn.example.com/a.png']);
+});
+
+// ==================== Obsidian wiki 图片语法兼容 ====================
+
+test('expandObsidianImages 各种语法归一化', () => {
+  assert.equal(expandObsidianImages('![[arch.png]]'), '![](arch.png)');
+  assert.equal(expandObsidianImages('![[d.png|说明]]'), '![说明](d.png)');
+  assert.equal(expandObsidianImages('![[d.png|320]]'), '![](d.png)');
+  assert.equal(expandObsidianImages('![[d.png|100x200]]'), '![](d.png)');
+  assert.equal(expandObsidianImages('![[my image.png]]'), '![](my%20image.png)');
+  assert.equal(expandObsidianImages('[[arch.png]]'), '![](arch.png)');
+  assert.equal(expandObsidianImages('[[某篇笔记]] 与 [[Note Name]]'), '[[某篇笔记]] 与 [[Note Name]]');
+});
+
+test('expandObsidianImages 跳过围栏与行内代码', () => {
+  assert.equal(expandObsidianImages('`![[x.png]]`'), '`![[x.png]]`');
+  assert.equal(expandObsidianImages('```\n![[y.png]]\n```'), '```\n![[y.png]]\n```');
+});
+
+test('expandObsidianImages 幂等', () => {
+  const src = '![[a.png]] [[b.png|c]] [[note]] ![alt](x.png)';
+  const once = expandObsidianImages(src);
+  assert.equal(expandObsidianImages(once), once);
+  assert.ok(once.includes('![alt](x.png)'));
+});
+
+test('markdownToWechatHtml 渲染 Obsidian 图片为 img', () => {
+  const html = markdownToWechatHtml(
+    '段落前 ![[架构图.png]] 中段。\n\n![[photo.jpeg]]\n\n![[d.png|系统架构]]\n\n笔记 [[某篇笔记]]',
+    'tech-blue', null, { insertCover: false },
+  );
+  assert.equal((html.match(/<img/g) || []).length, 3);
+  assert.ok(html.includes('<img src="架构图.png"'));
+  assert.ok(html.includes('alt="系统架构"'));
+  assert.ok(html.includes('[[某篇笔记]]'));
 });
 
 // ==================== CommonMark + GFM + 扩展语法完整支持 (v1.5.0) ====================

@@ -109,6 +109,57 @@ def hello():
         self.assertNotIn("assets/arch.png", html)
         self.assertIn("▲ 图：全自动流水线架构全貌", html)
 
+    def test_obsidian_wiki_image_block_and_inline(self):
+        """Obsidian ![[文件名]] 嵌入语法：块级与内联都归一化为 <img>"""
+        html = markdown_to_wechat_html("段落前 ![[架构图.png]] 中段。\n\n![[photo.jpeg]]\n")
+        self.assertEqual(html.count("<img"), 2)
+        self.assertIn('<img src="架构图.png"', html)
+        self.assertIn('<img src="photo.jpeg"', html)
+        self.assertNotIn("![[", html)
+
+    def test_obsidian_wiki_image_alias_and_size(self):
+        """别名 -> alt；数字/尺寸别名按尺寸丢弃"""
+        html = markdown_to_wechat_html("![[d.png|系统架构]] 与 ![[s.png|320]] 与 ![[t.png|100x200]]")
+        self.assertIn('alt="系统架构"', html)
+        self.assertEqual(html.count('<img src="s.png" alt=""'), 1)
+        self.assertEqual(html.count('<img src="t.png" alt=""'), 1)
+
+    def test_obsidian_wiki_image_space_encoding(self):
+        """含空格文件名转义为 %20（现有图片正则组不支持空格）"""
+        html = markdown_to_wechat_html("![[my image.png]]")
+        self.assertIn('<img src="my%20image.png"', html)
+
+    def test_obsidian_bare_link_requires_image_ext(self):
+        """裸链接 [[x]] 仅图片扩展名才转；笔记链接保持原样"""
+        html = markdown_to_wechat_html("图 [[arch.png]] 与笔记 [[某篇笔记]] 与 [[Note Name]]")
+        self.assertIn('<img src="arch.png"', html)
+        self.assertIn("[[某篇笔记]]", html)
+        self.assertIn("[[Note Name]]", html)
+
+    def test_obsidian_wiki_skips_code(self):
+        """围栏代码块与行内代码内的字面量不被转换"""
+        html = markdown_to_wechat_html("行内 `![[x.png]]` 与\n\n```\n![[y.png]]\n```\n")
+        self.assertNotIn('<img src="x.png"', html)
+        self.assertNotIn('<img src="y.png"', html)
+        self.assertIn("![[x.png]]", html)
+        self.assertIn("![[y.png]]", html)
+
+    def test_obsidian_wiki_image_map_swap(self):
+        """wiki 图片经 image_map 精确换链到微信 CDN"""
+        md = "![[assets/arch.png]]"
+        image_map = {"assets/arch.png": "http://mmbiz.qpic.cn/sz_mmbiz_png/mock/0?wx_fmt=png"}
+        html = markdown_to_wechat_html(md, image_map=image_map)
+        self.assertIn("http://mmbiz.qpic.cn/sz_mmbiz_png/mock/0?wx_fmt=png", html)
+        self.assertNotIn("assets/arch.png", html)
+
+    def test_expand_obsidian_images_idempotent(self):
+        """归一化幂等：重复调用不改变结果，标准语法不受影响"""
+        from md2wx.parser import expand_obsidian_images
+        src = "![[a.png]] [[b.png|c]] [[note]] ![alt](x.png)"
+        once = expand_obsidian_images(src)
+        self.assertEqual(expand_obsidian_images(once), once)
+        self.assertIn("![alt](x.png)", once)
+
     def test_strip_markdown_digest(self):
         """测试纯文本摘要提取"""
         md = "# 标题\n\n这是**加粗文字**与`代码`。[链接](http://example.com)"

@@ -94,6 +94,15 @@ Setext 二级标题
 
 段落中内联图片 ![行内图](https://cdn.example.com/img/inline.png) 验证。
 
+Obsidian wiki 图片：块级 ![[wiki-block.png]] 与内联 ![[wiki-inline.png]] 嵌入验证。
+带别名 ![[wiki-alias.png|别名说明]] 与尺寸 ![[wiki-size.png|320]] 写法验证。
+含空格文件名 ![[wiki space.png]] 与裸图片链接 [[wiki-bare.jpg]] 归一化验证。
+非图片裸链接 [[某篇笔记链接]] 保持原样不改写。
+
+```md
+代码围栏内的 ![[literal.png]] 不应被转换
+```
+
 参考式链接见 [参考手册][manual] 与折叠式 [manual]，定义在文末。
 参考式图片 ![参考图][logo]。
 

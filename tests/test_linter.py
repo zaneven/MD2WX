@@ -135,3 +135,23 @@ def test_duplicate_image_warns():
         "![复用](https://cdn.example.com/hero.png)\n\n正文\n"
     )
     assert "duplicate-image" in _codes(lint_markdown(md))
+
+
+def test_obsidian_wiki_images_counted():
+    """Obsidian ![[x.png]] 图片纳入 alt 缺失与重复引用检查"""
+    md = (
+        "---\ntitle: 短标题\ndigest: 摘要\n---\n\n"
+        "![[a.png]]\n\n![[a.png]]\n\n正文\n"
+    )
+    codes = _codes(lint_markdown(md))
+    assert "image-alt-missing" in codes   # 无别名 -> alt 缺失
+    assert "duplicate-image" in codes     # 同图重复引用
+
+
+def test_obsidian_wiki_image_with_alias_has_alt():
+    """带别名的 wiki 图片视为已有 alt，不报缺失"""
+    md = (
+        "---\ntitle: 短标题\ndigest: 摘要\n---\n\n"
+        "![[a.png|架构说明]]\n\n正文\n"
+    )
+    assert "image-alt-missing" not in _codes(lint_markdown(md))

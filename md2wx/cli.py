@@ -20,6 +20,7 @@ from .parser import (
     strip_markdown,
     extract_quote_text,
     collect_external_image_urls,
+    expand_obsidian_images,
 )
 from .themes import list_themes, get_theme, get_builtin_themes_dir, get_user_themes_dir, get_builtin_theme_cover
 from .cover import (
@@ -246,6 +247,10 @@ def main():
 
     # 3. 解析 Frontmatter 与正文
     meta, body_md = parse_frontmatter(raw_content)
+
+    # 3.1 Obsidian wiki 图片语法归一化 (![[x.png]] -> ![](x.png))：
+    #     让后续 CDN 上传扫描、外链检测与渲染统一按标准图片语法处理
+    body_md = expand_obsidian_images(body_md)
 
     # 3.5 发稿规范自检 (--lint 仅输出报告，存在阻断问题时以非零码退出)
     if args.lint:

@@ -53,6 +53,67 @@ def strip_markdown(md_text: str, max_len: int = 120) -> str:
     plain = " ".join(lines)
     return plain[:max_len].strip()
 
+# ------------------------------------------------------------------------------
+# Obsidian wiki 图片语法归一化
+# Obsidian 本地插图使用 ![[文件名]] 嵌入语法 (裸链接形态 [[文件名]])，而 MD2WX 图片管道
+# 仅识别标准 Markdown ![alt](path)。这里先做一次纯字符串归一化，把 wiki 图片转换为标准
+# 语法，从而无缝复用既有 inline/块级图片、image_map 换链、外链检测与 lint 全链路。
+# ------------------------------------------------------------------------------
+_OBSIDIAN_IMG_EXTS = frozenset({
+    "png", "jpg", "jpeg", "gif", "webp", "bmp", "svg",
+    "avif", "tiff", "tif", "ico", "heic",
+})
+_OBSIDIAN_WIKI_RE = re.compile(r"(!?)\[\[([^\[\]]+?)\]\]")
+_INLINE_CODE_RE = re.compile(r"(`+)((?:(?!\1)[\s\S])+?)\1")
+_WIKI_SIZE_RE = re.compile(r"^\d+(?:\s*x\s*\d+)?$", re.IGNORECASE)
+
+def _wiki_target_is_image(target: str) -> bool:
+    """目标是否带图片扩展名 (png/jpg/...)，用于甄别裸链接 [[x]] 是否为图片"""
+    ext = target.rpartition(".")[2].lower()
+    return bool(ext) and ext in _OBSIDIAN_IMG_EXTS
+
+def _wiki_to_md_image(match: "re.Match") -> str:
+    """单条 wiki 语法 -> 标准 Markdown 图片；非图片 (如笔记链接) 原样返回"""
+    forced = match.group(1) == "!"          # ![[...]] 一律视为图片嵌入
+    target, _, alias = match.group(2).partition("|")
+    target = target.strip()
+    alias = alias.strip()
+    if not target:
+        return match.group(0)
+    if not forced and not _wiki_target_is_image(target):
+        return match.group(0)               # 裸 [[某篇笔记]] 等非图片链接保持原样
+    # Obsidian 的 |100 / |100x200 是尺寸而非别名，标准 Markdown 无宽度语义，丢弃
+    alt = "" if _WIKI_SIZE_RE.match(alias) else alias
+    src = target.replace(" ", "%20")        # 现有图片正则组不支持空格，转义后下游 unquote 还原
+    return f"![{alt}]({src})"
+
+def expand_obsidian_images(md_text: str) -> str:
+    """
+    将 Obsidian wiki 图片语法归一化为标准 Markdown 图片语法 (幂等)：
+      ![[arch.png]]        -> ![](arch.png)
+      ![[arch.png|说明]]    -> ![说明](arch.png)
+      ![[arch.png|100]]     -> ![](arch.png)          (数字别名按尺寸丢弃)
+      ![[my image.png]]     -> ![](my%20image.png)     (空格转义，下游 unquote 还原)
+      [[arch.png]]          -> ![](arch.png)           (裸链接仅图片扩展名才转)
+    跳过围栏代码块与行内代码，避免误伤示例文本中的字面量。
+    """
+    def _convert(part: str) -> str:
+        """转换普通文本段，行内代码片段原样保留 (与 format_inline 的 save_code 同款切分)"""
+        out: List[str] = []
+        pos = 0
+        for m in _INLINE_CODE_RE.finditer(part):
+            out.append(_OBSIDIAN_WIKI_RE.sub(_wiki_to_md_image, part[pos:m.start()]))
+            out.append(m.group(0))
+            pos = m.end()
+        out.append(_OBSIDIAN_WIKI_RE.sub(_wiki_to_md_image, part[pos:]))
+        return "".join(out)
+
+    segments = re.split(r"(```.*?```|~~~.*?~~~)", md_text, flags=re.DOTALL)
+    return "".join(
+        seg if seg.startswith("```") or seg.startswith("~~~") else _convert(seg)
+        for seg in segments
+    )
+
 # 微信官方图片 CDN 域名 (外链图片检测白名单，这些域名之外的图片会被微信编辑器封禁)
 WECHAT_CDN_HOSTS = ("mmbiz.qpic.cn", "mmbiz.wpimg.cn")
 
@@ -62,6 +123,7 @@ def collect_external_image_urls(md_text: str) -> List[str]:
     微信编辑器会封禁外站图床的图片，调用方应提示用户转存或自动换链。
     跳过代码围栏段避免误报示例代码中的链接；按出现顺序去重。
     """
+    md_text = expand_obsidian_images(md_text)
     urls: List[str] = []
     seen = set()
     segments = re.split(r"(```.*?```|~~~.*?~~~)", md_text, flags=re.DOTALL)
@@ -1052,6 +1114,10 @@ def markdown_to_wechat_html(
     rich_blocks: 富文本块列表 (Mermaid/公式，由 richrender 预渲染)，
     块级 token 独占一行时直接落块，避免 <div> 嵌入 <p> 被微信净化破坏
     """
+    # 0. Obsidian wiki 图片语法归一化 (幂等)：![[x.png]] -> ![](x.png)，
+    #    使其复用后续 inline/块级图片与 image_map 换链管道
+    md_text = expand_obsidian_images(md_text)
+
     # 块级富文本 token -> 渲染产物映射 (仅 display 块；行内公式仍走后置替换)
     rich_block_map: Dict[str, str] = {
         b["token"]: b.get("html", "")

@@ -89,6 +89,68 @@ export function stripMarkdown(mdText, maxLen = 120) {
 // 微信官方图片 CDN 域名 (外链图片检测白名单，之外的图片会被微信编辑器封禁)
 export const WECHAT_CDN_HOSTS = ['mmbiz.qpic.cn', 'mmbiz.wpimg.cn'];
 
+// ------------------------------------------------------------------------------
+// Obsidian wiki 图片语法归一化 (与 md2wx/parser.py expand_obsidian_images 镜像)
+// Obsidian 本地插图使用 ![[文件名]] 嵌入语法 (裸链接形态 [[文件名]])，而图片管道仅识别
+// 标准 Markdown ![alt](path)。这里先做一次纯字符串归一化，把 wiki 图片转换为标准语法，
+// 从而无缝复用既有 inline/块级图片与 collectExternalImageUrls 全链路。
+// ------------------------------------------------------------------------------
+const OBSIDIAN_IMG_EXTS = new Set([
+  'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg',
+  'avif', 'tiff', 'tif', 'ico', 'heic',
+]);
+const OBSIDIAN_WIKI_RE = /(!?)\[\[([^\[\]]+?)\]\]/g;
+const INLINE_CODE_RE = /(`+)((?:(?!\1)[\s\S])+?)\1/g;
+const OBSIDIAN_WIKI_SIZE_RE = /^\d+(?:\s*x\s*\d+)?$/i;
+
+function wikiTargetIsImage(target) {
+  const dot = target.lastIndexOf('.');
+  if (dot < 0) return false;
+  return OBSIDIAN_IMG_EXTS.has(target.slice(dot + 1).toLowerCase());
+}
+
+function wikiToMdImage(match, bang, inner) {
+  const forced = bang === '!'; // ![[...]] 一律视为图片嵌入
+  const pipeIdx = inner.indexOf('|');
+  const target = (pipeIdx >= 0 ? inner.slice(0, pipeIdx) : inner).trim();
+  const alias = (pipeIdx >= 0 ? inner.slice(pipeIdx + 1) : '').trim();
+  if (!target) return match;
+  if (!forced && !wikiTargetIsImage(target)) return match; // 裸 [[某篇笔记]] 等非图片链接保持原样
+  // Obsidian 的 |100 / |100x200 是尺寸而非别名，标准 Markdown 无宽度语义，丢弃
+  const alt = OBSIDIAN_WIKI_SIZE_RE.test(alias) ? '' : alias;
+  const src = target.replace(/ /g, '%20'); // 现有图片正则组不支持空格，转义后下游 decode 还原
+  return `![${alt}](${src})`;
+}
+
+/**
+ * 将 Obsidian wiki 图片语法归一化为标准 Markdown 图片语法 (幂等)：
+ *   ![[arch.png]]      -> ![](arch.png)
+ *   ![[arch.png|说明]]  -> ![说明](arch.png)
+ *   ![[arch.png|100]]   -> ![](arch.png)          (数字别名按尺寸丢弃)
+ *   ![[my image.png]]   -> ![](my%20image.png)     (空格转义，下游 decode 还原)
+ *   [[arch.png]]        -> ![](arch.png)           (裸链接仅图片扩展名才转)
+ * 跳过围栏代码块与行内代码，避免误伤示例文本中的字面量。
+ */
+export function expandObsidianImages(mdText) {
+  const convert = (part) => {
+    let out = '';
+    let pos = 0;
+    let m;
+    INLINE_CODE_RE.lastIndex = 0;
+    while ((m = INLINE_CODE_RE.exec(part)) !== null) {
+      out += part.slice(pos, m.index).replace(OBSIDIAN_WIKI_RE, wikiToMdImage);
+      out += m[0];
+      pos = m.index + m[0].length;
+    }
+    out += part.slice(pos).replace(OBSIDIAN_WIKI_RE, wikiToMdImage);
+    return out;
+  };
+  const segments = String(mdText || '').split(/(```[\s\S]*?```|~~~[\s\S]*?~~~)/);
+  return segments
+    .map((seg) => (seg.startsWith('```') || seg.startsWith('~~~') ? seg : convert(seg)))
+    .join('');
+}
+
 /**
  * 收集正文 Markdown 中的外链图片 URL (http/https 且非微信官方 CDN)。
  * 跳过代码围栏段避免误报示例代码中的链接；按出现顺序去重。
@@ -96,7 +158,7 @@ export const WECHAT_CDN_HOSTS = ['mmbiz.qpic.cn', 'mmbiz.wpimg.cn'];
 export function collectExternalImageUrls(mdText) {
   const urls = [];
   const seen = new Set();
-  const segments = String(mdText || '').split(/(```[\s\S]*?```|~~~[\s\S]*?~~~)/);
+  const segments = String(expandObsidianImages(mdText) || '').split(/(```[\s\S]*?```|~~~[\s\S]*?~~~)/);
   for (const seg of segments) {
     if (seg.startsWith('```') || seg.startsWith('~~~')) continue;
     const imgRe = /!\[[^\]]*\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g;
@@ -948,6 +1010,9 @@ export function preprocessLines(lines) {
 }
 
 export function markdownToWechatHtml(mdText, themeName = DEFAULT_THEME_ID, customOverride = null, renderOptions = {}) {
+  // 0. Obsidian wiki 图片语法归一化 (幂等)：![[x.png]] -> ![](x.png)
+  mdText = expandObsidianImages(mdText);
+
   const theme = getTheme(themeName, customOverride);
   const accent = theme.accent;
   const textColor = theme.text_color;

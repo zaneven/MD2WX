@@ -15,7 +15,7 @@ MD2WX 发稿规范校验器 (md2wx --lint)
 import re
 from typing import Dict, List
 
-from .parser import parse_frontmatter, collect_external_image_urls
+from .parser import parse_frontmatter, collect_external_image_urls, expand_obsidian_images
 
 DEVLOG_TITLE_MAX_LEN = 20
 DEVLOG_DIGEST_MAX_LEN = 50
@@ -85,6 +85,8 @@ def lint_markdown(raw_md: str) -> List[Dict[str, str]]:
         issues.append({"level": level, "code": code, "message": message})
 
     meta, body = parse_frontmatter(raw_md)
+    # Obsidian wiki 图片语法归一化：让图片 alt/重复引用/外链检查覆盖 ![[x.png]] 写法
+    body = expand_obsidian_images(body)
 
     # 1. 主标题：frontmatter title 优先，其次首个 H1
     title = meta.get("title") or ""
