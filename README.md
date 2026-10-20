@@ -190,11 +190,11 @@ MD2WX 官方内置了 13 套风格截然不同的设计主题（均位于 `md2wx
 
 | 主题代号 | 视觉风格 | 核心视觉组件组合 (Styles) | 推荐场景 |
 | :--- | :--- | :--- | :--- |
-| `tech-blue` *(默认)* | **现代科技蓝** | 极简容器 + 下划粗线 H1 + 左侧竖条 H2 + Mac 圆点代码框 + 斑马纹表格 | 架构复盘、技术干货、开发者手记 |
+| `tech-blue` | **现代科技蓝** | 极简容器 + 下划粗线 H1 + 左侧竖条 H2 + Mac 圆点代码框 + 斑马纹表格 | 架构复盘、技术干货、开发者手记 |
 | `vintage-news` | **复古报刊** | 米黄纸质底色 + 衬线字体 + 双细线 H1 + 学术三线表 + 典雅大引号名言 | 人文深度长文、书摘精读、文化评论 |
 | `terminal-geek` | **极客终端** | 纯黑底色 + 等宽字 + 命令行 H1 + 终端运行状态条代码框 + 回显引用 | Linux/运维笔记、开源发布、黑客范 |
 | `warm-memo` | **温暖便签** | 暖杏底色 + 胶囊色块 H1/H2 + 日系 NOTE 便签贴纸 + 荧光笔涂鸦 H3 | 生活感悟、治愈随笔、读书手作 |
-| `acid-bold` | **先锋野兽派** | 纯黑粗实线框 + 黑色硬投影 + 粗黑方块列表 + 醒目大色块 | 青年态度、潮流观点、先锋专栏 |
+| `acid-bold` *(默认)* | **先锋野兽派** | 纯黑粗实线框 + 黑色硬投影 + 粗黑方块列表 + 醒目大色块 | 青年态度、潮流观点、先锋专栏 |
 | `elegant-purple` | **先锋优雅紫** | 微阴影悬浮卡片 + 柔和色块 H2 + 气泡卡片引用 + 渐变分割线 | 设计美学、独立思考、产品体验 |
 | `dark-night` | **暗黑极客风** | 沉浸深蓝灰底 + 冷冽荧光蓝 + 网格暗色表 + Mac 圆点深黑代码框 | 深夜阅读、极客笔记、沉浸长文 |
 | `warm-orange` | **温暖活力橙** | 温暖橙色调 + 下划粗线 H1 + 左条 H2 + 斑马纹表格 | 生活感悟、读书故事、个人随笔 |
@@ -213,7 +213,7 @@ MD2WX 官方内置了 13 套风格截然不同的设计主题（均位于 `md2wx
 <table>
   <tr>
     <td width="50%" align="center" valign="top">
-      <h4>✦ 现代科技蓝 (tech-blue · 默认)</h4>
+      <h4>✦ 现代科技蓝 (tech-blue)</h4>
       <p><i>硅谷现代排版 · 下划粗线 · 左侧竖条 · 斑马纹表格</i></p>
       <a href="assets/previews/tech-blue.png"><img src="assets/previews/tech-blue.png" alt="tech-blue" width="100%" /></a>
       <p><a href="previews/tech-blue.html">预览 HTML</a></p>
@@ -241,7 +241,7 @@ MD2WX 官方内置了 13 套风格截然不同的设计主题（均位于 `md2wx
   </tr>
   <tr>
     <td width="50%" align="center" valign="top">
-      <h4>✦ 先锋野兽派 (acid-bold)</h4>
+      <h4>✦ 先锋野兽派 (acid-bold · 默认)</h4>
       <p><i>高反差黑框硬投影 · 粗线条色块 · 波普视觉冲击</i></p>
       <a href="assets/previews/acid-bold.png"><img src="assets/previews/acid-bold.png" alt="acid-bold" width="100%" /></a>
       <p><a href="previews/acid-bold.html">预览 HTML</a></p>
@@ -293,7 +293,7 @@ MD2WX 官方内置了 13 套风格截然不同的设计主题（均位于 `md2wx
 <table>
   <tr>
     <td width="50%" align="center" valign="top">
-      <h4>✦ 现代科技蓝 (tech-blue · 默认)</h4>
+      <h4>✦ 现代科技蓝 (tech-blue)</h4>
       <a href="assets/covers/cover-tech-blue.png"><img src="assets/covers/cover-tech-blue.png" alt="tech-blue cover" width="100%" /></a>
     </td>
     <td width="50%" align="center" valign="top">
@@ -313,7 +313,7 @@ MD2WX 官方内置了 13 套风格截然不同的设计主题（均位于 `md2wx
   </tr>
   <tr>
     <td width="50%" align="center" valign="top">
-      <h4>✦ 先锋野兽派 (acid-bold)</h4>
+      <h4>✦ 先锋野兽派 (acid-bold · 默认)</h4>
       <a href="assets/covers/cover-acid-bold.png"><img src="assets/covers/cover-acid-bold.png" alt="acid-bold cover" width="100%" /></a>
     </td>
     <td width="50%" align="center" valign="top">

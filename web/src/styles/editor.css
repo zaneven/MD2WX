@@ -9,8 +9,34 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 12px;
+  gap: 8px;
+  padding: 0 10px;
   user-select: none;
+}
+
+/* 按钮较多时横向滚动，避免窄屏挤压；滚动条隐藏，鼠标滚轮/触控板可横向滚动 */
+.toolbar-scroll {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.toolbar-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.toolbar-scroll .toolbar-group {
+  flex-shrink: 0;
+}
+
+.toolbar-actions {
+  flex-shrink: 0;
 }
 
 .toolbar-group {

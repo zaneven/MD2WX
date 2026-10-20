@@ -319,7 +319,7 @@ export function renderCoverDirectCanvas(themeId, ratio, meta, scale = 2) {
  * @returns {Promise<Blob>}
  */
 export async function domToPngBlob(element, options = {}) {
-  const { width = 1175, height = 500, scale = 2, themeId = 'tech-blue', ratio = 'banner', meta = {} } = options;
+  const { width = 1175, height = 500, scale = 2, themeId = 'acid-bold', ratio = 'banner', meta = {} } = options;
 
   if (!element) {
     return await renderCoverDirectCanvas(themeId, ratio, meta, scale);

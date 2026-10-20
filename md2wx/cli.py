@@ -237,7 +237,7 @@ def main():
     parser.add_argument("input", nargs="?", help="Markdown 文件路径（留空则从标准输入 stdin 读取）")
     parser.add_argument("-o", "--output", help="输出 HTML 文件路径")
     parser.add_argument("-c", "--clip", action="store_true", help="将生成的带样式富文本直接复制到剪贴板（微信后台直接 Cmd+V）")
-    parser.add_argument("-t", "--theme", default="tech-blue", help="选择设计主题名称 (如 vintage-news, terminal-geek 等) 或指定外部 JSON 主题文件路径")
+    parser.add_argument("-t", "--theme", default="acid-bold", help="选择设计主题名称 (如 vintage-news, terminal-geek 等) 或指定外部 JSON 主题文件路径")
     parser.add_argument("--list-themes", action="store_true", help="列出所有可用的内置与用户自定义设计主题")
     parser.add_argument("--web", action="store_true", help="启动 MD2WX Web Studio 可视化排版工作台并在浏览器中打开")
     parser.add_argument("-p", "--publish", action="store_true", help="一键推送到微信公众号草稿箱 (同一文件再次发布时自动覆盖上次草稿)")

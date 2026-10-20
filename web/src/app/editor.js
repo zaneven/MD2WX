@@ -21,50 +21,12 @@ import {
   formatRelativeTime,
 } from './drafts.js';
 import { ICONS } from '../assets/icons.js';
+import sampleArticle from '../../../sample_article.md?raw';
 
 const textarea = document.getElementById('markdown-input');
 
-// 官方排版示范长文
-export const DEFAULT_SAMPLE_ARTICLE = `---
-title: 在喧嚣的时代，重塑深度思考的秩序
-author: 野生宝藏箱
-digest: 真正的专注，不是在安静的环境里做简单的事，而是在充满干扰的世界中守住内心的秩序。
----
-
-# 在喧嚣的时代，重塑深度思考的秩序
-
-> **作者**：野生宝藏箱
-> **核心标签**：AI 自动化 · 架构复盘 · 极客手记
-> **一句话简介**：从热点抓取到全自动排版，构建属于你的数字花园。
-
-真正的专注，不是在安静的环境里做简单的事，而是在充满干扰的世界中守住内心的秩序。我们每天接收海量的信息碎片，却越来越少体验到思维深潜的愉悦。阅读长文、推演逻辑、写下真实感悟，是抵抗思维退化的终极武器。
-
-## 01. 核心架构与设计哲学
-
-所谓卓越，就是将平凡的事反复雕琢，直到它泛出理性的光芒。
-
-### 核心设计组件对比
-
-| 模块 | 职责与定位 | 实现技术 |
-| :--- | :--- | :--- |
-| **Parser 引擎** | 解析 Markdown 并注入内联 CSS | 纯 Python 标准库 (零依赖) |
-| **Theme System** | JSON 文件驱动的视觉风格渲染 | Strategy Pattern + Deep Merge |
-| **Uploader** | 微信永久 CDN 换链搬运 | WeChat Media API |
-
-\`\`\`python
-def deploy_article(markdown_path: str, theme: str = "vintage-news"):
-    # 纯内联样式转换
-    html = markdown_to_wechat_html(markdown_path, theme_name=theme)
-    return html
-\`\`\`
-
-- 坚持纯 Python 标准库零沉重依赖；
-- 组件化视觉模式支持报刊、便签、终端等丰富变体；
-- 一键注入剪贴板，支持直接 Cmd+V 粘贴公众号后台。
-
----
-
-*▲ 图：全自动极简发布流水线架构全貌*`;
+// 官方排版示范：与 CLI 共用仓库根目录的 sample_article.md（单一数据源）
+export const DEFAULT_SAMPLE_ARTICLE = sampleArticle.trim();
 
 /**
  * 快捷插入 Markdown 语法
@@ -207,6 +169,10 @@ export function bindEditorEvents() {
   document.getElementById('tool-italic').addEventListener('click', () => insertFormatting('*', '*', '斜体文字'));
   document.getElementById('tool-h1').addEventListener('click', () => insertFormatting('# ', '\n', '一级主标题'));
   document.getElementById('tool-h2').addEventListener('click', () => insertFormatting('## ', '\n', '二级分区标题'));
+  document.getElementById('tool-h3').addEventListener('click', () => insertFormatting('### ', '\n', '三级小节标题'));
+  document.getElementById('tool-strike').addEventListener('click', () => insertFormatting('~~', '~~', '删除线文字'));
+  document.getElementById('tool-highlight').addEventListener('click', () => insertFormatting('==', '==', '重点高亮'));
+  document.getElementById('tool-inline-code').addEventListener('click', () => insertFormatting('`', '`', '行内代码'));
   document.getElementById('tool-quote').addEventListener('click', () => insertFormatting('> ', '\n', '核心观点与导读引言'));
   document.getElementById('tool-code').addEventListener('click', () => insertFormatting('```python\n', '\n```', '# 编写代码逻辑\nprint("Hello MD2WX")'));
   document.getElementById('tool-table').addEventListener('click', () => {
@@ -214,6 +180,10 @@ export function bindEditorEvents() {
     insertFormatting('', '', sampleTable);
   });
   document.getElementById('tool-list').addEventListener('click', () => insertFormatting('- ', '\n', '核心列表项'));
+  document.getElementById('tool-list-ordered').addEventListener('click', () => insertFormatting('1. ', '\n', '有序列表项'));
+  document.getElementById('tool-list-task').addEventListener('click', () => insertFormatting('- [ ] ', '\n', '待办事项'));
+  document.getElementById('tool-math').addEventListener('click', () => insertFormatting('$$\n', '\n$$', 'E = mc^2'));
+  document.getElementById('tool-mermaid').addEventListener('click', () => insertFormatting('```mermaid\n', '\n```', 'graph LR\n  A[Markdown] --> B[微信公众号]'));
   document.getElementById('tool-hr').addEventListener('click', () => insertFormatting('\n---\n', '', ''));
   document.getElementById('tool-link').addEventListener('click', () => insertFormatting('[', '](https://example.com)', '链接说明'));
 

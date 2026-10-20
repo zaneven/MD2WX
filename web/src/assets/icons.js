@@ -94,6 +94,57 @@ export const ICONS = {
     <line x1="15" x2="9" y1="4" y2="20"/>
   </svg>`,
 
+  strikethrough: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 4H9a3 3 0 0 0-2.83 4"/>
+    <path d="M14 12a4 4 0 0 1 0 8H6"/>
+    <line x1="4" x2="20" y1="12" y2="12"/>
+  </svg>`,
+
+  highlight: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m9 11-6 6v3h9l3-3"/>
+    <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>
+  </svg>`,
+
+  inlineCode: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5a2 2 0 0 0 2 2h1"/>
+    <path d="M16 3h1a2 2 0 0 1 2 2v5a2 2 0 0 0 2 2 2 2 0 0 0-2 2v5a2 2 0 0 1-2 2h-1"/>
+  </svg>`,
+
+  heading3: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 12h8"/>
+    <path d="M4 18V6"/>
+    <path d="M12 18V6"/>
+    <path d="M17.5 10.5c1.7-1 3.5 0 3.5 1.5a2 2 0 0 1-2 2"/>
+    <path d="M17 17.5c2 0 3.5.5 3.5 2.5a2.5 2.5 0 0 1-5 0"/>
+  </svg>`,
+
+  listOrdered: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="10" x2="21" y1="6" y2="6"/>
+    <line x1="10" x2="21" y1="12" y2="12"/>
+    <line x1="10" x2="21" y1="18" y2="18"/>
+    <path d="M4 6h1v4"/>
+    <path d="M4 10h2"/>
+    <path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/>
+  </svg>`,
+
+  listTodo: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="5" width="6" height="6" rx="1"/>
+    <path d="m3 17 2 2 4-4"/>
+    <line x1="13" x2="21" y1="6" y2="6"/>
+    <line x1="13" x2="21" y1="12" y2="12"/>
+    <line x1="13" x2="21" y1="18" y2="18"/>
+  </svg>`,
+
+  sigma: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 7V4H6l6 8-6 8h12v-3"/>
+  </svg>`,
+
+  workflow: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect width="8" height="8" x="3" y="3" rx="2"/>
+    <path d="M7 11v4a2 2 0 0 0 2 2h4"/>
+    <rect width="8" height="8" x="13" y="13" rx="2"/>
+  </svg>`,
+
   heading1: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M4 12h8"/>
     <path d="M4 18V6"/>

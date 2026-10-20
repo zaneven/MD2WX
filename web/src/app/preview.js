@@ -95,7 +95,7 @@ export function renderPreview() {
     linkToFootnote: state.enableFootnotes,
     insertCover: state.insertCoverEnabled,
     // 封面元数据必须从原始正文提取，避免富文本占位 token 泄漏进封面摘要
-    coverMeta: state.currentCoverMeta || extractCoverMeta(body, state.currentThemeId),
+    coverMeta: state.currentCoverMeta || extractCoverMeta(rawText, state.currentThemeId),
   });
   previewTarget.innerHTML = state.currentHtmlOutput;
 

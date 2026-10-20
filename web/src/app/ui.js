@@ -34,6 +34,14 @@ export function initIcons() {
   setIcon('#icon-italic', 'italic');
   setIcon('#icon-h1', 'heading1');
   setIcon('#icon-h2', 'heading2');
+  setIcon('#icon-h3', 'heading3');
+  setIcon('#icon-strike', 'strikethrough');
+  setIcon('#icon-highlight', 'highlight');
+  setIcon('#icon-inline-code', 'inlineCode');
+  setIcon('#icon-list-ordered', 'listOrdered');
+  setIcon('#icon-list-task', 'listTodo');
+  setIcon('#icon-math', 'sigma');
+  setIcon('#icon-mermaid', 'workflow');
   setIcon('#icon-quote', 'quote');
   setIcon('#icon-code', 'code');
   setIcon('#icon-table', 'table');

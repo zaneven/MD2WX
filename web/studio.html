@@ -152,34 +152,57 @@
       <section class="pane pane-editor" id="editor-pane" aria-label="Markdown 编辑区">
         <!-- Editor Formatting Toolbar -->
         <div class="editor-toolbar">
-          <div class="toolbar-group">
-            <button class="tool-btn" id="tool-bold" type="button" title="粗体 (Cmd+B)"><span id="icon-bold"></span></button>
-            <button class="tool-btn" id="tool-italic" type="button" title="斜体 (Cmd+I)"><span id="icon-italic"></span></button>
+          <div class="toolbar-scroll">
+            <div class="toolbar-group">
+              <button class="tool-btn" id="tool-bold" type="button" title="粗体 (Cmd+B)"><span id="icon-bold"></span></button>
+              <button class="tool-btn" id="tool-italic" type="button" title="斜体 (Cmd+I)"><span id="icon-italic"></span></button>
+              <button class="tool-btn" id="tool-strike" type="button" title="删除线 (~~文字~~)"><span id="icon-strike"></span></button>
+              <button class="tool-btn" id="tool-highlight" type="button" title="荧光高亮 (==文字==)"><span id="icon-highlight"></span></button>
+              <button class="tool-btn" id="tool-inline-code" type="button" title="行内代码 (`代码`)"><span id="icon-inline-code"></span></button>
+            </div>
+
             <div class="toolbar-divider"></div>
-            <button class="tool-btn" id="tool-h1" type="button" title="一级标题 (# 标题)"><span id="icon-h1"></span></button>
-            <button class="tool-btn" id="tool-h2" type="button" title="二级标题 (## 标题)"><span id="icon-h2"></span></button>
+
+            <div class="toolbar-group">
+              <button class="tool-btn" id="tool-h1" type="button" title="一级标题 (# 标题)"><span id="icon-h1"></span></button>
+              <button class="tool-btn" id="tool-h2" type="button" title="二级标题 (## 标题)"><span id="icon-h2"></span></button>
+              <button class="tool-btn" id="tool-h3" type="button" title="三级标题 (### 标题)"><span id="icon-h3"></span></button>
+            </div>
+
             <div class="toolbar-divider"></div>
-            <button class="tool-btn" id="tool-quote" type="button" title="引用导读块 (> 引言)"><span id="icon-quote"></span></button>
-            <button class="tool-btn" id="tool-code" type="button" title="代码块 (```代码```)"><span id="icon-code"></span></button>
-            <button class="tool-btn" id="tool-table" type="button" title="插入三线/斑马纹表格"><span id="icon-table"></span></button>
-            <button class="tool-btn" id="tool-list" type="button" title="列表项 (- 项目)"><span id="icon-list"></span></button>
-            <button class="tool-btn" id="tool-hr" type="button" title="分割线 (---)"><span id="icon-minus"></span></button>
-            <button class="tool-btn" id="tool-link" type="button" title="超链接 (Cmd+K)"><span id="icon-link"></span></button>
-            <div class="image-tool-wrap">
-              <button class="tool-btn" id="tool-image" type="button" title="插入图片 (图床上传 / 粘贴链接)"><span id="icon-image"></span></button>
-              <div class="image-menu" id="image-menu">
-                <div class="image-menu-title">插入图片</div>
-                <div class="image-menu-row">
-                  <input type="text" id="image-url-input" class="image-url-input" placeholder="粘贴图片链接 https://…" autocomplete="off" />
-                  <button class="image-menu-btn" id="image-url-insert" type="button" title="插入图片链接">插入</button>
+
+            <div class="toolbar-group">
+              <button class="tool-btn" id="tool-quote" type="button" title="引用导读块 (> 引言)"><span id="icon-quote"></span></button>
+              <button class="tool-btn" id="tool-code" type="button" title="代码块 (```代码```)"><span id="icon-code"></span></button>
+              <button class="tool-btn" id="tool-table" type="button" title="插入三线/斑马纹表格"><span id="icon-table"></span></button>
+              <button class="tool-btn" id="tool-list" type="button" title="无序列表 (- 项目)"><span id="icon-list"></span></button>
+              <button class="tool-btn" id="tool-list-ordered" type="button" title="有序列表 (1. 项目)"><span id="icon-list-ordered"></span></button>
+              <button class="tool-btn" id="tool-list-task" type="button" title="任务清单 (- [ ] 待办)"><span id="icon-list-task"></span></button>
+              <button class="tool-btn" id="tool-hr" type="button" title="分割线 (---)"><span id="icon-minus"></span></button>
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <div class="toolbar-group">
+              <button class="tool-btn" id="tool-link" type="button" title="超链接 (Cmd+K)"><span id="icon-link"></span></button>
+              <div class="image-tool-wrap">
+                <button class="tool-btn" id="tool-image" type="button" title="插入图片 (图床上传 / 粘贴链接)"><span id="icon-image"></span></button>
+                <div class="image-menu" id="image-menu">
+                  <div class="image-menu-title">插入图片</div>
+                  <div class="image-menu-row">
+                    <input type="text" id="image-url-input" class="image-url-input" placeholder="粘贴图片链接 https://…" autocomplete="off" />
+                    <button class="image-menu-btn" id="image-url-insert" type="button" title="插入图片链接">插入</button>
+                  </div>
+                  <button class="image-menu-upload" id="image-upload-trigger" type="button" title="选择本地图片上传到图床">上传本地图片（图床）</button>
+                  <div class="image-menu-hint" id="image-host-hint"></div>
                 </div>
-                <button class="image-menu-upload" id="image-upload-trigger" type="button" title="选择本地图片上传到图床">上传本地图片（图床）</button>
-                <div class="image-menu-hint" id="image-host-hint"></div>
               </div>
+              <button class="tool-btn" id="tool-math" type="button" title="数学公式 ($行内$ / $$块级$$)"><span id="icon-math"></span></button>
+              <button class="tool-btn" id="tool-mermaid" type="button" title="Mermaid 流程图 (```mermaid)"><span id="icon-mermaid"></span></button>
             </div>
           </div>
 
-          <div class="toolbar-group">
+          <div class="toolbar-group toolbar-actions">
             <button class="tool-btn" id="tool-clear" type="button" title="清空编辑器内容"><span id="icon-trash"></span></button>
           </div>
         </div>
@@ -205,7 +228,7 @@
               <span class="status-dot"></span>
               <span>实时秒级解析就绪</span>
             </span>
-            <span id="status-theme-tag">主题: 现代科技蓝</span>
+            <span id="status-theme-tag">主题: 先锋野兽派</span>
           </div>
           <div class="statusbar-right">
             <span id="status-word-count">0 字</span>
@@ -233,7 +256,7 @@
           <div class="theme-selector-wrapper">
             <button class="theme-selector-trigger" id="theme-trigger-btn" type="button" aria-haspopup="true" aria-expanded="false">
               <span class="theme-color-dot" id="current-theme-dot"></span>
-              <span id="current-theme-name">现代科技蓝</span>
+              <span id="current-theme-name">先锋野兽派</span>
               <span id="theme-chevron-icon"></span>
             </button>
             <div class="theme-dropdown" id="theme-dropdown-menu" role="menu">
@@ -376,8 +399,8 @@
             <div class="form-group">
               <label class="form-label" for="select-cover-theme">匹配排版主题</label>
               <select class="form-select" id="select-cover-theme">
-                <option value="tech-blue">现代科技蓝 (tech-blue)</option>
                 <option value="acid-bold">先锋野兽派 (acid-bold)</option>
+                <option value="tech-blue">现代科技蓝 (tech-blue)</option>
                 <option value="dark-night">暗黑极客风 (dark-night)</option>
                 <option value="elegant-purple">先锋优雅紫 (elegant-purple)</option>
                 <option value="terminal-geek">极客终端 (terminal-geek)</option>

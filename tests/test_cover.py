@@ -52,9 +52,9 @@ class TestDynamicCover(unittest.TestCase):
         # 微信生态绿包含官方认证徽标
         green_html = build_cover_html("wechat-green", build_cover_meta("wechat-green"))
         self.assertIn("wechat-verify-badge", green_html)
-        # 未知主题回退 tech-blue 预设
+        # 未知主题回退 acid-bold 预设
         fallback_meta = build_cover_meta("not-exist-theme")
-        self.assertEqual(fallback_meta["badge"], THEME_COVER_PRESETS["tech-blue"]["badgeText"])
+        self.assertEqual(fallback_meta["badge"], THEME_COVER_PRESETS["acid-bold"]["badgeText"])
 
     def test_render_graceful_fallback_without_browser(self):
         """测试无可用无头浏览器时安全返回 None (调用方回退静态封面)"""

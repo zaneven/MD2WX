@@ -335,7 +335,7 @@ def build_cover_meta(theme_id: str, title: str = "", digest: str = "",
     汇聚文章元数据与主题预设，生成封面渲染所需的完整 meta
     与 Web Studio extractCoverMeta 保持一致的截断上限 (标题 36 / 摘要 60 / 作者 16 / 标签 24)
     """
-    preset = THEME_COVER_PRESETS.get(theme_id, THEME_COVER_PRESETS["tech-blue"])
+    preset = THEME_COVER_PRESETS.get(theme_id, THEME_COVER_PRESETS["acid-bold"])
     tag = " · ".join(tags) if isinstance(tags, list) and tags else preset["defaultTag"]
     return {
         "title": (title or "在喧嚣时代重塑深度思考").strip()[:36],

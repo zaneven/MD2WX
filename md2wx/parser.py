@@ -1033,7 +1033,7 @@ def render_container(body_html: str, theme: dict) -> str:
 
     return f'<section style="{container_style}">\n{body_html}\n</section>'
 
-def render_wechat_article_header_cover(theme_id: str = "tech-blue", meta: dict = None) -> str:
+def render_wechat_article_header_cover(theme_id: str = "acid-bold", meta: dict = None) -> str:
     """生成可直接内嵌在微信公众号可复制正文顶部的富文本封面 HTML (自包含纯内联样式)"""
     if not meta:
         meta = {}
@@ -1101,7 +1101,7 @@ def render_wechat_article_header_cover(theme_id: str = "tech-blue", meta: dict =
 
 def markdown_to_wechat_html(
     md_text: str,
-    theme_name: str = "tech-blue",
+    theme_name: str = "acid-bold",
     image_map: Optional[Dict[str, str]] = None,
     link_to_footnote: bool = True,
     insert_cover: bool = True,

@@ -53,9 +53,9 @@ MD2WX/
 │   ├── publisher.py            # 微信公众号后台交互（access_token、素材上传、草稿箱推送）
 │   ├── drafts.py               # 草稿箱管理（列表/覆盖更新/删除/本地文件与草稿 ID 映射）
 │   └── themes/                 # 13大主题 JSON 配置文件夹
-│       ├── tech-blue.json      # 现代科技蓝（默认）
+│       ├── acid-bold.json      # 先锋野兽派（默认）
+│       ├── tech-blue.json      # 现代科技蓝
 │       ├── terminal-geek.json  # 极客终端黑
-│       ├── acid-bold.json      # 先锋野兽派
 │       ├── covers/             # 13大主题默认封面 (随包分发，动态渲染不可用时的降级兜底)
 │       └── ...
 │

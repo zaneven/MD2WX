@@ -17,7 +17,7 @@ import themeWarmMemo from '../../../md2wx/themes/warm-memo.json';
 import themeWarmOrange from '../../../md2wx/themes/warm-orange.json';
 import themeWechatGreen from '../../../md2wx/themes/wechat-green.json';
 
-export const DEFAULT_THEME_ID = 'tech-blue';
+export const DEFAULT_THEME_ID = 'acid-bold';
 
 export const FALLBACK_BASE_THEME = {
   id: 'tech-blue',

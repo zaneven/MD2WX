@@ -108,9 +108,9 @@ export const THEME_COVER_PRESETS = {
 /**
  * 从 Markdown 文本中自动智能提取封面元数据
  */
-export function extractCoverMeta(markdownText, themeId = 'tech-blue') {
+export function extractCoverMeta(markdownText, themeId = 'acid-bold') {
   const { meta, body } = parseFrontmatter(markdownText || '');
-  const preset = THEME_COVER_PRESETS[themeId] || THEME_COVER_PRESETS['tech-blue'];
+  const preset = THEME_COVER_PRESETS[themeId] || THEME_COVER_PRESETS['acid-bold'];
 
   // 1. 提取标题
   let title = meta.title || '';
@@ -166,7 +166,7 @@ function escapeMultiline(str) {
  * @param {Object} meta
  * @param {boolean} showSafeGuide - 是否叠加安全参考线
  */
-export function renderCoverHtml(themeId = 'tech-blue', ratio = 'banner', meta = {}, showSafeGuide = false) {
+export function renderCoverHtml(themeId = 'acid-bold', ratio = 'banner', meta = {}, showSafeGuide = false) {
   if (ratio === 'dual') {
     const bannerHtml = renderCoverHtml(themeId, 'banner', meta, false);
     const squareHtml = renderCoverHtml(themeId, 'square', meta, false);
@@ -311,7 +311,7 @@ export function renderCoverHtml(themeId = 'tech-blue', ratio = 'banner', meta = 
  * @param {Object} meta
  * @returns {string}
  */
-export function renderWechatArticleHeaderCover(themeId = 'tech-blue', meta = {}) {
+export function renderWechatArticleHeaderCover(themeId = 'acid-bold', meta = {}) {
   const safeTitle = escapeMultiline(meta.title || '在喧嚣时代重塑深度思考');
   const safeDigest = escapeMultiline(meta.digest || '真正的专注，是在充满干扰的世界中守住内心的秩序');
   const safeAuthor = escapeHtml(meta.author || '野生宝藏箱');

@@ -113,7 +113,7 @@ export function initCoverStudio() {
     if (shareTitleEl) shareTitleEl.textContent = coverMeta.title || '文章标题';
     if (shareDigestEl) shareDigestEl.textContent = coverMeta.digest || '真正的专注，是在充满干扰的世界中守住内心的秩序。';
     if (shareThumbEl) {
-      const preset = THEME_COVER_PRESETS[coverThemeId] || THEME_COVER_PRESETS['tech-blue'];
+      const preset = THEME_COVER_PRESETS[coverThemeId] || THEME_COVER_PRESETS['acid-bold'];
       shareThumbEl.innerHTML = `
         <div style="width:100%;height:100%;background:#0a0a0a;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:4px;gap:2px;">
           <span style="font-size:9px;font-weight:900;color:#34d399;line-height:1;">${(preset.badgeText || 'COVER').slice(0, 6)}</span>
