@@ -227,5 +227,88 @@ class TestPublisher(unittest.TestCase):
         self.assertEqual(ctx.exception.errcode, 42001)
 
 
+    def test_publish_draft_update_existing(self):
+        """传入 update_media_id 时走 draft/update，且 articles 为单个对象"""
+        update_res = json.dumps({"errcode": 0, "errmsg": "ok"}).encode("utf-8")
+        get_res = json.dumps({"news_item": [{"url": "https://mp.weixin.qq.com/s/updated"}]}).encode("utf-8")
+        responses = [io.BytesIO(update_res), io.BytesIO(get_res)]
+        captured = []
+
+        def mock_urlopen(req, timeout=30):
+            captured.append(req)
+            return responses.pop(0)
+
+        with mock.patch("md2wx.publisher.load_env", return_value={}), \
+             mock.patch("urllib.request.urlopen", side_effect=mock_urlopen):
+            res = publish_draft_to_wechat(
+                token="test_token",
+                title="更新标题",
+                content_html="<p>更新正文</p>",
+                thumb_media_id="test_thumb_123",
+                update_media_id="existing_draft_id",
+            )
+
+        self.assertEqual(res["media_id"], "existing_draft_id")
+        self.assertTrue(res["updated"])
+        self.assertEqual(res["preview_url"], "https://mp.weixin.qq.com/s/updated")
+
+        update_req = captured[0]
+        self.assertIn("draft/update?access_token=test_token", update_req.full_url)
+        body = json.loads(update_req.data.decode("utf-8"))
+        self.assertEqual(body["media_id"], "existing_draft_id")
+        self.assertEqual(body["index"], 0)
+        self.assertIsInstance(body["articles"], dict)
+        self.assertEqual(body["articles"]["title"], "更新标题")
+
+    def test_publish_draft_update_via_proxy(self):
+        """代理模式下更新草稿使用 draft_update action"""
+        responses = [
+            io.BytesIO(json.dumps({"errcode": 0}).encode("utf-8")),
+            io.BytesIO(json.dumps({"news_item": []}).encode("utf-8")),
+        ]
+        captured = []
+
+        def mock_urlopen(req, timeout=30):
+            captured.append(req)
+            return responses.pop(0)
+
+        with mock.patch("md2wx.publisher.load_env", return_value={"WECHAT_PROXY_URL": "https://proxy.example.com"}), \
+             mock.patch("urllib.request.urlopen", side_effect=mock_urlopen):
+            res = publish_draft_to_wechat(
+                token="test_token",
+                title="代理更新",
+                content_html="<p>正文</p>",
+                thumb_media_id="thumb",
+                update_media_id="proxy_draft_id",
+            )
+
+        self.assertEqual(res["media_id"], "proxy_draft_id")
+        self.assertTrue(res["updated"])
+        body = json.loads(captured[0].data.decode("utf-8"))
+        self.assertEqual(body["action"], "draft_update")
+        self.assertEqual(body["mediaId"], "proxy_draft_id")
+        self.assertEqual(body["payload"]["media_id"], "proxy_draft_id")
+
+
+    def test_publish_draft_update_proxy_error_surfaces(self):
+        """代理返回 error 字段时更新流程必须报错，不能静默成功"""
+        from md2wx.uploader import WeChatApiError
+
+        with mock.patch("md2wx.publisher.load_env", return_value={"WECHAT_PROXY_URL": "https://proxy.example.com"}), \
+             mock.patch("urllib.request.urlopen", return_value=io.BytesIO(
+                 json.dumps({"error": "未知的代理动作: draft_update"}).encode("utf-8")
+             )):
+            with self.assertRaises(WeChatApiError) as ctx:
+                publish_draft_to_wechat(
+                    token="test_token",
+                    title="标题",
+                    content_html="<p>正文</p>",
+                    thumb_media_id="thumb",
+                    update_media_id="draft_1",
+                )
+
+        self.assertIn("未知的代理动作", str(ctx.exception))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -38,8 +38,19 @@ from .imagehost import (
     download_image_bytes,
     CONFIG_HINT as IMAGE_HOST_HINT,
 )
-from .uploader import get_access_token, upload_image_to_wechat_cdn, upload_image_bytes_to_wechat_cdn
+from .uploader import get_access_token, upload_image_to_wechat_cdn, upload_image_bytes_to_wechat_cdn, WeChatApiError
 from .publisher import publish_draft_to_wechat
+from .drafts import (
+    list_drafts,
+    delete_draft,
+    get_last_draft,
+    record_last_draft,
+    forget_draft,
+    forget_key,
+    draft_state_key,
+    list_local_mappings,
+    DRAFT_NOT_FOUND_ERRCODES,
+)
 from .linter import lint_markdown, format_lint_report, has_errors
 from .richrender import extract_rich_blocks, resolve_rich_blocks, substitute_rich_html, rehost_data_uri_images
 
@@ -104,6 +115,98 @@ def load_env_credentials() -> Dict[str, str]:
         app_secret = ""
     return {"app_id": app_id, "app_secret": app_secret}
 
+
+def resolve_wechat_credentials(args) -> tuple:
+    """解析 AppID/AppSecret；缺失密钥时允许交互式输入，避免进入 shell history"""
+    creds = load_env_credentials()
+    app_id = args.app_id or creds["app_id"]
+    app_secret = creds["app_secret"]
+    if not app_secret and sys.stdin.isatty():
+        import getpass
+        app_secret = getpass.getpass("请输入 WECHAT_APP_SECRET (输入不回显): ")
+    return app_id, app_secret
+
+
+def prepare_wechat_session(args) -> tuple:
+    """草稿箱管理命令统一凭据/Token 获取入口，返回 (token, 强制刷新回调)"""
+    app_id, app_secret = resolve_wechat_credentials(args)
+    if not app_id or not app_secret:
+        print("[-] 错误: 该操作需要配置 WECHAT_APP_ID 和 WECHAT_APP_SECRET！", file=sys.stderr)
+        sys.exit(1)
+    try:
+        token = get_access_token(app_id, app_secret)
+    except Exception as e:
+        print(f"[-] 获取 Access Token 失败: {e}", file=sys.stderr)
+        sys.exit(1)
+    return token, (lambda: get_access_token(app_id, app_secret, force_refresh=True))
+
+
+def format_draft_time(timestamp: int) -> str:
+    """把微信返回的秒级时间戳格式化为本地时间；缺失时显示占位符"""
+    if not timestamp:
+        return "-"
+    try:
+        import datetime
+        return datetime.datetime.fromtimestamp(int(timestamp)).strftime("%Y-%m-%d %H:%M")
+    except (ValueError, OSError, OverflowError):
+        return "-"
+
+
+def _display_width(text: str) -> int:
+    """按终端显示宽度计算字符串 (中日韩等全角字符按 2 列)"""
+    return sum(2 if ord(ch) > 0x2E80 else 1 for ch in text)
+
+
+def _truncate_display(text: str, limit: int) -> str:
+    """按显示宽度截断，超长时以省略号收尾"""
+    width = 0
+    chars = []
+    for ch in text:
+        char_width = 2 if ord(ch) > 0x2E80 else 1
+        if width + char_width > limit:
+            break
+        chars.append(ch)
+        width += char_width
+    result = "".join(chars)
+    return result + "…" if len(result) < len(text) else result
+
+
+def print_draft_list(result: Dict) -> None:
+    """以对齐表格打印草稿箱列表，并标注本机做过映射、可直接续更的草稿"""
+    items = result.get("items", [])
+    local_map = list_local_mappings()
+    total = result.get("total_count", len(items))
+
+    print("================================================================================")
+    print(f"  MD2WX 微信草稿箱 (共 {total} 篇，本页 {len(items)} 篇)")
+    print("================================================================================")
+    if not items:
+        print("  草稿箱暂无内容。")
+        print("================================================================================")
+        return
+
+    title_width = 30
+    time_width = 17
+    header_title = "标题" + " " * (title_width - _display_width("标题"))
+    header_time = "更新时间" + " " * (time_width - _display_width("更新时间"))
+    print(f"{'#':<4}{header_title}{header_time}{'草稿 ID':<26}{'本机'}")
+    print("-" * 100)
+    for idx, item in enumerate(items, start=1):
+        title = item.get("title") or "(无标题)"
+        title = _truncate_display(title, title_width - 1)
+        padded_title = title + " " * max(0, title_width - _display_width(title))
+        marker = "*" if item.get("media_id") in local_map else ""
+        print(
+            f"{idx:<4}{padded_title}{format_draft_time(item.get('update_time')):<{time_width}}"
+            f"{item.get('media_id', ''):<26}{marker}"
+        )
+    print("-" * 100)
+    print("  * = 本机发布过，重复使用同一 Markdown 发布时会自动覆盖该草稿。")
+    print("  覆盖更新: md2wx 文章.md -p --update-draft <草稿 ID>")
+    print("  删除草稿: md2wx --delete-draft <草稿 ID>")
+    print("================================================================================")
+
+
 def copy_html_to_clipboard(html: str) -> bool:
     """在 macOS 环境下将 HTML 作为富文本写入剪贴板 (可以直接 Cmd+V 粘贴到微信后台)"""
     if sys.platform != "darwin":
@@ -137,7 +240,12 @@ def main():
     parser.add_argument("-t", "--theme", default="tech-blue", help="选择设计主题名称 (如 vintage-news, terminal-geek 等) 或指定外部 JSON 主题文件路径")
     parser.add_argument("--list-themes", action="store_true", help="列出所有可用的内置与用户自定义设计主题")
     parser.add_argument("--web", action="store_true", help="启动 MD2WX Web Studio 可视化排版工作台并在浏览器中打开")
-    parser.add_argument("-p", "--publish", action="store_true", help="一键推送到微信公众号草稿箱")
+    parser.add_argument("-p", "--publish", action="store_true", help="一键推送到微信公众号草稿箱 (同一文件再次发布时自动覆盖上次草稿)")
+    parser.add_argument("--list-drafts", nargs="?", const=10, type=int, metavar="N", help="列出微信草稿箱最近 N 篇草稿 (默认 10，上限 20)")
+    parser.add_argument("--update-draft", metavar="MEDIA_ID", help="配合 -p 使用: 覆盖更新指定草稿，而不是新建一篇")
+    parser.add_argument("--new-draft", action="store_true", help="配合 -p 使用: 即使本机发布记录存在，也强制新建草稿")
+    parser.add_argument("--delete-draft", metavar="MEDIA_ID", help="删除指定草稿 (需二次确认，配合 -y 跳过)")
+    parser.add_argument("-y", "--yes", action="store_true", help="删除草稿时跳过确认提示")
     parser.add_argument("--dry-run", action="store_true", help="发布演练: 完成渲染与封面解析后打印将上报微信的草稿 payload 摘要，不请求任何微信接口 (需搭配 -p)")
     parser.add_argument("--cover", help="指定头条封面图片路径 (默认优先级: 此参数 > frontmatter cover: > 动态渲染主题双封面 > 正文首图)")
     parser.add_argument("--cover-square", help="指定次条/会话 1:1 方形封面图片路径 (与 --cover 搭配时将自动拼接为双比例合图)")
@@ -215,6 +323,50 @@ def main():
             print(f"[-] 图片上传失败: {e}", file=sys.stderr)
             sys.exit(1)
         sys.exit(0)
+
+    # 处理草稿箱管理命令 (列表 / 删除)：与文章渲染流程无关，先行处理并退出
+    if args.list_drafts is not None:
+        token, refresher = prepare_wechat_session(args)
+        try:
+            result = list_drafts(
+                token,
+                count=args.list_drafts,
+                token_refresher=refresher,
+            )
+            print_draft_list(result)
+        except Exception as e:
+            print(f"[-] 读取草稿箱失败: {e}", file=sys.stderr)
+            sys.exit(1)
+        sys.exit(0)
+
+    delete_media_id = (args.delete_draft or "").strip()
+    if delete_media_id:
+        if not args.yes:
+            if not sys.stdin.isatty():
+                print("[-] 非交互环境删除草稿需显式添加 -y 确认。", file=sys.stderr)
+                sys.exit(1)
+            answer = input(f"确认删除草稿 {delete_media_id} ? 该操作不可撤销 [y/N] ").strip().lower()
+            if answer not in ("y", "yes"):
+                print("已取消删除。")
+                sys.exit(0)
+        token, refresher = prepare_wechat_session(args)
+        try:
+            delete_draft(token, delete_media_id, token_refresher=refresher)
+            removed = forget_draft(delete_media_id)
+            print(f"[+] 草稿已删除: {delete_media_id}")
+            if removed:
+                print(f"    已同步清除 {removed} 条本地发布记录。")
+        except Exception as e:
+            print(f"[-] 删除草稿失败: {e}", file=sys.stderr)
+            sys.exit(1)
+        sys.exit(0)
+
+    if args.update_draft and args.new_draft:
+        print("[-] 错误: --update-draft 与 --new-draft 不能同时使用。", file=sys.stderr)
+        sys.exit(1)
+    if (args.update_draft or args.new_draft) and not args.publish:
+        print("[-] 错误: --update-draft / --new-draft 需要配合 -p 发布使用。", file=sys.stderr)
+        sys.exit(1)
 
     # 1. 校验主题配置：交给 get_theme 统一解析（含文件路径加载与回退），
     #    并在确实发生回退时给出明确警告，避免预检逻辑与解析逻辑漂移
@@ -301,9 +453,19 @@ def main():
 
     # 4. 如果需要发布到公众号草稿箱，需要前置上传正文图片
     image_map = {}
-    creds = load_env_credentials()
-    app_id = args.app_id or creds["app_id"]
-    app_secret = creds["app_secret"]
+    app_id, app_secret = "", ""
+    if args.publish and not args.dry_run:
+        app_id, app_secret = resolve_wechat_credentials(args)
+
+    # 4.0 草稿续更目标：显式 --update-draft 优先；否则按本地发布记录自动覆盖原草稿
+    state_key = draft_state_key(str(input_path) if args.input else None, title)
+    publish_update_media_id = (args.update_draft or "").strip() or None
+    publish_auto_update = False
+    if args.publish and not publish_update_media_id and not args.new_draft:
+        last_draft = get_last_draft(state_key)
+        if last_draft:
+            publish_update_media_id = last_draft.get("media_id")
+            publish_auto_update = bool(publish_update_media_id)
 
     # 4.0 外链图片检测与可选图床换链 (微信编辑器会封禁外站图床)
     external_images = collect_external_image_urls(body_md)
@@ -330,10 +492,6 @@ def main():
     if args.publish and args.dry_run:
         print(">>> [DRY RUN] 发布演练模式：跳过凭据获取、图片上传与草稿推送，仅完成渲染与 payload 预览。")
     if args.publish and not args.dry_run:
-        # AppSecret 属敏感信息，仅从环境变量/.env 读取；缺失时交互式输入，避免进入 shell history
-        if not app_secret and sys.stdin.isatty():
-            import getpass
-            app_secret = getpass.getpass("请输入 WECHAT_APP_SECRET (输入不回显): ")
         if not app_id or not app_secret:
             print("[-] 错误: 推送草稿箱需要配置 WECHAT_APP_ID 和 WECHAT_APP_SECRET！", file=sys.stderr)
             sys.exit(1)
@@ -344,6 +502,12 @@ def main():
         except Exception as e:
             print(f"[-] 获取 Token 失败: {e}", file=sys.stderr)
             sys.exit(1)
+        if publish_update_media_id:
+            if publish_auto_update:
+                print(f"    检测到本机发布记录，本次将覆盖更新草稿: {publish_update_media_id}")
+                print("    如需新建一篇草稿，请追加 --new-draft 参数。")
+            else:
+                print(f"    本次将覆盖更新指定草稿: {publish_update_media_id}")
 
         # 扫描正文图片引用并上传至微信官方 CDN (支持 title 语法与 URL 编码路径，精确捕获 src)
         img_matches = list(re.finditer(r'!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)', body_md))
@@ -549,14 +713,25 @@ def main():
                 article_preview["pic_crop_235_1"] = pic_crop_235_1
             if pic_crop_1_1:
                 article_preview["pic_crop_1_1"] = pic_crop_1_1
-            print(">>> [DRY RUN] 将上报微信 draft/add 的 payload 摘要:")
-            print(json.dumps({"articles": [article_preview]}, ensure_ascii=False, indent=2))
+            if publish_update_media_id:
+                target_payload = {
+                    "media_id": publish_update_media_id,
+                    "index": 0,
+                    "articles": article_preview,
+                }
+                if publish_auto_update:
+                    print("    [续更] 检测到本机发布记录，将覆盖更新原草稿；如需新建请加 --new-draft。")
+                print(">>> [DRY RUN] 将上报微信 draft/update 的 payload 摘要:")
+            else:
+                target_payload = {"articles": [article_preview]}
+                print(">>> [DRY RUN] 将上报微信 draft/add 的 payload 摘要:")
+            print(json.dumps(target_payload, ensure_ascii=False, indent=2))
             print(f"    content: 微信内联 HTML 共 {len(html_output)} 字符 (可用 -o/--clip 配合查验全文)")
             print("[DRY RUN] 已停止：未上传素材、未推送草稿。去除 --dry-run 参数后将执行真实发布。")
             return
 
-        try:
-            res = publish_draft_to_wechat(
+        def submit_draft(target_media_id):
+            return publish_draft_to_wechat(
                 token=token,
                 title=title,
                 content_html=html_output,
@@ -567,16 +742,31 @@ def main():
                 pic_crop_1_1=pic_crop_1_1,
                 content_source_url=source_url,
                 token_refresher=lambda: get_access_token(app_id, app_secret, force_refresh=True),
+                update_media_id=target_media_id,
             )
-            print("[+] 恭喜！文章已成功推送到微信公众号草稿箱！")
+
+        try:
+            try:
+                res = submit_draft(publish_update_media_id)
+            except WeChatApiError as e:
+                # 本机记录的草稿已在后台被删除：自动降级为新建，避免续更链路卡死
+                if publish_auto_update and e.errcode in DRAFT_NOT_FOUND_ERRCODES:
+                    print("    [!] 本机记录的草稿已不存在，改为新建草稿。", file=sys.stderr)
+                    forget_key(state_key)
+                    res = submit_draft(None)
+                else:
+                    raise
+            record_last_draft(state_key, res["media_id"], title)
+            print("[+] 草稿已覆盖更新！" if res.get("updated") else "[+] 恭喜！文章已成功推送到微信公众号草稿箱！")
             print(f"    草稿标题: {res['title']}")
             print(f"    草稿 ID:   {res['media_id']}")
             if res.get("pic_crop_235_1"):
                 print(f"    双图裁剪坐标已同步生效 (头条: {res['pic_crop_235_1']}, 方图: {res['pic_crop_1_1']})")
             if res.get("preview_url"):
                 print(f"    临时预览: {res['preview_url']}")
+            print("    提示: 再次发布同一 Markdown 会继续覆盖这篇草稿；需要新稿请加 --new-draft。")
         except Exception as e:
-            print(f"[-] 提交草稿箱失败: {e}", file=sys.stderr)
+            print(f"[-] 草稿箱操作失败: {e}", file=sys.stderr)
             sys.exit(1)
 
 if __name__ == "__main__":

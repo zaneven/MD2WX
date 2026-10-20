@@ -59,7 +59,7 @@ pip install -e .
 
 ## Web 可视化排版工作台 (MD2WX Studio)
 
-除了命令行外，MD2WX 还提供了**纯前端驱动的可视化排版工作台**。在网页端直接粘贴 Markdown 文本，即可享受即时渲染、主题切换、微信外链自动转文末脚注、内联代码彩色语法高亮、双栏联动同步滚动与移动端真机仿真。
+除了命令行外，MD2WX 还提供了**纯前端驱动的可视化排版工作台**。在网页端直接粘贴 Markdown 文本，即可享受即时渲染、主题切换、微信外链自动转文末脚注、内联代码彩色语法高亮、双栏联动同步滚动、移动端真机仿真，以及常驻的本地草稿箱（多篇草稿自动保存与历史切换）。
 
 🌐 **在线免安装体验**：**[https://md2wx.zaneven.com](https://md2wx.zaneven.com)**
 
@@ -150,7 +150,31 @@ md2wx article.md --publish --cover assets/banner.png --cover-square assets/squar
 
 如果未显式指定封面，CLI 默认优先调用内置动态渲染引擎生成匹配当前排版主题的专属双比例拼接封面（头条 2350x1000 + 方图 1000x1000 并排合成，零第三方硬依赖）。
 
-### 6. 管道与标准输入流支持
+### 6. 草稿箱管理与自动续更
+
+同一篇文章改完再发，不会在后台堆出一堆重复草稿：
+
+```bash
+# 列出最近 10 篇草稿（标题 / 更新时间 / 草稿 ID），* 表示本机发布过
+md2wx --list-drafts
+
+# 首次发布：新建草稿，并在本机记下「文件 -> 草稿 ID」映射
+md2wx article.md -p
+
+# 再次发布同一文件：自动覆盖上次那篇草稿
+md2wx article.md -p
+
+# 需要另发新稿，或临时覆盖指定的另一篇草稿
+md2wx article.md -p --new-draft
+md2wx article.md -p --update-draft <草稿 ID>
+
+# 删除草稿（-y 跳过确认），同时清理本机映射
+md2wx --delete-draft <草稿 ID>
+```
+
+映射保存在 `~/.config/md2wx/drafts.json`，只记录草稿 ID、标题与更新时间，不保存正文。若本机记录的草稿已在后台被删除，再次发布会自动降级为新建。
+
+### 7. 管道与标准输入流支持
 
 极客友好，与其他命令行工具无缝衔接：
 
@@ -262,6 +286,87 @@ MD2WX 官方内置了 13 套风格截然不同的设计主题（均位于 `md2wx
 
 ---
 
+### 主题封面效果图 (Cover Gallery)
+
+> 未显式指定封面时，CLI 会按当前主题动态渲染 2350x1000 头条横图，并与 1000x1000 方图无缝拼接为 3350x1000 合图，兼顾公众号大图与朋友圈分享方图。下图均为各主题默认封面。
+
+<table>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <h4>✦ 现代科技蓝 (tech-blue · 默认)</h4>
+      <a href="assets/covers/cover-tech-blue.png"><img src="assets/covers/cover-tech-blue.png" alt="tech-blue cover" width="100%" /></a>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <h4>✦ 复古报刊 (vintage-news)</h4>
+      <a href="assets/covers/cover-vintage-news.png"><img src="assets/covers/cover-vintage-news.png" alt="vintage-news cover" width="100%" /></a>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <h4>✦ 极客终端 (terminal-geek)</h4>
+      <a href="assets/covers/cover-terminal-geek.png"><img src="assets/covers/cover-terminal-geek.png" alt="terminal-geek cover" width="100%" /></a>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <h4>✦ 温暖便签 (warm-memo)</h4>
+      <a href="assets/covers/cover-warm-memo.png"><img src="assets/covers/cover-warm-memo.png" alt="warm-memo cover" width="100%" /></a>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <h4>✦ 先锋野兽派 (acid-bold)</h4>
+      <a href="assets/covers/cover-acid-bold.png"><img src="assets/covers/cover-acid-bold.png" alt="acid-bold cover" width="100%" /></a>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <h4>✦ 先锋优雅紫 (elegant-purple)</h4>
+      <a href="assets/covers/cover-elegant-purple.png"><img src="assets/covers/cover-elegant-purple.png" alt="elegant-purple cover" width="100%" /></a>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <h4>✦ 暗黑极客风 (dark-night)</h4>
+      <a href="assets/covers/cover-dark-night.png"><img src="assets/covers/cover-dark-night.png" alt="dark-night cover" width="100%" /></a>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <h4>✦ 温暖活力橙 (warm-orange)</h4>
+      <a href="assets/covers/cover-warm-orange.png"><img src="assets/covers/cover-warm-orange.png" alt="warm-orange cover" width="100%" /></a>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <h4>✦ 微信生态绿 (wechat-green)</h4>
+      <a href="assets/covers/cover-wechat-green.png"><img src="assets/covers/cover-wechat-green.png" alt="wechat-green cover" width="100%" /></a>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <h4>✦ 森野墨绿 (forest-green)</h4>
+      <a href="assets/covers/cover-forest-green.png"><img src="assets/covers/cover-forest-green.png" alt="forest-green cover" width="100%" /></a>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <h4>✦ 陶土亚麻 (terracotta-clay)</h4>
+      <a href="assets/covers/cover-terracotta-clay.png"><img src="assets/covers/cover-terracotta-clay.png" alt="terracotta-clay cover" width="100%" /></a>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <h4>✦ 莫兰迪雾灰 (morandi-mist)</h4>
+      <a href="assets/covers/cover-morandi-mist.png"><img src="assets/covers/cover-morandi-mist.png" alt="morandi-mist cover" width="100%" /></a>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <h4>✦ 奶油粉彩 (pastel-cream)</h4>
+      <a href="assets/covers/cover-pastel-cream.png"><img src="assets/covers/cover-pastel-cream.png" alt="pastel-cream cover" width="100%" /></a>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <h4>✦ 自定义主题封面</h4>
+      <p><i>传入任意 2.35:1 图片即可覆盖默认封面，仍会自动切出分享方图。</i></p>
+      <pre><code>md2wx article.md -t tech-blue \
+  --cover ./my-cover.png -p</code></pre>
+    </td>
+  </tr>
+</table>
+
+---
+
 ## 如何扩展自定义主题？(Theme Extension)
 
 MD2WX 采用标准 JSON 格式定义主题，扩展自定义主题非常简单，支持三种方式：
@@ -346,6 +451,14 @@ WECHAT_APP_SECRET=20827782e3e1f62xxxxxx
 ```
 
 > **凭据自动探测**：MD2WX 会按顺序自动探测当前目录的 `.env`、`~/Develop/wx-serv/.env` 或全局环境变量，您无需重复配置。
+
+如果本机出口 IP 不在公众号后台的白名单内，可以配置自建代理网关转发请求（`--publish` 与草稿箱管理命令共用）：
+
+```bash
+WECHAT_PROXY_URL=https://your-gateway.example.com/api/wechat/proxy
+```
+
+> 网关需放行 `draft`、`draft_get`、`draft_batchget`、`draft_update`、`draft_delete` 与 `uploadimg` 动作。
 
 ---
 

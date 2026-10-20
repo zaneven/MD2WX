@@ -1,10 +1,11 @@
 """MD2WX 命令行工具单元测试 (轻量，聚焦可离线验证的路径)"""
+import io
 import sys
 from unittest.mock import patch
 
 import pytest
 
-from md2wx import cli
+from md2wx import cli, drafts
 
 
 def test_load_env_credentials_filters_placeholders(monkeypatch):
@@ -78,3 +79,150 @@ def test_cli_dry_run_prints_payload_without_network(tmp_path, monkeypatch, capsy
     assert "演练标题" in out
     assert "digest" in out
     assert "未上传素材、未推送草稿" in out
+
+
+def test_cli_list_drafts_prints_items(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["md2wx", "--list-drafts", "5"])
+    monkeypatch.setattr(cli, "prepare_wechat_session", lambda args: ("tok", None))
+    monkeypatch.setattr(cli, "list_local_mappings", lambda: {})
+
+    calls = {}
+
+    def fake_list(token, count=10, token_refresher=None):
+        calls["count"] = count
+        return {
+            "total_count": 1,
+            "item_count": 1,
+            "items": [{
+                "media_id": "draft_media_id",
+                "title": "草稿标题",
+                "author": "",
+                "digest": "",
+                "url": "",
+                "update_time": 1700000000,
+                "article_count": 1,
+            }],
+        }
+
+    monkeypatch.setattr(cli, "list_drafts", fake_list)
+
+    with pytest.raises(SystemExit) as exc:
+        cli.main()
+
+    assert exc.value.code == 0
+    assert calls["count"] == 5
+    out = capsys.readouterr().out
+    assert "草稿标题" in out
+    assert "draft_media_id" in out
+
+
+def test_cli_delete_draft_non_interactive_requires_yes(monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["md2wx", "--delete-draft", "draft_media_id"])
+    monkeypatch.setattr(sys, "stdin", io.StringIO())
+
+    with pytest.raises(SystemExit) as exc:
+        cli.main()
+
+    assert exc.value.code == 1
+
+
+def test_cli_delete_draft_with_yes(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["md2wx", "--delete-draft", "draft_media_id", "-y"])
+    monkeypatch.setattr(cli, "prepare_wechat_session", lambda args: ("tok", None))
+
+    deleted = []
+    monkeypatch.setattr(cli, "delete_draft", lambda token, media_id, token_refresher=None: deleted.append(media_id) or {})
+    monkeypatch.setattr(cli, "forget_draft", lambda media_id: 1)
+
+    with pytest.raises(SystemExit) as exc:
+        cli.main()
+
+    assert exc.value.code == 0
+    assert deleted == ["draft_media_id"]
+    assert "已同步清除 1 条本地发布记录" in capsys.readouterr().out
+
+
+def test_cli_update_flags_require_publish(monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["md2wx", "post.md", "--update-draft", "draft_media_id"])
+
+    with pytest.raises(SystemExit) as exc:
+        cli.main()
+
+    assert exc.value.code == 1
+
+
+def test_cli_update_and_new_draft_conflict(monkeypatch):
+    monkeypatch.setattr(
+        sys, "argv",
+        ["md2wx", "post.md", "-p", "--update-draft", "draft_media_id", "--new-draft"],
+    )
+
+    with pytest.raises(SystemExit) as exc:
+        cli.main()
+
+    assert exc.value.code == 1
+
+
+def _write_post(tmp_path):
+    md = tmp_path / "post.md"
+    md.write_text("---\ntitle: 续更标题\ndigest: 摘要\n---\n\n# 续更标题\n\n正文段落。\n", encoding="utf-8")
+    return md
+
+
+def test_cli_dry_run_auto_updates_previous_draft(tmp_path, monkeypatch, capsys):
+    md = _write_post(tmp_path)
+    monkeypatch.setattr(drafts, "DRAFT_STATE_PATH", tmp_path / "drafts.json")
+    key = drafts.draft_state_key(str(md))
+    drafts.record_last_draft(key, "prev_draft_id", "续更标题")
+
+    monkeypatch.setattr(sys, "argv", ["md2wx", str(md), "-p", "--dry-run", "--no-cover"])
+    monkeypatch.setattr(cli, "resolve_wechat_credentials", lambda args: ("app_id", "app_secret"))
+
+    def _forbidden_urlopen(*a, **kw):
+        raise AssertionError("dry-run 不应发起网络请求")
+
+    with patch("urllib.request.urlopen", side_effect=_forbidden_urlopen):
+        cli.main()
+
+    out = capsys.readouterr().out
+    assert "draft/update" in out
+    assert "prev_draft_id" in out
+
+
+def test_cli_dry_run_new_draft_ignores_mapping(tmp_path, monkeypatch, capsys):
+    md = _write_post(tmp_path)
+    monkeypatch.setattr(drafts, "DRAFT_STATE_PATH", tmp_path / "drafts.json")
+    drafts.record_last_draft(drafts.draft_state_key(str(md)), "prev_draft_id", "续更标题")
+
+    monkeypatch.setattr(sys, "argv", ["md2wx", str(md), "-p", "--dry-run", "--no-cover", "--new-draft"])
+    monkeypatch.setattr(cli, "resolve_wechat_credentials", lambda args: ("app_id", "app_secret"))
+
+    def _forbidden_urlopen(*a, **kw):
+        raise AssertionError("dry-run 不应发起网络请求")
+
+    with patch("urllib.request.urlopen", side_effect=_forbidden_urlopen):
+        cli.main()
+
+    out = capsys.readouterr().out
+    assert "draft/add" in out
+    assert "prev_draft_id" not in out
+
+
+def test_cli_dry_run_explicit_update_draft(tmp_path, monkeypatch, capsys):
+    md = _write_post(tmp_path)
+    monkeypatch.setattr(drafts, "DRAFT_STATE_PATH", tmp_path / "drafts.json")
+    monkeypatch.setattr(
+        sys, "argv",
+        ["md2wx", str(md), "-p", "--dry-run", "--no-cover", "--update-draft", "manual_draft_id"],
+    )
+    monkeypatch.setattr(cli, "resolve_wechat_credentials", lambda args: ("app_id", "app_secret"))
+
+    def _forbidden_urlopen(*a, **kw):
+        raise AssertionError("dry-run 不应发起网络请求")
+
+    with patch("urllib.request.urlopen", side_effect=_forbidden_urlopen):
+        cli.main()
+
+    out = capsys.readouterr().out
+    assert "draft/update" in out
+    assert "manual_draft_id" in out

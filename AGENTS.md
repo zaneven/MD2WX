@@ -51,6 +51,7 @@ MD2WX/
 │   ├── imagehost.py            # 在线图床客户端（通用自定义上传接口，上传/下载/配置探测）
 │   ├── uploader.py             # 微信素材上传（正文图 CDN 换链 + 封面永久素材，md5 缓存）
 │   ├── publisher.py            # 微信公众号后台交互（access_token、素材上传、草稿箱推送）
+│   ├── drafts.py               # 草稿箱管理（列表/覆盖更新/删除/本地文件与草稿 ID 映射）
 │   └── themes/                 # 13大主题 JSON 配置文件夹
 │       ├── tech-blue.json      # 现代科技蓝（默认）
 │       ├── terminal-geek.json  # 极客终端黑
