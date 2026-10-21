@@ -3,32 +3,25 @@
    ============================================================================== */
 
 .editor-toolbar {
-  height: var(--toolbar-height);
+  min-height: var(--toolbar-height);
   background: var(--bg-surface-elevated);
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
-  padding: 0 10px;
+  padding: 6px 10px;
+  box-sizing: border-box;
   user-select: none;
 }
 
-/* 按钮较多时横向滚动，避免窄屏挤压；滚动条隐藏，鼠标滚轮/触控板可横向滚动 */
+/* 按钮随编辑区宽度自动换行，避免撑宽编辑栏挤压预览区 */
 .toolbar-scroll {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 3px;
   flex: 1;
   min-width: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-}
-
-.toolbar-scroll::-webkit-scrollbar {
-  display: none;
 }
 
 .toolbar-scroll .toolbar-group {
@@ -37,11 +30,13 @@
 
 .toolbar-actions {
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .toolbar-group {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 3px;
 }
 
