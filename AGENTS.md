@@ -126,6 +126,7 @@ MD2WX/
    - 若改动涉及 admin 相关的核心代码或配置，完成修改后必须确认并执行推送/部署到生产环境。
 4. **版本发布规范（GitHub Release）**：
    - 以后凡是有新版本更新（Bug 修复、新增主题、重大特性等），必须按照语义化版本打 Tag，并将**技术亮点、更新要点精简总结并发布到 GitHub Releases**中。
+   - 发版时必须同步更新 Web Studio 的更新记录弹窗（`web/studio.html`），保证站点上的版本说明与本次发布一致，具体步骤见第 5 节 Release SOP。
 5. **测试保障**：
    - 每次修改核心解析器或高亮逻辑后，必须执行 `python3 -m pytest`，并保证 100% 测试通过率；修改 Web 端代码后必须执行 `npm run build` 确保无编译错误。
 6. **开发日志与技术文章编写规范（必须严格遵守）**：
@@ -185,14 +186,22 @@ npm run preview
    - **首个一级标题即 Release 标题**，格式 `# v<版本>: <标题>`（版本号前缀不计入 20 字限制），标题措辞遵循第 6 条规范：精简平实、讲人话、禁用公关修辞与空洞排比。
    - 正文覆盖技术亮点与更新要点，按模块分节；本次修复/新增的行为变更、破坏性提示要显式写出。
    - **顺序红线**：必须先在打 Tag 之前提交该文件。`release.yml` 按 Tag 检出的代码树读取要点文件，打完 Tag 再补文件会导致校验失败。
-4. **提交代码并打 Tag**：
+4. **同步 Web Studio 更新记录弹窗（每次发版必做，不可省略）**：
+   打开 `web/studio.html` 的 Changelog Modal，把面向用户的版本说明同步到本次发布，**禁止只换版本号、内容还是上一版**：
+   - `changelog-title` 改成这次发布的主线，`changelog-ver-tag` 的日期改为本次发版月份；
+   - 三条功能要点按本次实际改动重写：标题写能力，正文写它解决了什么问题，过期的旧条目直接替换，不堆叠历史版本；
+   - 版本徽章由 `data-app-version*` 占位符在构建期注入，**严禁手写版本号**；
+   - 只写用户能感知的变化，**不要写版本递增判定规则、内部实现细节等面向维护者的内容**；
+   - 图标沿用 `icon-feat-*` 占位 + `web/src/app/ui.js` 的 `setIcon` 注册，只用纯矢量 SVG，严禁 Emoji；
+   - 该页面随 `main` 推送自动部署到 GitHub Pages，改完必须 `npm run build` 验证，并确认部署工作流成功。
+5. **提交代码并打 Tag**：
    ```bash
    git add .
    git commit -m "chore(release): bump version to v1.0.3"
    git tag -a v1.0.3 -m "Release v1.0.3"
    git push origin main --tags
    ```
-5. **由 workflow 自动发布 GitHub Release**：
+6. **由 workflow 自动发布 GitHub Release**：
    `.github/workflows/release.yml` 监听 Tag 推送后自动完成，无需人工介入：
    - 校验 `release_notes/v<版本>.md` 存在且含一级标题，并校验 `pyproject.toml` 的 `version` 与 Tag 一致（不一致直接失败，避免发布出 Web 版本号错乱的产物）；
    - 跑全量 Python 测试与 `npm run build`；

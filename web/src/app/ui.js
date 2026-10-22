@@ -70,9 +70,9 @@ export function initIcons() {
   setIcon('#icon-sync-article', 'refresh');
   setIcon('#icon-changelog-header', 'info');
   setIcon('#icon-changelog-close', 'x');
-  setIcon('#icon-feat-theme', 'palette');
-  setIcon('#icon-feat-ratio', 'smartphone');
-  setIcon('#icon-feat-copy', 'copy');
+  setIcon('#icon-feat-lint', 'shieldCheck');
+  setIcon('#icon-feat-gate', 'checkCircle');
+  setIcon('#icon-feat-toc', 'listTree');
 }
 
 /**

@@ -544,38 +544,33 @@
               <span class="cover-badge" style="background:#059669;color:#fff;font-size:12px;padding:3px 10px;">RELEASE <span data-app-version-plain></span></span>
               <span style="font-size:13px;color:#a3a3a3;">2026 年 10 月</span>
             </div>
-            <h3 class="changelog-title">富文本管线、发稿自检与双端一致性工程化上线</h3>
+            <h3 class="changelog-title">发稿体检进工作台，发布前先过关</h3>
           </div>
 
           <div class="changelog-features-list">
             <div class="changelog-feature-item">
-              <div class="changelog-feature-icon" id="icon-feat-theme"></div>
+              <div class="changelog-feature-icon" id="icon-feat-lint"></div>
               <div class="changelog-feature-text">
-                <h4>Mermaid 图表与数学公式渲染</h4>
-                <p>新增富文本渲染管线：```mermaid 围栏、$$ 公式块与行内公式双端渲染为内联高清位图，发布自动转存微信 CDN，离线安全降级，粘贴进微信后台不丢样式。</p>
+                <h4>Web 端发稿体检面板</h4>
+                <p>13 条规则与 CLI 逐条对齐，问题带行号，点一下就能跳到编辑器对应位置；存在阻断问题时无法复制，中文里混用的半角标点可一键修正。</p>
               </div>
             </div>
 
             <div class="changelog-feature-item">
-              <div class="changelog-feature-icon" id="icon-feat-ratio"></div>
+              <div class="changelog-feature-icon" id="icon-feat-gate"></div>
               <div class="changelog-feature-text">
-                <h4>发稿规范自检 md2wx --lint 与外链图片防护</h4>
-                <p>一键自检标题字数、digest、cover 字段与控制字符，发布前自动预检；双端实时检测非微信 CDN 外链图片，支持 --rehost-images 图床换链与 Web 端一键转存。</p>
+                <h4>发布门禁与机器可读报告</h4>
+                <p>-p 发布默认先体检，有阻断问题会在发出任何网络请求前停下，--no-lint 可临时放行；--lint --format json 输出结构化报告，方便接进自己的发布流程。</p>
               </div>
             </div>
 
             <div class="changelog-feature-item">
-              <div class="changelog-feature-icon" id="icon-feat-copy"></div>
+              <div class="changelog-feature-icon" id="icon-feat-toc"></div>
               <div class="changelog-feature-text">
-                <h4>GFM 语法补齐与双端一致性测试</h4>
-                <p>任务列表 SVG 勾选框、删除线、裸 URL 自动脚注双端同步上线；parser 双端镜像新增 golden 一致性测试，9 主题 x 2 样例严格比对，测试规模 46 提升至 117 例。</p>
+                <h4>阅读指标、大纲导航与拖拽导入</h4>
+                <p>状态栏常驻正文字数、预计阅读时长与图片数量；大纲抽屉按 H1-H6 生成层级目录，点击同步正文与预览；本地 .md 文件直接拖进编辑器就能打开。</p>
               </div>
             </div>
-          </div>
-
-          <div class="changelog-rules-card">
-            <strong>版本更新机制规则说明</strong>：<br>
-            MD2WX 当前基准版本为 <strong data-app-version-plain></strong>。版本递增判定规则（命中即停）：新增主题、新功能模块、新 CLI 参数或新渲染语法 → 升第二位且末位归零（Minor）；主题 JSON schema 不兼容、CLI 参数移除等破坏性变更 → 升第一位（Major）；其余日常修复与优化默认只递增最后一位（Patch: <span data-app-version-minor></span>）。存疑时取更高档位。
           </div>
         </div>
       </div>

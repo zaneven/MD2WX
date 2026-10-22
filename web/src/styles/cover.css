@@ -1359,16 +1359,6 @@
   color: #a3a3a3;
 }
 
-.changelog-rules-card {
-  background: rgba(16, 185, 129, 0.06);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  border-radius: 12px;
-  padding: 14px 16px;
-  font-size: 12.5px;
-  line-height: 1.6;
-  color: #a7f3d0;
-}
-
 /* ==========================================================================
    7. 微信聊天转发卡片实时仿真预览 (WeChat Share Card Preview)
    ========================================================================== */
