@@ -6,8 +6,10 @@
 import { ICONS } from '../assets/icons.js';
 import { copyWechatHtml, downloadHtmlFile } from '../core/clipboard.js';
 import { rasterizeRichBlocks, substituteRichHtml } from '../core/richrender.js';
+import { hasErrors } from '../core/lint.js';
 import { state } from './state.js';
 import { showToast } from './ui.js';
+import { expandLintPanel } from './lint-panel.js';
 
 const textarea = document.getElementById('markdown-input');
 const previewTarget = document.getElementById('preview-render-target');
@@ -35,6 +37,15 @@ async function getExportableHtml() {
 export async function handleCopy() {
   if (!state.currentHtmlOutput) {
     showToast('当前暂无可复制的内容', 'error');
+    return;
+  }
+
+  // 发稿体检门禁：error 级问题未清零前阻断复制，避免把错误排版贴进微信后台
+  const lintIssues = state.lintIssues || [];
+  const blocking = lintIssues.filter((item) => item.level === 'error');
+  if (hasErrors(lintIssues)) {
+    expandLintPanel();
+    showToast(`存在 ${blocking.length} 项阻断问题，已暂停复制，请先修复发稿体检中的问题`, 'error');
     return;
   }
 

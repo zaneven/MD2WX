@@ -19,4 +19,5 @@ export const state = {
   currentHtmlOutput: '',
   currentRichBlocks: [], // 当前富文本块列表 (Mermaid/公式，复制前需光栅化)
   currentCoverMeta: null, // 全局当前文章封面定制元数据，与正文顶部封面图联动
+  lintIssues: [], // 最近一次发稿体检结果 (error 级阻断复制)
 };

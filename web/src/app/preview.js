@@ -6,10 +6,13 @@
 import { markdownToWechatHtml, parseFrontmatter } from '../core/parser.js';
 import { prepareRichBlocks, hydrateRichBlocks } from '../core/richrender.js';
 import { extractCoverMeta } from '../core/cover.js';
+import { computeReadingStats } from '../core/lint.js';
 import { state } from './state.js';
 import { showToast } from './ui.js';
 import { saveActiveDraft } from './drafts.js';
 import { updateExternalImageGuard } from './imageguard.js';
+import { updateLintPanel } from './lint-panel.js';
+import { updateToc } from './toc.js';
 
 const textarea = document.getElementById('markdown-input');
 const gutter = document.getElementById('editor-gutter');
@@ -18,6 +21,7 @@ const wechatNavTitle = document.getElementById('wechat-nav-title');
 const previewCanvas = document.getElementById('preview-canvas');
 const statusWordCount = document.getElementById('status-word-count');
 const statusReadTime = document.getElementById('status-read-time');
+const statusImageCount = document.getElementById('status-image-count');
 
 /**
  * 实时更新行号
@@ -32,17 +36,13 @@ export function updateGutter() {
 }
 
 /**
- * 计算字数与阅读时间
+ * 计算字数、阅读时间与图片数量 (与 CLI 发稿体检同口径)
  */
-function updateWordCount(text) {
-  // 匹配汉字字符数与英文单词数
-  const chineseChars = (text.match(/[一-龥]/g) || []).length;
-  const englishWords = (text.replace(/[一-龥]/g, ' ').match(/\b\w+\b/g) || []).length;
-  const totalCount = chineseChars + englishWords;
-
-  statusWordCount.textContent = `${totalCount} 字`;
-  const minutes = Math.max(1, Math.ceil(totalCount / 400));
-  statusReadTime.textContent = `约 ${minutes} 分钟阅读`;
+function updateReadingStats(text) {
+  const stats = computeReadingStats(text);
+  statusWordCount.textContent = `${stats.chars} 字`;
+  statusReadTime.textContent = `约 ${stats.minutes} 分钟阅读`;
+  if (statusImageCount) statusImageCount.textContent = `${stats.images} 图`;
 }
 
 /**
@@ -69,7 +69,9 @@ export function saveDraft(rawText) {
 export function renderPreview() {
   const rawText = textarea.value;
   updateGutter();
-  updateWordCount(rawText);
+  updateReadingStats(rawText);
+  updateToc(rawText);
+  updateLintPanel(rawText);
 
   // 解析 Frontmatter
   const { meta, body } = parseFrontmatter(rawText);

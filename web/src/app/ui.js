@@ -26,6 +26,11 @@ export function initIcons() {
   setIcon('#icon-battery', 'battery');
   setIcon('#icon-nav-back', 'arrowLeft');
   setIcon('#icon-nav-more', 'moreVertical');
+  setIcon('#icon-toc', 'listTree');
+  setIcon('#icon-toc-title', 'listTree');
+  setIcon('#icon-toc-close', 'x');
+  setIcon('#icon-lint-status', 'shieldCheck');
+  setIcon('#icon-lint-chevron', 'chevronDown');
 
   // Toolbar & Header Icons
   setIcon('#icon-settings', 'settings');

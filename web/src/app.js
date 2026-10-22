@@ -15,6 +15,8 @@ import { bindShortcuts } from './app/shortcuts.js';
 import { bindPublishActions } from './app/publish.js';
 import { initCoverStudio } from './app/cover-studio.js';
 import { initChangelogModal } from './app/changelog.js';
+import { initToc } from './app/toc.js';
+import { initLintPanel } from './app/lint-panel.js';
 import { applyVersion } from './version.js';
 
 /**
@@ -27,6 +29,8 @@ function init() {
   initSettings();
   initCoverStudio();
   initChangelogModal();
+  initToc();
+  initLintPanel();
   updateClock();
   setInterval(updateClock, 30000);
 

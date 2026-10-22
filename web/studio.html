@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="./src/styles/preview.css">
   <link rel="stylesheet" href="./src/styles/toast.css">
   <link rel="stylesheet" href="./src/styles/cover.css">
+  <link rel="stylesheet" href="./src/styles/lint.css">
 </head>
 <body>
   <div id="app">
@@ -154,6 +155,12 @@
         <div class="editor-toolbar">
           <div class="toolbar-scroll">
             <div class="toolbar-group">
+              <button class="tool-btn" id="tool-toc" type="button" title="文章大纲 (按 H1-H6 生成层级目录)" aria-expanded="false"><span id="icon-toc"></span></button>
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <div class="toolbar-group">
               <button class="tool-btn" id="tool-bold" type="button" title="粗体 (Cmd+B)"><span id="icon-bold"></span></button>
               <button class="tool-btn" id="tool-italic" type="button" title="斜体 (Cmd+I)"><span id="icon-italic"></span></button>
               <button class="tool-btn" id="tool-strike" type="button" title="删除线 (~~文字~~)"><span id="icon-strike"></span></button>
@@ -207,6 +214,21 @@
           </div>
         </div>
 
+        <!-- Outline Drawer (H1-H6 大纲导航) -->
+        <aside class="toc-drawer" id="toc-drawer" aria-label="文章大纲">
+          <div class="toc-drawer-header">
+            <span class="toc-drawer-title">
+              <span id="icon-toc-title"></span>
+              <span>文章大纲</span>
+            </span>
+            <button class="toc-close-btn" id="btn-toc-close" type="button" title="关闭 (Esc)">
+              <span id="icon-toc-close"></span>
+            </button>
+          </div>
+          <nav class="toc-list" id="toc-list"></nav>
+          <div class="toc-drawer-footer" id="toc-count">0 个标题</div>
+        </aside>
+
         <!-- Editor Input Body -->
         <div class="editor-body">
           <div class="editor-gutter" id="editor-gutter" aria-hidden="true">1</div>
@@ -232,6 +254,7 @@
           </div>
           <div class="statusbar-right">
             <span id="status-word-count">0 字</span>
+            <span id="status-image-count">0 图</span>
             <span id="status-read-time">约 1 分钟阅读</span>
           </div>
         </footer>
@@ -307,6 +330,29 @@
             </button>
           </div>
         </div>
+
+        <!-- Lint Panel (发稿体检，常驻预览区底部) -->
+        <footer class="lint-panel" id="lint-panel" aria-label="发稿体检">
+          <button class="lint-panel-toggle" id="lint-panel-toggle" type="button" aria-expanded="false">
+            <span class="lint-panel-status">
+              <span class="lint-panel-icon" id="icon-lint-status"></span>
+              <span class="lint-panel-title">发稿体检</span>
+              <span class="lint-panel-summary" id="lint-summary">发稿体检通过</span>
+            </span>
+            <span class="lint-panel-meta">
+              <span class="lint-chip error" id="lint-error-count">阻断 0</span>
+              <span class="lint-chip warn" id="lint-warn-count">建议 0</span>
+              <span class="lint-panel-chevron" id="icon-lint-chevron"></span>
+            </span>
+          </button>
+          <div class="lint-panel-body">
+            <div class="lint-panel-tools">
+              <span class="lint-panel-hint">规则与 CLI 端 md2wx --lint 完全一致</span>
+              <button class="lint-fix-btn" id="btn-fix-punctuation" type="button" disabled>一键修复中文标点</button>
+            </div>
+            <div class="lint-issue-list" id="lint-issue-list"></div>
+          </div>
+        </footer>
       </section>
     </main>
 

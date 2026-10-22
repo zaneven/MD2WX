@@ -226,3 +226,83 @@ def test_cli_dry_run_explicit_update_draft(tmp_path, monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "draft/update" in out
     assert "manual_draft_id" in out
+
+
+# ---------------------------------------------------------------------------
+# 波次一 (v1.9.0)：发布门禁与机器可读输出
+# ---------------------------------------------------------------------------
+def _write_risky_post(tmp_path):
+    md = tmp_path / "risky.md"
+    md.write_text(
+        "---\ntitle: " + "超" * 26 + "\ndigest: 摘要\n---\n\n# " + "超" * 26 + "\n\n正文。\n",
+        encoding="utf-8",
+    )
+    return md
+
+
+def test_cli_publish_gate_blocks_before_any_network(tmp_path, monkeypatch, capsys):
+    md = _write_risky_post(tmp_path)
+    monkeypatch.setattr(sys, "argv", ["md2wx", str(md), "-p"])
+
+    def _forbidden(*a, **kw):
+        raise AssertionError("发布门禁拦截时不应发起任何网络请求")
+
+    monkeypatch.setattr(cli, "resolve_wechat_credentials", _forbidden)
+    monkeypatch.setattr(cli, "get_access_token", _forbidden)
+    with patch("urllib.request.urlopen", side_effect=_forbidden):
+        with pytest.raises(SystemExit) as exc:
+            cli.main()
+
+    assert exc.value.code == 1
+    err = capsys.readouterr().err
+    assert "中止发布" in err
+    assert "--no-lint" in err
+
+
+def test_cli_no_lint_escape_hatch_allows_dry_run(tmp_path, monkeypatch, capsys):
+    md = _write_risky_post(tmp_path)
+    monkeypatch.setattr(
+        sys, "argv",
+        ["md2wx", str(md), "-p", "--dry-run", "--no-cover", "--no-lint"],
+    )
+    monkeypatch.setattr(cli, "resolve_wechat_credentials", lambda args: ("app_id", "app_secret"))
+
+    with patch("urllib.request.urlopen", side_effect=AssertionError("dry-run 不应联网")):
+        cli.main()
+
+    out = capsys.readouterr().out
+    assert "[DRY RUN]" in out
+
+
+def test_cli_lint_json_output_is_parseable(tmp_path, monkeypatch, capsys):
+    md = tmp_path / "bad.md"
+    md.write_text(
+        "---\ntitle: " + "超" * 25 + "\ndigest: 摘要混用半角逗号,触发规则\n---\n\n正文,混用。\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(sys, "argv", ["md2wx", str(md), "--lint", "--format", "json"])
+
+    with pytest.raises(SystemExit) as exc:
+        cli.main()
+
+    assert exc.value.code == 1
+    import json
+
+    payload = json.loads(capsys.readouterr().out)
+    codes = [item["code"] for item in payload["issues"]]
+    assert "title-too-long" in codes
+    assert payload["summary"]["errors"] >= 1
+    assert payload["file"].endswith("bad.md")
+
+
+def test_collect_external_links_skips_images_code_and_duplicates():
+    from md2wx.linter import collect_external_links
+
+    md = (
+        "![图](https://cdn.example.com/a.png)\n"
+        "[官网](https://example.com/docs)\n"
+        "重复 [再来](https://example.com/docs)\n"
+        "`https://code.example.com` 不算\n"
+    )
+    links = collect_external_links(md)
+    assert [url for url, _ in links] == ["https://example.com/docs"]

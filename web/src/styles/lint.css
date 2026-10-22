@@ -1,0 +1,257 @@
+/* ==============================================================================
+   MD2WX Web Studio - Lint Panel (发稿体检常驻问题栏)
+   ============================================================================== */
+
+.lint-panel {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface-elevated);
+  border-top: 1px solid var(--border-subtle);
+  max-height: 42px;
+  overflow: hidden;
+  transition: max-height 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 30;
+}
+
+.lint-panel.expanded {
+  max-height: 280px;
+}
+
+.lint-panel.has-errors {
+  border-top-color: rgba(248, 113, 113, 0.55);
+  box-shadow: 0 -6px 20px -12px rgba(248, 113, 113, 0.6);
+}
+
+.lint-panel-toggle {
+  flex: 0 0 auto;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 14px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.lint-panel-toggle:hover {
+  color: var(--text-primary);
+}
+
+.lint-panel-status,
+.lint-panel-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.lint-panel-icon,
+.lint-panel-chevron {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.lint-panel.is-clean .lint-panel-icon {
+  color: #6ee7b7;
+}
+
+.lint-panel.has-errors .lint-panel-icon {
+  color: #f87171;
+}
+
+.lint-panel-title {
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+}
+
+.lint-panel-summary {
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lint-panel.is-clean .lint-panel-summary {
+  color: #6ee7b7;
+}
+
+.lint-panel.has-errors .lint-panel-summary {
+  color: #fca5a5;
+}
+
+.lint-panel-chevron {
+  transition: transform 0.2s ease;
+}
+
+.lint-panel.expanded .lint-panel-chevron {
+  transform: rotate(180deg);
+}
+
+.lint-chip {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.lint-chip.error.is-hot {
+  color: #fca5a5;
+  border-color: rgba(248, 113, 113, 0.45);
+  background: rgba(248, 113, 113, 0.12);
+}
+
+.lint-chip.warn.is-hot {
+  color: #fcd34d;
+  border-color: rgba(251, 191, 36, 0.4);
+  background: rgba(251, 191, 36, 0.1);
+}
+
+.lint-panel-body {
+  display: none;
+  flex-direction: column;
+  min-height: 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.lint-panel.expanded .lint-panel-body {
+  display: flex;
+}
+
+.lint-panel-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px 4px;
+}
+
+.lint-panel-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.lint-fix-btn {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lint-fix-btn.is-active {
+  color: #6ee7b7;
+  border-color: rgba(16, 185, 129, 0.45);
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.lint-fix-btn:hover:not(:disabled) {
+  color: #ffffff;
+  border-color: rgba(16, 185, 129, 0.7);
+}
+
+.lint-fix-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.lint-issue-list {
+  overflow-y: auto;
+  min-height: 0;
+  padding: 4px 8px 10px;
+}
+
+.lint-clean-hint {
+  padding: 10px 8px 6px;
+  font-size: 12px;
+  color: #6ee7b7;
+}
+
+.lint-issue {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.55;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lint-issue:hover,
+.lint-issue.active {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+}
+
+.lint-issue-level {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 16px;
+}
+
+.lint-issue.error .lint-issue-level {
+  color: #fecaca;
+  background: rgba(220, 38, 38, 0.28);
+}
+
+.lint-issue.warn .lint-issue-level {
+  color: #fde68a;
+  background: rgba(217, 119, 6, 0.24);
+}
+
+.lint-issue-code {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.lint-issue-message {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.lint-issue-line {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+@media (max-width: 900px) {
+  .lint-panel-hint {
+    display: none;
+  }
+}

@@ -306,25 +306,50 @@ export function bindEditorEvents() {
     }
   });
 
-  // 本地图片拖拽上传 (上传图床，未配置时提示不支持)
+  // 本地图片粘贴 / Markdown 文件拖拽导入 / 图片拖拽上传
+  const editorPane = document.getElementById('editor-pane');
   const textareaWrapper = document.querySelector('.editor-textarea-wrapper');
-  if (textareaWrapper) {
-    textareaWrapper.addEventListener('dragover', (e) => {
+  if (editorPane) {
+    editorPane.addEventListener('dragover', (e) => {
       e.preventDefault();
-      textareaWrapper.classList.add('drag-over');
+      textareaWrapper?.classList.add('drag-over');
     });
-    textareaWrapper.addEventListener('dragleave', () => {
-      textareaWrapper.classList.remove('drag-over');
+    editorPane.addEventListener('dragleave', (e) => {
+      if (!editorPane.contains(e.relatedTarget)) {
+        textareaWrapper?.classList.remove('drag-over');
+      }
     });
-    textareaWrapper.addEventListener('drop', (e) => {
+    editorPane.addEventListener('drop', async (e) => {
       e.preventDefault();
-      textareaWrapper.classList.remove('drag-over');
+      textareaWrapper?.classList.remove('drag-over');
       const files = e.dataTransfer?.files;
-      if (files && files.length > 0) {
-        const file = files[0];
-        if (file.type.startsWith('image/')) {
-          handleImageUpload(file, file.name.replace(/\.[^.]+$/, '') || '图片');
+      if (!files || !files.length) return;
+      const file = files[0];
+
+      // 图片 -> 上传图床并插入正文
+      if (file.type.startsWith('image/')) {
+        handleImageUpload(file, file.name.replace(/\.[^.]+$/, '') || '图片');
+        return;
+      }
+
+      // Markdown / 纯文本 -> 直接载入编辑器
+      const isMarkdown = /\.(md|markdown|mdown|txt)$/i.test(file.name) || file.type.startsWith('text/');
+      if (!isMarkdown) {
+        showToast('仅支持拖拽 .md / .markdown / .txt 文件或图片', 'error');
+        return;
+      }
+      try {
+        const text = await file.text();
+        if (!text.trim()) {
+          showToast('拖入的文件内容为空', 'error');
+          return;
         }
+        textarea.value = text;
+        textarea.scrollTop = 0;
+        scheduleRender();
+        showToast(`已导入 ${file.name}`);
+      } catch (err) {
+        showToast(`读取文件失败: ${err.message || '未知错误'}`, 'error');
       }
     });
   }

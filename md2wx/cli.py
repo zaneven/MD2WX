@@ -51,7 +51,13 @@ from .drafts import (
     list_local_mappings,
     DRAFT_NOT_FOUND_ERRCODES,
 )
-from .linter import lint_markdown, format_lint_report, has_errors
+from .linter import (
+    lint_markdown,
+    format_lint_report,
+    has_errors,
+    summarize,
+    check_link_reachability,
+)
 from .richrender import extract_rich_blocks, resolve_rich_blocks, substitute_rich_html, rehost_data_uri_images
 
 # 各主题封面徽标预设 (与 Web Studio THEME_COVER_PRESETS 保持一致)
@@ -255,7 +261,10 @@ def main():
     parser.add_argument("--app-id", help="微信 AppID (默认从环境变量或 .env 读取)")
     parser.add_argument("--no-cover", action="store_true", help="不在正文顶部注入封面卡片")
     parser.add_argument("--upload-image", metavar="PATH", help="将本地图片上传到 .env 配置的在线图床并输出图片链接 (需配置 IMAGE_HOST_UPLOAD_URL)")
-    parser.add_argument("--lint", action="store_true", help="对文章执行发稿规范自检 (标题 20 字 / 摘要 50 字 / 禁填 cover / 控制字符 / 外链图片)")
+    parser.add_argument("--lint", action="store_true", help="对文章执行发稿规范自检 (标题/摘要/标点/Emoji/外链图片/HTML 标签等)，error 级以非零码退出")
+    parser.add_argument("--format", choices=["text", "json"], default="text", help="配合 --lint 使用: 报告输出格式 (text 人读 / json 机器可读，便于接入发布 CI)")
+    parser.add_argument("--check-links", action="store_true", help="配合 --lint 使用: 额外并发探测正文外链可达性 (HEAD 请求，超时降级为 warn)")
+    parser.add_argument("--no-lint", action="store_true", help="紧急逃生通道: 发布 (-p) 时跳过发稿规范检查，不阻断推送")
     parser.add_argument("--rehost-images", action="store_true", help="将正文外链图片自动转存到 .env 配置的在线图床并换链 (规避微信外链封禁)")
 
     args = parser.parse_args()
@@ -383,6 +392,7 @@ def main():
 
     # 2. 获取输入内容
     base_dir = Path.cwd()
+    input_path = None
     if args.input:
         input_path = Path(args.input).resolve()
         if not input_path.exists():
@@ -407,8 +417,34 @@ def main():
     # 3.5 发稿规范自检 (--lint 仅输出报告，存在阻断问题时以非零码退出)
     if args.lint:
         lint_issues = lint_markdown(raw_content)
-        print(format_lint_report(lint_issues))
+        if args.check_links:
+            print(">>> 正在并发探测正文外链可达性 (HEAD 请求)...", file=sys.stderr)
+            lint_issues.extend(check_link_reachability(raw_content))
+        if args.format == "json":
+            # 机器可读报告：stdout 仅输出单个 JSON 对象，可直接被 jq 解析
+            payload = {
+                "file": str(input_path) if input_path else "<stdin>",
+                "issues": lint_issues,
+                "summary": summarize(lint_issues),
+            }
+            print(json.dumps(payload, ensure_ascii=False, indent=2))
+        else:
+            print(format_lint_report(lint_issues))
         sys.exit(1 if has_errors(lint_issues) else 0)
+
+    # 3.55 发布门禁：存在 error 级问题时，在获取凭据/上传图片等任何网络请求之前中止
+    if args.publish and not args.no_lint:
+        gate_issues = lint_markdown(raw_content)
+        if has_errors(gate_issues):
+            print("[-] 发稿规范检查未通过，已在发起任何网络请求前中止发布:", file=sys.stderr)
+            for line in format_lint_report(gate_issues).split("\n"):
+                print(f"    {line}", file=sys.stderr)
+            print("    确需强行发布可追加 --no-lint 参数。", file=sys.stderr)
+            sys.exit(1)
+        elif gate_issues:
+            print("[lint] 发布前规范自检 (仅提示，不阻断):", file=sys.stderr)
+            for line in format_lint_report(gate_issues).split("\n"):
+                print(f"    {line}", file=sys.stderr)
 
     # 3.6 富文本块预处理：Mermaid 图表与数学公式抽取为占位 token 并无头预渲染
     rich_blocks = []
@@ -615,13 +651,6 @@ def main():
     # 选项 D: 一键发布到微信公众号草稿箱
     if args.publish:
         print(">>> 3. 准备提交草稿至微信公众号...")
-
-        # 发布前规范自检 (仅提示，不阻断发布)
-        pre_issues = lint_markdown(raw_content)
-        if pre_issues:
-            print("    [lint] 发布前规范自检发现以下问题 (不阻断):")
-            for line in format_lint_report(pre_issues).split("\n"):
-                print(f"      {line}")
 
         # 富文本渲染产物 (base64 内联图) 统一转存微信官方 CDN，草稿箱正文不支持 data URI
         if rich_blocks and not args.dry_run:

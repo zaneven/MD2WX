@@ -155,3 +155,94 @@ def test_obsidian_wiki_image_with_alias_has_alt():
         "![[a.png|架构说明]]\n\n正文\n"
     )
     assert "image-alt-missing" not in _codes(lint_markdown(md))
+
+
+# ---------------------------------------------------------------------------
+# 波次一 (v1.9.0)：Lint 规则扩充
+# ---------------------------------------------------------------------------
+def _clean(body, title="短标题", digest="合格摘要内容", extra=""):
+    return f"---\ntitle: {title}\ndigest: {digest}\n{extra}---\n\n{body}"
+
+
+def test_punctuation_mixed_detected_with_full_width_suggestion():
+    issues = lint_markdown(_clean("这是中文,混用半角标点;还有冒号:测试。\n"))
+    item = next(i for i in issues if i["code"] == "punctuation-mixed")
+    assert item["level"] == "warn"
+    assert "「,」" in item["message"]
+    assert "「，」" in item["message"]
+    assert "全角" in item["message"]
+
+
+def test_punctuation_in_code_fence_and_inline_code_ignored():
+    md = _clean("`a,b:c` 与代码块不检测。\n\n```text\n中文,半角;标点\n```\n")
+    assert "punctuation-mixed" not in _codes(lint_markdown(md))
+
+
+def test_punctuation_in_link_target_ignored():
+    md = _clean("跳转到 [章节](#一级,标题) 不应误报。\n")
+    assert "punctuation-mixed" not in _codes(lint_markdown(md))
+
+
+def test_punctuation_cjk_parenthesis_detected():
+    md = _clean("中文正文里的括号(示例)被检出。\n")
+    assert "punctuation-mixed" in _codes(lint_markdown(md))
+
+
+def test_title_punctuation_trailing_period_warns():
+    md = _clean("正文。\n", title="标题以句号结尾。")
+    assert "title-punctuation" in _codes(lint_markdown(md))
+
+
+def test_title_half_width_punctuation_warns():
+    md = _clean("正文。\n", title="标题混用(半角)")
+    assert "title-punctuation" in _codes(lint_markdown(md))
+
+
+def test_digest_punctuation_warns():
+    md = _clean("正文。\n", digest="摘要混用半角逗号,触发规则")
+    assert "digest-punctuation" in _codes(lint_markdown(md))
+
+
+def test_emoji_detected_and_code_fence_ignored():
+    issues = lint_markdown(_clean("正文里有一个表情 😀。\n"))
+    assert "emoji-banned" in _codes(issues)
+    md = _clean("```text\n😀\n```\n")
+    assert "emoji-banned" not in _codes(lint_markdown(md))
+
+
+def test_unclosed_html_tag_is_error():
+    issues = lint_markdown(_clean("<div>未闭合容器\n"))
+    item = next(i for i in issues if i["code"] == "html-unclosed")
+    assert item["level"] == "error"
+    assert has_errors(issues)
+
+
+def test_closed_html_tag_and_code_fence_ok():
+    assert "html-unclosed" not in _codes(lint_markdown(_clean("<div>闭合</div>\n")))
+    assert "html-unclosed" not in _codes(lint_markdown(_clean("```html\n<div>\n```\n")))
+
+
+def test_link_format_invalid_protocol_and_missing_scheme():
+    md = _clean("[坏协议](htp://example.com) 与 [缺协议](www.example.com) 以及 [空]()\n")
+    issues = [i for i in lint_markdown(md) if i["code"] == "link-format-invalid"]
+    assert len(issues) == 3
+
+
+def test_link_format_valid_links_not_flagged():
+    md = _clean("[官网](https://example.com) [邮件](mailto:a@b.com) [锚点](#小节)\n")
+    assert "link-format-invalid" not in _codes(lint_markdown(md))
+
+
+def test_issue_carries_line_number():
+    md = "---\ntitle: 短标题\ndigest: 摘要\n---\n\n正文。\n\n表情 😀\n"
+    item = next(i for i in lint_markdown(md) if i["code"] == "emoji-banned")
+    assert item["line"] == 8
+
+
+def test_summarize_counts():
+    from md2wx.linter import summarize
+
+    issues = lint_markdown(_clean("正文,混用。\n", title="超" * 21))
+    counts = summarize(issues)
+    assert counts["errors"] == 1
+    assert counts["warnings"] >= 1
