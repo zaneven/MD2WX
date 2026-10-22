@@ -184,7 +184,7 @@
           </div>
 
           <!-- 右侧：微信公众号排版真实视窗 -->
-          <div class="showcase-col showcase-right">
+          <div class="showcase-col showcase-right" data-preview-theme="tech-blue">
             <div class="showcase-preview-inner">
               <div class="wx-sim-header">
                 <h2 class="wx-sim-h1">在喧嚣的时代，重塑深度思考的秩序</h2>
@@ -199,19 +199,19 @@
                 <strong>核心定位</strong>：AI 自动化 · 架构复盘 · 极客手记
               </div>
 
-              <p style="margin: 12px 0; color: #334155; font-size: 14px;">
+              <p class="wx-sim-p">
                 真正的专注不是在安静的环境里做简单的事，而是在充满干扰的世界中守住内心的秩序。阅读官方技术白皮书 <sup>[1]</sup> 是抵御思维退化的终极武器。
               </p>
 
               <div class="wx-sim-code">
-                <div style="display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:4px;">
-                  <span style="color:#94a3b8; font-size:11px;">PYTHON</span>
-                  <span style="color:#64748b; font-size:11px;">SF MONO</span>
+                <div class="wx-sim-code-head">
+                  <span class="wx-sim-code-lang">PYTHON</span>
+                  <span class="wx-sim-code-fmt">SF MONO</span>
                 </div>
-                <span style="color:#f43f5e;">def</span> <span style="color:#38bdf8;">deploy_article</span>(markdown_path: str):<br>
-                &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#64748b;"># 纯内联样式转换，零外部依赖</span><br>
+                <span class="tok-key">def</span> <span class="tok-fn">deploy_article</span>(markdown_path: str):<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="tok-comment"># 纯内联样式转换，零外部依赖</span><br>
                 &nbsp;&nbsp;&nbsp;&nbsp;html = markdown_to_wechat_html(markdown_path)<br>
-                &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#f43f5e;">return</span> html
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="tok-key">return</span> html
               </div>
 
               <table class="wx-sim-table">

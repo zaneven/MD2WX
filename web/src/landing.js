@@ -205,7 +205,9 @@ function initThemeShowcase() {
     </button>
   `).join('');
 
-  // 切换函数
+  // 切换函数（用序号兜底快速连点：只让最后一次点击更新预览）
+  let previewToken = 0;
+
   function switchTheme(themeId) {
     const theme = THEMES_DATA.find(t => t.id === themeId);
     if (!theme) return;
@@ -223,14 +225,20 @@ function initThemeShowcase() {
     metaScene.textContent = theme.scene;
     metaFeatures.textContent = theme.features.join(' · ');
 
-    // 预览图平滑切换
+    // 预载完成后再换图，失败时也恢复亮度，避免预览一直灰着
+    const token = ++previewToken;
+    const nextSrc = theme.preview;
     previewImg.style.opacity = '0.3';
-    setTimeout(() => {
-      previewImg.src = theme.preview;
-      previewImg.onload = () => {
-        previewImg.style.opacity = '1';
-      };
-    }, 150);
+
+    const preload = new Image();
+    const showPreview = () => {
+      if (token !== previewToken) return;
+      previewImg.src = nextSrc;
+      previewImg.style.opacity = '1';
+    };
+    preload.onload = showPreview;
+    preload.onerror = showPreview;
+    preload.src = nextSrc;
   }
 
   // 绑定点击
@@ -247,54 +255,43 @@ function initThemeShowcase() {
 }
 
 // Hero 演示区的主题切换
+// 预览骨架由 CSS 按 data-preview-theme 整体切换，这里只负责状态与主题色
 function initHeroThemeSwitch() {
   const switchBtns = document.querySelectorAll('.showcase-theme-btn');
-  const previewHeader = document.querySelector('.wx-sim-header');
-  const previewQuote = document.querySelector('.wx-sim-quote');
-  const previewCode = document.querySelector('.wx-sim-code');
+  const previewRoot = document.querySelector('.showcase-right');
+  const showcase = document.querySelector('.hero-showcase');
+  const metaLabel = document.querySelector('.wx-sim-meta span:last-child');
 
-  if (!previewHeader || switchBtns.length === 0) return;
+  if (!previewRoot || switchBtns.length === 0) return;
 
-  const THEME_STYLES = {
-    'tech-blue': {
-      headerBorder: '#0284c7',
-      quoteBg: '#f0f9ff',
-      quoteBorder: '#0284c7',
-      codeBg: '#1e293b'
-    },
-    'terminal-geek': {
-      headerBorder: '#10b981',
-      quoteBg: '#0f172a',
-      quoteBorder: '#10b981',
-      codeBg: '#090d16'
-    },
-    'vintage-news': {
-      headerBorder: '#78350f',
-      quoteBg: '#fdfbf7',
-      quoteBorder: '#92400e',
-      codeBg: '#292524'
-    },
-    'acid-bold': {
-      headerBorder: '#e11d48',
-      quoteBg: '#fff1f2',
-      quoteBorder: '#be123c',
-      codeBg: '#18181b'
-    }
+  const HERO_THEMES = {
+    'tech-blue': { label: '现代科技蓝', accent: '#38bdf8' },
+    'terminal-geek': { label: '极客终端黑', accent: '#34d399' },
+    'vintage-news': { label: '复古报刊', accent: '#f59e0b' },
+    'acid-bold': { label: '先锋野兽派', accent: '#facc15' }
   };
 
-  switchBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      switchBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+  function applyTheme(themeId) {
+    const theme = HERO_THEMES[themeId] || HERO_THEMES['tech-blue'];
+    const key = HERO_THEMES[themeId] ? themeId : 'tech-blue';
 
-      const theme = btn.getAttribute('data-theme');
-      const st = THEME_STYLES[theme];
-      if (st) {
-        previewHeader.style.borderBottomColor = st.headerBorder;
-        previewQuote.style.backgroundColor = st.quoteBg;
-        previewQuote.style.borderLeftColor = st.quoteBorder;
-        previewCode.style.backgroundColor = st.codeBg;
-      }
+    previewRoot.setAttribute('data-preview-theme', key);
+    showcase.style.setProperty('--showcase-accent', theme.accent);
+    if (metaLabel) metaLabel.textContent = `微信公众号 · ${theme.label}`;
+
+    switchBtns.forEach((btn) => {
+      const isActive = btn.getAttribute('data-theme') === key;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-pressed', String(isActive));
+    });
+  }
+
+  switchBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      applyTheme(btn.getAttribute('data-theme'));
     });
   });
+
+  // 初始状态与 HTML 中的默认主题保持一致
+  applyTheme(previewRoot.getAttribute('data-preview-theme') || 'tech-blue');
 }

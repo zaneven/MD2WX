@@ -361,6 +361,7 @@ body {
    Hero 交互式对比演示器 (Interactive Showcase)
    ========================================================================== */
 .hero-showcase {
+  --showcase-accent: #38bdf8;
   max-width: 1060px;
   margin: 40px auto 0;
   background: var(--bg-surface);
@@ -431,8 +432,9 @@ body {
 }
 
 .showcase-theme-btn.active, .showcase-theme-btn:hover {
-  background: rgba(56, 189, 248, 0.15);
-  color: #38bdf8;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--showcase-accent);
+  box-shadow: inset 0 -2px 0 var(--showcase-accent);
 }
 
 .showcase-body {
@@ -476,6 +478,7 @@ body {
   color: #262626;
   font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   position: relative;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 .showcase-preview-inner {
@@ -483,11 +486,12 @@ body {
   line-height: 1.85;
 }
 
-/* 预览效果的内联微信风格模拟 */
+/* 预览效果的内联微信风格模拟（默认：现代科技蓝） */
 .wx-sim-header {
   border-bottom: 2px solid #0284c7;
   padding-bottom: 10px;
   margin-bottom: 16px;
+  transition: border-color 0.25s ease;
 }
 
 .wx-sim-h1 {
@@ -495,6 +499,7 @@ body {
   font-weight: 700;
   color: #0f172a;
   margin: 0 0 6px 0;
+  transition: color 0.25s ease;
 }
 
 .wx-sim-meta {
@@ -502,16 +507,25 @@ body {
   color: #64748b;
   display: flex;
   gap: 12px;
+  transition: color 0.25s ease;
 }
 
 .wx-sim-quote {
   background: #f0f9ff;
   border-left: 4px solid #0284c7;
   padding: 12px 14px;
-  border-radius: 4px;
+  border-radius: 0 8px 8px 0;
   font-size: 13.5px;
   color: #334155;
   margin: 14px 0;
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+.wx-sim-p {
+  margin: 12px 0;
+  color: #334155;
+  font-size: 14px;
+  transition: color 0.25s ease;
 }
 
 .wx-sim-code {
@@ -523,7 +537,30 @@ body {
   font-size: 12px;
   margin: 14px 0;
   overflow-x: auto;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
 }
+
+.wx-sim-code-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 4px;
+}
+
+.wx-sim-code-lang,
+.wx-sim-code-fmt {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.wx-sim-code-fmt {
+  color: #64748b;
+}
+
+.tok-key { color: #f43f5e; }
+.tok-fn { color: #38bdf8; }
+.tok-comment { color: #64748b; }
 
 .wx-sim-table {
   width: 100%;
@@ -538,11 +575,13 @@ body {
   padding: 6px 8px;
   text-align: left;
   font-weight: 600;
+  transition: border-color 0.25s ease, color 0.25s ease;
 }
 
 .wx-sim-table td {
   border-bottom: 1px solid #e2e8f0;
   padding: 6px 8px;
+  transition: border-color 0.25s ease, color 0.25s ease;
 }
 
 .wx-sim-footnote {
@@ -551,6 +590,269 @@ body {
   border-top: 1px dashed #cbd5e1;
   font-size: 12px;
   color: #64748b;
+  transition: border-color 0.25s ease, color 0.25s ease;
+}
+
+/* ---------- 极客终端黑：整屏深色 + 等宽字体 + 终端回显 ---------- */
+.showcase-right[data-preview-theme="terminal-geek"] {
+  background: #0b0f19;
+  color: #e2e8f0;
+}
+
+.showcase-right[data-preview-theme="terminal-geek"] .showcase-preview-inner {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+.showcase-right[data-preview-theme="terminal-geek"] .wx-sim-header {
+  border-bottom: 1px dashed #10b981;
+}
+
+.showcase-right[data-preview-theme="terminal-geek"] .wx-sim-h1 {
+  color: #e2e8f0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 19px;
+}
+
+.showcase-right[data-preview-theme="terminal-geek"] .wx-sim-h1::before {
+  content: "> ";
+  color: #10b981;
+}
+
+.showcase-right[data-preview-theme="terminal-geek"] .wx-sim-meta {
+  color: #94a3b8;
+}
+
+.showcase-right[data-preview-theme="terminal-geek"] .wx-sim-quote {
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-left: 3px solid #10b981;
+  border-radius: 4px;
+  color: #e2e8f0;
+  font-size: 13px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.showcase-right[data-preview-theme="terminal-geek"] .wx-sim-quote::before {
+  content: "[OUTPUT / 回显]";
+  display: block;
+  color: #64748b;
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+
+.showcase-right[data-preview-theme="terminal-geek"] .wx-sim-p {
+  color: #cbd5e1;
+}
+
+.showcase-right[data-preview-theme="terminal-geek"] .wx-sim-code {
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 6px;
+}
+
+.showcase-right[data-preview-theme="terminal-geek"] .wx-sim-code-head {
+  border-bottom-color: rgba(16, 185, 129, 0.25);
+}
+
+.showcase-right[data-preview-theme="terminal-geek"] .wx-sim-code-lang {
+  color: #10b981;
+}
+
+.showcase-right[data-preview-theme="terminal-geek"] .wx-sim-code-fmt {
+  color: #475569;
+}
+
+.showcase-right[data-preview-theme="terminal-geek"] .tok-key { color: #34d399; }
+.showcase-right[data-preview-theme="terminal-geek"] .tok-fn { color: #5eead4; }
+.showcase-right[data-preview-theme="terminal-geek"] .tok-comment { color: #64748b; }
+
+.showcase-right[data-preview-theme="terminal-geek"] .wx-sim-table th {
+  border-top-color: #1e293b;
+  border-bottom-color: #1e293b;
+  color: #94a3b8;
+}
+
+.showcase-right[data-preview-theme="terminal-geek"] .wx-sim-table td {
+  border-bottom-color: #1e293b;
+  color: #cbd5e1;
+}
+
+.showcase-right[data-preview-theme="terminal-geek"] .wx-sim-table strong {
+  color: #e2e8f0;
+}
+
+.showcase-right[data-preview-theme="terminal-geek"] .wx-sim-footnote {
+  border-top-color: #1e293b;
+  color: #94a3b8;
+}
+
+/* ---------- 复古报刊：米纸底 + 衬线 + 双线标题与典雅引号 ---------- */
+.showcase-right[data-preview-theme="vintage-news"] {
+  background: #fdfbf7;
+  color: #292524;
+  font-family: "Songti SC", "Noto Serif SC", "Source Han Serif SC", SimSun, Georgia, serif;
+}
+
+.showcase-right[data-preview-theme="vintage-news"] .showcase-preview-inner {
+  font-family: "Songti SC", "Noto Serif SC", "Source Han Serif SC", SimSun, Georgia, serif;
+  letter-spacing: 0.3px;
+}
+
+.showcase-right[data-preview-theme="vintage-news"] .wx-sim-header {
+  border-bottom: 3px double #854d0e;
+}
+
+.showcase-right[data-preview-theme="vintage-news"] .wx-sim-h1 {
+  color: #292524;
+  letter-spacing: 0.5px;
+}
+
+.showcase-right[data-preview-theme="vintage-news"] .wx-sim-meta {
+  color: #78716c;
+}
+
+.showcase-right[data-preview-theme="vintage-news"] .wx-sim-quote {
+  background: #fcfaf2;
+  border: 1px solid #d6d3d1;
+  border-left: 3px double #854d0e;
+  border-radius: 0;
+  padding: 14px 18px;
+  color: #292524;
+  font-family: "Songti SC", "Noto Serif SC", "Source Han Serif SC", SimSun, Georgia, serif;
+}
+
+.showcase-right[data-preview-theme="vintage-news"] .wx-sim-quote::before {
+  content: "\201C";
+  display: block;
+  font-family: Georgia, serif;
+  font-size: 28px;
+  line-height: 1;
+  color: #854d0e;
+  margin-bottom: 2px;
+}
+
+.showcase-right[data-preview-theme="vintage-news"] .wx-sim-p {
+  color: #292524;
+}
+
+.showcase-right[data-preview-theme="vintage-news"] .wx-sim-code {
+  background: #292524;
+  border-radius: 4px;
+  color: #f5f5f4;
+}
+
+.showcase-right[data-preview-theme="vintage-news"] .wx-sim-code-lang {
+  color: #d6d3d1;
+}
+
+.showcase-right[data-preview-theme="vintage-news"] .wx-sim-code-fmt {
+  color: #a8a29e;
+}
+
+.showcase-right[data-preview-theme="vintage-news"] .tok-key { color: #fbbf24; }
+.showcase-right[data-preview-theme="vintage-news"] .tok-fn { color: #fcd34d; }
+.showcase-right[data-preview-theme="vintage-news"] .tok-comment { color: #a8a29e; }
+
+.showcase-right[data-preview-theme="vintage-news"] .wx-sim-table th {
+  border-top: 2px solid #292524;
+  border-bottom: 1px solid #292524;
+  color: #292524;
+}
+
+.showcase-right[data-preview-theme="vintage-news"] .wx-sim-table td {
+  border-bottom: 1px solid #e7e5e4;
+  color: #44403c;
+}
+
+.showcase-right[data-preview-theme="vintage-news"] .wx-sim-footnote {
+  border-top: 1px solid #d6d3d1;
+  color: #78716c;
+}
+
+/* ---------- 先锋野兽派：粗黑框 + 硬投影 + 荧光黄块 ---------- */
+.showcase-right[data-preview-theme="acid-bold"] {
+  background: #ffffff;
+  color: #09090b;
+}
+
+.showcase-right[data-preview-theme="acid-bold"] .wx-sim-header {
+  border-bottom: 3px solid #000000;
+}
+
+.showcase-right[data-preview-theme="acid-bold"] .wx-sim-h1 {
+  display: inline-block;
+  color: #000000;
+  background: #facc15;
+  border: 2.5px solid #000000;
+  box-shadow: 4px 4px 0 #000000;
+  padding: 6px 12px;
+  margin-bottom: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: 0.5px;
+}
+
+.showcase-right[data-preview-theme="acid-bold"] .wx-sim-meta {
+  color: #52525b;
+  font-weight: 500;
+}
+
+.showcase-right[data-preview-theme="acid-bold"] .wx-sim-quote {
+  background: #fef08a;
+  border: 2px solid #000000;
+  box-shadow: 3px 3px 0 #000000;
+  border-radius: 0;
+  color: #000000;
+  font-weight: 500;
+}
+
+.showcase-right[data-preview-theme="acid-bold"] .wx-sim-p {
+  color: #09090b;
+  font-weight: 500;
+}
+
+.showcase-right[data-preview-theme="acid-bold"] .wx-sim-code {
+  background: #09090b;
+  border: 2px solid #000000;
+  box-shadow: 4px 4px 0 #000000;
+  border-radius: 0;
+  color: #fef9c3;
+}
+
+.showcase-right[data-preview-theme="acid-bold"] .wx-sim-code-head {
+  border-bottom-color: rgba(250, 204, 21, 0.35);
+}
+
+.showcase-right[data-preview-theme="acid-bold"] .wx-sim-code-lang {
+  color: #facc15;
+}
+
+.showcase-right[data-preview-theme="acid-bold"] .wx-sim-code-fmt {
+  color: #a1a1aa;
+}
+
+.showcase-right[data-preview-theme="acid-bold"] .tok-key {
+  color: #facc15;
+  font-weight: 700;
+}
+
+.showcase-right[data-preview-theme="acid-bold"] .tok-fn { color: #fde047; }
+.showcase-right[data-preview-theme="acid-bold"] .tok-comment { color: #a1a1aa; }
+
+.showcase-right[data-preview-theme="acid-bold"] .wx-sim-table th {
+  border: 1.5px solid #000000;
+  color: #000000;
+  font-weight: 800;
+}
+
+.showcase-right[data-preview-theme="acid-bold"] .wx-sim-table td {
+  border: 1px solid #000000;
+  color: #09090b;
+}
+
+.showcase-right[data-preview-theme="acid-bold"] .wx-sim-footnote {
+  border-top: 2px solid #000000;
+  color: #52525b;
 }
 
 /* ==========================================================================
@@ -1251,13 +1553,20 @@ body {
 @media (max-width: 768px) {
   .hero-title { font-size: 32px; }
   .hero-desc { font-size: 15px; }
-  .showcase-body { grid-template-columns: 1fr; }
-  .showcase-left { display: none; }
   .matrix-grid { grid-template-columns: 1fr; }
   .quickstart-steps { grid-template-columns: 1fr; }
   .nav-links { display: none; }
+  /* 窄屏只保留工作台入口，避免导航把页面撑出横向滚动条 */
+  .nav-container { padding: 0 16px; }
+  .nav-actions { gap: 8px; }
+  .nav-actions .btn-secondary { display: none; }
   .footer-top { grid-template-columns: 1fr; }
   .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
+}
+
+@media (max-width: 900px) {
+  .showcase-body { grid-template-columns: 1fr; }
+  .showcase-left { display: none; }
 }
 
 /* ==========================================================================
